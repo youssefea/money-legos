@@ -152,3 +152,17 @@
     font-size: 15px;
   }
 }
+
+/* Present: a compact toolbar (lockup, Docs, Present) that never wraps. */
+.header[data-present] {
+  gap: var(--space-3);
+  min-height: 44px;
+  flex-wrap: nowrap;
+}
+.header[data-present] .divider,
+.header[data-present] .name {
+  display: none;
+}
+.header[data-present] .nav {
+  margin-left: var(--space-2);
+}

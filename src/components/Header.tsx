@@ -14,7 +14,7 @@ export type HeaderProps = {
 /** Base lockup, divider, "Money Legos"; Docs and the Present toggle on the right. */
 export default function Header({ present = false, onPresent }: HeaderProps) {
   return (
-    <header className={styles.header}>
+    <header className={styles.header} data-present={present || undefined}>
       <span className={styles.brand}>
         <BaseLockup label="Base" />
         <span className={styles.divider} aria-hidden="true" />

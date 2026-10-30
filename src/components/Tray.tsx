@@ -136,6 +136,7 @@ export default function Tray({ ids, onToggle, onPointerDown, wasDrag, dragging, 
   const scrollRef = useRef<HTMLDivElement>(null);
   const chipsRef = useRef<HTMLDivElement>(null);
   const [chipsMore, setChipsMore] = useState<{ left: boolean; right: boolean }>({ left: false, right: false });
+  const [stripMore, setStripMore] = useState<{ left: boolean; right: boolean }>({ left: false, right: false });
   const hoverTimer = useRef<number | undefined>(undefined);
   const pressTimer = useRef<number | undefined>(undefined);
   const longPressed = useRef(false);
@@ -173,6 +174,48 @@ export default function Tray({ ids, onToggle, onPointerDown, wasDrag, dragging, 
       el.removeEventListener("scroll", check);
     };
   }, []);
+
+  // Present drawer strip: an edge fade and a "›" on the side that has more bricks (it snaps brick by brick).
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!strip || !el) return;
+    const check = () => {
+      const left = el.scrollLeft > 2;
+      const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 2;
+      setStripMore((p) => (p.left === left && p.right === right ? p : { left, right }));
+    };
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    if (el.firstElementChild) ro.observe(el.firstElementChild);
+    el.addEventListener("scroll", check, { passive: true });
+    return () => {
+      ro.disconnect();
+      el.removeEventListener("scroll", check);
+    };
+  }, [strip]);
+  /**
+   * Page the strip to a whole brick: next = the first brick cut by the right edge (or fade) comes to the
+   * left edge; previous = back by about a drawer width, onto a brick's left edge. Explicit targets, since
+   * Safari does not snap after a programmatic scroll.
+   */
+  const stripPage = (dir: 1 | -1) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const x0 = el.getBoundingClientRect().left;
+    const lefts = Array.from(el.querySelectorAll<HTMLElement>("li:not([aria-hidden])")).map((li) => ({
+      left: li.getBoundingClientRect().left - x0 + el.scrollLeft,
+      right: li.getBoundingClientRect().right - x0 + el.scrollLeft,
+    }));
+    const view = el.scrollLeft + el.clientWidth - 24;
+    let target: number;
+    if (dir > 0) target = (lefts.find((c) => c.right > view) ?? lefts[lefts.length - 1])?.left ?? el.scrollLeft;
+    else {
+      const want = el.scrollLeft - (el.clientWidth - 96);
+      target = lefts.find((c) => c.left >= want - 1)?.left ?? 0;
+    }
+    el.scrollTo({ left: Math.max(0, Math.min(target, el.scrollWidth - el.clientWidth)), behavior: "smooth" });
+  };
 
   const showTip = useCallback((id: LegoId, el: HTMLElement) => {
     const r = el.getBoundingClientRect();
@@ -262,7 +305,13 @@ export default function Tray({ ids, onToggle, onPointerDown, wasDrag, dragging, 
       if (!placed) onHover?.(on ? lego.id : null);
     };
     return (
-      <li key={lego.id} className={styles.cell} data-span={g.span > 1 ? g.span : undefined} data-hero={hero || undefined}>
+      <li
+        key={lego.id}
+        className={styles.cell}
+        data-span={g.span > 1 ? g.span : undefined}
+        data-hero={hero || undefined}
+        style={{ "--cw": Math.max(2, g.sw - g.fl).toFixed(3) } as CSSProperties}
+      >
         <button
           type="button"
           className={styles.brick}
@@ -272,6 +321,7 @@ export default function Tray({ ids, onToggle, onPointerDown, wasDrag, dragging, 
           tabIndex={lego.id === tabId ? 0 : -1}
           data-lego={lego.id}
           data-placed={placed || undefined}
+          data-pale={lego.brick.id === "white" || lego.brick.id === "gray-light" || undefined}
           data-dim={dim || undefined}
           data-inspect={(placed && inspect === lego.id) || undefined}
           data-dragging={dragging === lego.id || undefined}
@@ -360,12 +410,28 @@ export default function Tray({ ids, onToggle, onPointerDown, wasDrag, dragging, 
         Arrow keys choose a brick. Enter adds or removes it.
       </span>
       {layout === "strip" ? (
-        <div ref={scrollRef} className={styles.strip} data-testid="tray-scroll">
-          <ul className={styles.stripRow} aria-label={`Core and ${active} bricks`}>
-            {HERO_LEGOS.map(item)}
-            <li className={styles.stripSep} aria-hidden="true" />
-            {more.map(item)}
-          </ul>
+        <div className={styles.stripWrap} data-more-left={stripMore.left || undefined} data-more-right={stripMore.right || undefined}>
+          <div ref={scrollRef} className={styles.strip} data-testid="tray-scroll">
+            <ul className={styles.stripRow} aria-label={`Core and ${active} bricks`}>
+              {HERO_LEGOS.map(item)}
+              <li className={styles.stripSep} aria-hidden="true" />
+              {more.map(item)}
+            </ul>
+          </div>
+          {stripMore.left && (
+            <button type="button" className={styles.stripNav} data-side="left" tabIndex={-1} aria-label="Earlier bricks" onClick={() => stripPage(-1)} data-testid="strip-prev">
+              <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true">
+                <path d="M10 3.5L5.5 8l4.5 4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          )}
+          {stripMore.right && (
+            <button type="button" className={styles.stripNav} data-side="right" tabIndex={-1} aria-label="More bricks" onClick={() => stripPage(1)} data-testid="strip-next">
+              <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true">
+                <path d="M6 3.5l4.5 4.5L6 12.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          )}
         </div>
       ) : (
         <>

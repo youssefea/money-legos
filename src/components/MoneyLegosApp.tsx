@@ -490,6 +490,7 @@ export default function MoneyLegosApp() {
             dragOver={!!drag?.over}
             dragging={!!drag}
             ghostSize={ghostSize}
+            ghostHidden={live && count >= 3 && !ghostSize}
             inspect={inspected}
             onInspect={setInspect}
             onRemove={onRemoveBoard}

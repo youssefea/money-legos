@@ -139,6 +139,44 @@
   }
 }
 
+/*
+ * Present: no header row. The lockup, Docs and the Present toggle become one small toolbar over the
+ * board's top-left corner (the board steps down to make room), so the phone column runs from the top of
+ * the stage to the footer and the phone grows. The H1 stays for screen readers.
+ */
+.page[data-present] {
+  position: relative;
+  --present-top: var(--page-pad-y);
+}
+.page[data-present] .top.top {
+  position: absolute;
+  z-index: 6;
+  top: calc(var(--present-top) + var(--space-3));
+  left: calc(var(--page-pad-x) + var(--space-5));
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  white-space: nowrap;
+}
+.page[data-present] .top.top > header {
+  display: flex;
+  flex-wrap: nowrap;
+}
+.page[data-present] .hero.hero {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+.page[data-present] .main.main {
+  margin-top: 0;
+}
+.page[data-present] .boardPanel {
+  padding-top: 52px;
+}
+
 /* Drag ghost follows the pointer. */
 .dragGhost {
   position: fixed;
@@ -243,6 +281,7 @@
     .page {
       padding-top: var(--space-3);
       padding-bottom: var(--space-2);
+      --present-top: var(--space-3);
     }
     .main {
       margin-top: var(--space-2);

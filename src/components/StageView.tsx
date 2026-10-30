@@ -29,6 +29,8 @@ export type StageViewProps = {
   onFrame?: (frame: Frame) => void;
   /** Footprint of the brick about to be added (hovered or dragged in the tray): sizes the ghost. */
   ghostSize?: [number, number];
+  /** Hide the ghost volume (a built app of 3+ bricks reads finished); the slot still frames the stack. */
+  ghostHidden?: boolean;
   /**
    * Board bricks as controls: an invisible button over each placed brick. Hover or focus inspects it
    * (its tile and outline light up); click or Enter removes it. On touch the first tap selects, the
@@ -78,7 +80,7 @@ export function estimateLayout(ids: readonly LegoId[], width: number, height: nu
  * The baseplate. Always draws the SVG poster; once the live board renders something visible
  * (a canvas, or its own SVG fallback) the poster fades out. The box size never changes.
  */
-export default function StageView({ ids, dark, reducedMotion, generation, lastAdded, live, compact, className, onLayout, onFrame: onFrameOut, ghostSize, hits }: StageViewProps) {
+export default function StageView({ ids, dark, reducedMotion, generation, lastAdded, live, compact, className, onLayout, onFrame: onFrameOut, ghostSize, ghostHidden, hits }: StageViewProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const liveRef = useRef<HTMLDivElement>(null);
   const [liveVisible, setLiveVisible] = useState(false);
@@ -154,7 +156,7 @@ export default function StageView({ ids, dark, reducedMotion, generation, lastAd
   });
 
   return (
-    <div ref={rootRef} className={[styles.stage, compact ? styles.compact : undefined, className].filter(Boolean).join(" ")} data-live={live && liveVisible ? "true" : "false"}>
+    <div ref={rootRef} className={[styles.stage, compact ? styles.compact : undefined, className].filter(Boolean).join(" ")} data-live={live && liveVisible ? "true" : "false"} data-ghost-hidden={ghostHidden || undefined}>
       <BoardPoster
         className={styles.poster}
         bricks={poster}

@@ -201,4 +201,15 @@
 :global([data-present]) .panel {
   --phone-max: 460px;
   --name-fs: 28px;
+  /* One line for the name (sized to fit the phone's width), the demo label under it: that height goes to the phone. */
+  --chrome: calc(1.2 * var(--name-fs) + var(--space-1) + var(--demo-lh) + 2 * var(--gap) + var(--act-h, 52px) + 2px);
+}
+:global([data-present]) .name {
+  min-height: 0;
+  display: block;
+  font-size: max(18px, min(var(--name-fs), calc(var(--pw) / (var(--len, 16) * 0.56))));
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

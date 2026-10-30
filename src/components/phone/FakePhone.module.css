@@ -253,6 +253,32 @@
   gap: 8px;
 }
 
+/*
+ * The bottom tile takes the rest of the screen (a 2- or 3-tile app never leaves the bottom of the phone
+ * empty): its content stays where it is (a hero ends on its action at the bottom) and the extra room is a
+ * calm wash of the brick's colour.
+ */
+.device[data-phase="live"] .tile:nth-last-child(1 of .tile) {
+  flex: 1 0 auto;
+  background:
+    linear-gradient(to bottom, transparent 0, transparent 72px, color-mix(in srgb, var(--accent) 7%, transparent) 100%),
+    var(--base-gray-0);
+}
+.device[data-phase="live"] .tile[data-pale]:nth-last-child(1 of .tile) {
+  background:
+    linear-gradient(to bottom, transparent 0, transparent 72px, color-mix(in srgb, var(--base-gray-30) 14%, transparent) 100%),
+    var(--base-gray-0);
+}
+.device[data-phase="live"] .tile:nth-last-child(1 of .tile) .body {
+  justify-content: flex-start;
+}
+.device[data-phase="live"] .tile[data-role="hero"]:nth-last-child(1 of .tile) .body {
+  justify-content: space-between;
+}
+.frameless .device[data-phase="live"] .tile:nth-last-child(1 of .tile) {
+  min-height: 0;
+}
+
 /* Wireframe (before Build app): short title and grey bars on the brick-strip card. */
 .wireTitle {
   font-weight: var(--weight-medium);
@@ -915,6 +941,16 @@
   }
   .tile[data-pale] .strip {
     box-shadow: none;
+  }
+  .device[data-phase="live"] .tile:nth-last-child(1 of .tile) {
+    background:
+      linear-gradient(to bottom, transparent 0, transparent 72px, color-mix(in srgb, var(--accent) 10%, transparent) 100%),
+      var(--base-gray-80);
+  }
+  .device[data-phase="live"] .tile[data-pale]:nth-last-child(1 of .tile) {
+    background:
+      linear-gradient(to bottom, transparent 0, transparent 72px, color-mix(in srgb, var(--base-gray-60) 30%, transparent) 100%),
+      var(--base-gray-80);
   }
   .label,
   .sub,

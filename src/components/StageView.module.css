@@ -99,3 +99,8 @@
 .hit:focus-visible {
   outline: none;
 }
+
+/* A finished 3-brick app: no "unfinished" ghost until the next brick is hovered or dragged. */
+.stage[data-ghost-hidden] :global([data-ghost-slot]) {
+  visibility: hidden;
+}

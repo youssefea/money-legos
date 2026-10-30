@@ -22,6 +22,8 @@ export type BoardProps = {
   dragging: boolean;
   /** Footprint of the brick about to be added (hovered or dragged in the tray), for the ghost. */
   ghostSize?: [number, number];
+  /** Hide the ghost (built app of 3+ bricks, nothing hovered or dragged). */
+  ghostHidden?: boolean;
   inspect: LegoId | null;
   onInspect: (id: LegoId | null) => void;
   /** A board brick was clicked (or Enter, `keyboard`): take it off (the page shows Undo). */
@@ -78,6 +80,7 @@ export default function Board({ dropRef, ...p }: BoardProps) {
           onLayout={p.onLayout}
           onFrame={onFrame}
           ghostSize={p.ghostSize}
+          ghostHidden={p.ghostHidden}
           hits={p.live ? hits : undefined}
         />
       </div>

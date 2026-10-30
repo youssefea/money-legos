@@ -123,25 +123,30 @@
   mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - var(--space-6)), transparent 100%);
 }
 
+/*
+ * Packed rows, no holes: each cell is as wide as its own brick (front face + side face, --cw studs), so
+ * a 2x1 never sits in a 3-stud box and a 3x2 never takes two. Rows wrap; every brick sits on its row's
+ * baseline; one stud scale throughout.
+ */
 .grid {
   margin: 0;
   padding: 0;
   list-style: none;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, calc(var(--stud) * 3));
-  grid-auto-rows: calc(var(--stud) * var(--row, 3.33));
-  grid-auto-flow: row dense;
-  column-gap: var(--gap);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  column-gap: 10px;
   row-gap: 4px;
-  align-items: end;
 }
 .cell {
   min-width: 0;
   display: flex;
   align-items: flex-end;
 }
-.cell[data-span="2"] {
-  grid-column: span 2;
+.grid .cell {
+  flex: none;
+  width: calc(var(--stud) * var(--cw, 3));
+  height: calc(var(--stud) * var(--row, 3.33));
 }
 
 /*
@@ -149,12 +154,68 @@
  * The 5 heroes, a hairline, then the active category, on the bin's own 24px stud (26px projector),
  * so every printed verb stays >= 12px. Scrolls sideways when the row is wider than the drawer.
  */
-.strip {
+.stripWrap {
+  position: relative;
   flex: none;
+}
+.strip {
   overflow-x: auto;
   overflow-y: hidden;
-  scrollbar-width: thin;
+  scrollbar-width: none;
   padding-bottom: 2px;
+  /* Brick by brick: a scroll always comes to rest on a whole brick's left edge. */
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 0;
+}
+.strip::-webkit-scrollbar {
+  display: none;
+}
+.stripRow .cell {
+  scroll-snap-align: start;
+}
+/* Edge fades on the side that has more, so a brick at the edge melts away instead of being cut. */
+.stripWrap[data-more-right] .strip {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 96px), transparent calc(100% - 20px));
+  mask-image: linear-gradient(to right, #000 calc(100% - 96px), transparent calc(100% - 20px));
+}
+.stripWrap[data-more-left] .strip {
+  -webkit-mask-image: linear-gradient(to right, transparent 20px, #000 96px);
+  mask-image: linear-gradient(to right, transparent 20px, #000 96px);
+}
+.stripWrap[data-more-left][data-more-right] .strip {
+  -webkit-mask-image: linear-gradient(to right, transparent 20px, #000 96px, #000 calc(100% - 96px), transparent calc(100% - 20px));
+  mask-image: linear-gradient(to right, transparent 20px, #000 96px, #000 calc(100% - 96px), transparent calc(100% - 20px));
+}
+/* "›" / "‹": a visible affordance over the fade (pointer only; keyboard arrows already scroll). */
+.stripNav {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--color-surface);
+  box-shadow:
+    0 0 0 1px var(--color-hairline),
+    0 2px 6px rgb(10 11 13 / 0.12);
+  color: var(--color-fg);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+.stripNav[data-side="right"] {
+  right: 0;
+}
+.stripNav[data-side="left"] {
+  left: 0;
+}
+.stripNav:hover {
+  box-shadow:
+    0 0 0 1px var(--color-border-strong),
+    0 2px 6px rgb(10 11 13 / 0.16);
 }
 .stripSep {
   flex: none;
@@ -251,6 +312,26 @@
   transition:
     opacity var(--dur-base) var(--ease-hover),
     filter var(--dur-fast) var(--ease-hover);
+}
+/*
+ * White and pale grey bricks on the white surface: a soft contact shadow and a hairline-dark rim from the
+ * same shadow, so they never vanish into the paper.
+ */
+.brick[data-pale] .sprite,
+.brick[data-pale] .drawn {
+  filter: drop-shadow(0 0 0.6px rgb(10 11 13 / 0.45)) drop-shadow(0 2px 2px rgb(10 11 13 / 0.14));
+}
+@media (hover: hover) {
+  .brick[data-pale]:hover .sprite,
+  .brick[data-pale]:hover .drawn {
+    filter: drop-shadow(0 0 0.6px rgb(10 11 13 / 0.45)) drop-shadow(0 5px 4px rgb(10 11 13 / 0.16));
+  }
+}
+@media (prefers-color-scheme: dark) {
+  .brick[data-pale] .sprite,
+  .brick[data-pale] .drawn {
+    filter: none;
+  }
 }
 .brick[data-dragging] .sprite,
 .brick[data-dragging] .drawn {

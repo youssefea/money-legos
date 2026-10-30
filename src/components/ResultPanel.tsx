@@ -79,7 +79,14 @@ export function AppName({ name, typing, id, className }: { name: string | null; 
   }
   const typed = !!name && !!typing && typing.name === name;
   return (
-    <h2 id={id} className={[styles.name, className].filter(Boolean).join(" ")} data-empty={!name || undefined} data-testid="app-name" data-typing={typed || undefined}>
+    <h2
+      id={id}
+      className={[styles.name, className].filter(Boolean).join(" ")}
+      style={{ "--len": Array.from(name ?? "Your app").length } as CSSProperties}
+      data-empty={!name || undefined}
+      data-testid="app-name"
+      data-typing={typed || undefined}
+    >
       {name ? (
         <span
           key={typed ? `t${typing!.n}` : name}
