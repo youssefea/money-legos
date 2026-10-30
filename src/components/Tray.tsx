@@ -17,7 +17,16 @@ export type TrayProps = {
 
 type Open = { id: LegoId; pos: { top: number; left: number; width: number }; anchor: HTMLButtonElement } | null;
 
-/** The Lego picker: 5 hero bricks, then 8 more behind a disclosure. Every brick is a real button. */
+const Check = () => (
+  <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
+    <path d="M2.5 6.5l2.2 2.2 4.8-5.2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+/**
+ * The Lego picker: 5 hero rows (sprite + verb · name + one-line tag + info), then 8 more behind a
+ * disclosure. Every brick is a real button; a placed brick shows ON BOARD and removes on press.
+ */
 export default function Tray({ ids, fullHint, onToggle, onPointerDown, wasDrag, dragging }: TrayProps) {
   const [more, setMore] = useState(false);
   const [open, setOpen] = useState<Open>(null);
@@ -45,17 +54,21 @@ export default function Tray({ ids, fullHint, onToggle, onPointerDown, wasDrag, 
     if (returnFocus) anchor?.focus();
   };
 
-  const item = (lego: Lego) => {
+  const item = (lego: Lego, index: number) => {
     const placed = ids.includes(lego.id);
     const hero = lego.tier === "featured";
     const slot = ids.indexOf(lego.id) + 1;
+    const tagId = `${moreId}-${lego.id}-tag`;
+    const start = hero && index === 0 && ids.length === 0;
+    const label = `${lego.kicker} ${lego.title}${placed ? `, on board, slot ${slot}. Press to remove.` : ""}`;
     return (
       <li key={lego.id} className={hero ? styles.item : `${styles.item} ${styles.small}`} data-placed={placed || undefined}>
         <button
           type="button"
           className={styles.brick}
           aria-pressed={placed}
-          aria-describedby={full && !placed ? `${moreId}-full` : undefined}
+          aria-label={label}
+          aria-describedby={placed ? undefined : [tagId, full ? `${moreId}-full` : ""].filter(Boolean).join(" ")}
           data-lego={lego.id}
           data-dragging={dragging === lego.id || undefined}
           onPointerDown={(e) => onPointerDown(e, lego.id)}
@@ -67,16 +80,45 @@ export default function Tray({ ids, fullHint, onToggle, onPointerDown, wasDrag, 
         >
           <span className={styles.art}>
             <BrickSprite id={lego.id} color={lego.brick.hex} size={lego.size} className={styles.sprite} />
-            <span className={styles.print}>
-              <span className={styles.verb}>{lego.kicker}</span>{" "}
+            {placed && (
+              <span className={styles.badge}>
+                <Check />
+                On board
+              </span>
+            )}
+          </span>
+          <span className={styles.text}>
+            <span className={styles.title}>
+              <span className={styles.verb}>{lego.kicker}</span>
+              {lego.statusKind === "testnet" && <span className={styles.chip}>Sepolia</span>}
+              <span className={styles.sep} aria-hidden="true">
+                {" · "}
+              </span>
               <span className={styles.name}>{lego.title}</span>
             </span>
+            {placed ? (
+              <span className={styles.placed}>
+                <span className={styles.remove} aria-hidden="true">
+                  <svg viewBox="0 0 12 12" width="10" height="10">
+                    <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                  </svg>
+                  Remove
+                </span>
+              </span>
+            ) : (
+              <span id={tagId} className={styles.tag}>
+                {lego.tag}
+              </span>
+            )}
+            {start && (
+              <span className={styles.start} aria-hidden="true" data-testid="start-here">
+                <svg viewBox="0 0 16 16" width="14" height="14">
+                  <path d="M13 8H3M7 4L3 8l4 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Start here
+              </span>
+            )}
           </span>
-          {placed && (
-            <span className={styles.badge}>
-              On board<span className="visually-hidden">, slot {slot}. Press to remove.</span>
-            </span>
-          )}
         </button>
         <button
           type="button"
@@ -92,7 +134,6 @@ export default function Tray({ ids, fullHint, onToggle, onPointerDown, wasDrag, 
             <circle cx="10" cy="6.2" r="1.05" fill="currentColor" />
           </svg>
         </button>
-        {lego.id === "speed" && <p className={styles.note}>Live on Base Sepolia · mainnet targeting Nov 2026</p>}
       </li>
     );
   };

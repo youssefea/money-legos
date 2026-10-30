@@ -27,7 +27,7 @@
   transition: background var(--dur-base) var(--ease-hover);
 }
 .step[data-state="done"]::after {
-  background: var(--base-blue);
+  background: var(--color-step-line);
 }
 
 .dot {
@@ -71,19 +71,16 @@
 }
 .step[data-state="current"] .text,
 .step[data-state="done"] .text {
-  color: var(--color-link);
+  color: var(--color-step-active);
 }
 
 @media (prefers-color-scheme: dark) {
-  .dot {
+  .step[data-state="todo"] .dot {
     background: var(--base-gray-80);
-  }
-  .step[data-state="done"]::after {
-    background: var(--base-cerulean);
   }
 }
 
-@media (min-width: 1920px) {
+@media (min-width: 1600px) {
   .rail {
     max-width: 1100px;
   }

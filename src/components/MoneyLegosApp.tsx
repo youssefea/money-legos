@@ -40,6 +40,8 @@ export default function MoneyLegosApp() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const dropRef = useRef<HTMLDivElement>(null);
   const generateRef = useRef<HTMLButtonElement>(null);
+  const cardTitleRef = useRef<HTMLHeadingElement>(null);
+  const revealRef = useRef(false);
   const isMobileRef = useRef(isMobile);
   useEffect(() => {
     isMobileRef.current = isMobile;
@@ -66,7 +68,18 @@ export default function MoneyLegosApp() {
   const opened = () => {
     sound.play("open");
     if (isMobileRef.current) setSheetOpen(true);
+    else revealRef.current = true;
   };
+
+  // Tablet (768-1279): the set box sits below the stage, so bring it into view and focus its title.
+  useEffect(() => {
+    if (!revealRef.current) return;
+    revealRef.current = false;
+    const title = cardTitleRef.current;
+    if (!title || window.innerWidth >= 1280) return;
+    title.closest("section")?.scrollIntoView({ block: "start", behavior: reducedMotion ? "auto" : "smooth" });
+    title.focus({ preventScroll: true });
+  }, [state.generation, reducedMotion]);
 
   const load = (ids: readonly LegoId[], recipe: string | null, source: "recipe" | "surprise" | "link") => {
     dispatch({ type: "load", ids, recipe, generate: true, source });
@@ -155,15 +168,23 @@ export default function MoneyLegosApp() {
           onGenerate={onGenerate}
         />
         <div className={styles.mobileTools}>
-          <RecipeChips active={state.recipe} onPick={onRecipe} idPrefix="mobile" />
-          <div className={styles.mobileActions}>
-            <button type="button" className={styles.smallButton} onClick={onSurprise}>
-              Surprise me
-            </button>
-            <button type="button" className={styles.smallButton} onClick={onClear} disabled={count === 0}>
-              Clear
-            </button>
-          </div>
+          <RecipeChips
+            active={state.recipe}
+            onPick={onRecipe}
+            idPrefix="mobile"
+            lead={[
+              <button key="surprise" type="button" className={styles.smallButton} onClick={onSurprise}>
+                Surprise me
+              </button>,
+              ...(count > 0
+                ? [
+                    <button key="clear" type="button" className={styles.smallButton} onClick={onClear}>
+                      Clear
+                    </button>,
+                  ]
+                : []),
+            ]}
+          />
         </div>
       </div>
 
@@ -199,7 +220,7 @@ export default function MoneyLegosApp() {
         </div>
         <div className={styles.resultCol}>
           {state.result && !isMobile ? (
-            <SetCard key={state.generation} result={state.result} copied={state.copied} onCopied={() => dispatch({ type: "copied" })} />
+            <SetCard ref={cardTitleRef} key={state.generation} result={state.result} copied={state.copied} onCopied={() => dispatch({ type: "copied" })} />
           ) : (
             <SetBlueprint count={count} />
           )}

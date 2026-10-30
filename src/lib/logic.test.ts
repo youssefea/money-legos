@@ -4,7 +4,9 @@ import {
   BY_ID,
   COMBOS,
   COMBO_BY_KEY,
+  DENIM_SHORT,
   DENIM_STATUS,
+  GLOSSARY,
   DOCS,
   HERO_LEGOS,
   LEGOS,
@@ -53,7 +55,7 @@ function textOf(r: GenerateResult): string {
 
 function allContentText(): string {
   return [
-    ...LEGOS.flatMap((l) => [l.kicker, l.title, l.blurb, l.what, l.status, l.example, l.role, l.build, l.adj, l.noun, l.verb]),
+    ...LEGOS.flatMap((l) => [l.kicker, l.title, l.blurb, l.what, l.status, l.example, l.role, l.build, l.adj, l.noun, l.verb, l.short, l.tag, l.step, l.note ?? ""]),
     ...COMBOS.flatMap((c) => [c.name, c.pitch, ...Object.values(c.why ?? {})]),
     ...Object.values(DOCS).map((d) => d.label),
     RISK_FOOTER,
@@ -131,7 +133,35 @@ describe("Lego registry", () => {
   });
 });
 
+describe("short copy for the set box and tray", () => {
+  it("every Lego has a one-line short (<= 60 chars), a tray tag (<= 20) and a build step (<= 28)", () => {
+    for (const l of LEGOS) {
+      expect(l.short.length, l.id).toBeGreaterThan(8);
+      expect(l.short.length, `${l.id}: ${l.short}`).toBeLessThanOrEqual(60);
+      expect(l.tag.length, `${l.id}: ${l.tag}`).toBeLessThanOrEqual(20);
+      expect(l.step.length, `${l.id}: ${l.step}`).toBeLessThanOrEqual(28);
+      expect(l.short).toMatch(/\.$/);
+    }
+  });
+
+  it("only Speed carries a status note, and it is the short Denim line", () => {
+    expect(BY_ID.speed.note).toBe(DENIM_SHORT);
+    for (const l of LEGOS) if (l.id !== "speed") expect(l.note).toBeUndefined();
+  });
+
+  it("glossary explains B20 and x402 plainly", () => {
+    expect(GLOSSARY.map((g) => g.term)).toEqual(["B20", "x402"]);
+    for (const g of GLOSSARY) expect(g.gloss.length).toBeLessThanOrEqual(32);
+  });
+});
+
 describe("Denim / 200ms wording", () => {
+  it("the short Denim line says the same thing as the full one, minus the date", () => {
+    expect(DENIM_SHORT).toBe("Live on Base Sepolia; mainnet targeting November 2026");
+    expect(DENIM_STATUS.startsWith("Live on Base Sepolia")).toBe(true);
+    expect(DENIM_STATUS.endsWith("; mainnet targeting November 2026")).toBe(true);
+  });
+
   it("always uses the exact Denim status line", () => {
     expect(DENIM_STATUS).toBe("Live on Base Sepolia since Oct 21, 2026; mainnet targeting November 2026");
     const speed = BY_ID.speed;

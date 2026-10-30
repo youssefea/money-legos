@@ -69,6 +69,14 @@ export type Lego = {
   /** Lego name, small mono caps on the brick (B20, Accept payments...). */
   title: string;
   blurb: string;
+  /** One line for "Why each Lego matters" in the set box (plain English, <= 60 chars). */
+  short: string;
+  /** Tray caption beside the brick (<= 20 chars). */
+  tag: string;
+  /** Build-step tile text (<= 28 chars). */
+  step: string;
+  /** Optional status line shown after `short` (Speed: the Denim status). */
+  note?: string;
   what: string;
   status: string;
   statusKind: StatusKind;

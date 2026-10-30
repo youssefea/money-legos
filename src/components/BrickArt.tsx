@@ -248,6 +248,8 @@ export function BoardPoster({ bricks, next, dark, dropId, settle = 0, className,
   );
 }
 
+const LID_STUDS: readonly [number, number][] = [1, 0].flatMap((z) => [0, 1, 2, 3].map((x) => [x, z] as [number, number]));
+
 /** Line drawing of a closed set box, for the empty right column. */
 export function ClosedBoxArt({ className }: { className?: string }) {
   const W = 72;
@@ -264,8 +266,21 @@ export function ClosedBoxArt({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox={viewBoxFor(-1, topY, W + 1 + KX * (D + 1.6), 0, 2)} aria-hidden="true" focusable="false">
       {faces.map((f, i) => (
-        <polygon key={i} points={pts(f)} fill="none" stroke="currentColor" strokeWidth={1} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+        <polygon key={i} points={pts(f)} fill="var(--box-fill, none)" stroke="currentColor" strokeWidth={1} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
       ))}
+      {/* 2x4 stud relief on the lid: a brick footprint and eight raised studs. */}
+      <polygon points={pts([P(W / 2 - 16, H, D / 2 - 8), P(W / 2 + 16, H, D / 2 - 8), P(W / 2 + 16, H, D / 2 + 8), P(W / 2 - 16, H, D / 2 + 8)])} fill="none" stroke="currentColor" strokeWidth={1.5} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+      {LID_STUDS.map(([sx, sz], i) => {
+        const cx = W / 2 - 12 + sx * 8;
+        const cz = D / 2 - 4 + sz * 8;
+        const ring = (y: number) => pts(Array.from({ length: 16 }, (_, k) => P(cx + 2.4 * Math.cos((k / 16) * Math.PI * 2), y, cz + 2.4 * Math.sin((k / 16) * Math.PI * 2))));
+        return (
+          <g key={i}>
+            <polygon points={ring(H)} fill="var(--box-fill, none)" stroke="currentColor" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+            <polygon points={ring(H + 1.7)} fill="var(--box-stud-fill, var(--color-panel))" stroke="currentColor" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+          </g>
+        );
+      })}
       {/* Thumb notch on the lid. */}
       <polyline points={pts([P(W / 2 - 6, H - lid, -0.8), P(W / 2, H - lid - 3, -0.8), P(W / 2 + 6, H - lid, -0.8)])} fill="none" stroke="currentColor" strokeWidth={1} vectorEffect="non-scaling-stroke" />
     </svg>

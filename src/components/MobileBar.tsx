@@ -1,6 +1,6 @@
 "use client";
 
-import type { RefObject } from "react";
+import type { CSSProperties, RefObject } from "react";
 import { MAX_LEGOS, MIN_LEGOS, type LegoId } from "@/lib";
 import { requirementText } from "@/state/store";
 import StageView from "./StageView";
@@ -16,15 +16,21 @@ export type MobileBarProps = {
   live: boolean;
   generateRef: RefObject<HTMLButtonElement | null>;
   onGenerate: () => void;
+  /** Mini stack container size in CSS px (the live board auto-fits inside it). Default 136x76. */
+  stageSize?: [number, number];
 };
 
 /** Phone only: sticky bar with the live mini stack, "n/4" and Generate. */
-export default function MobileBar({ generateRef, ...p }: MobileBarProps) {
+export default function MobileBar({ generateRef, stageSize = [136, 76], ...p }: MobileBarProps) {
   const count = p.ids.length;
   const ready = count >= MIN_LEGOS;
   const need = requirementText(count);
   return (
-    <div className={styles.bar} data-testid="mobile-bar">
+    <div
+      className={styles.bar}
+      data-testid="mobile-bar"
+      style={{ "--mini-w": `${stageSize[0]}px`, "--mini-h": `${stageSize[1]}px` } as CSSProperties}
+    >
       <StageView
         className={styles.stage}
         ids={p.ids}
@@ -40,7 +46,7 @@ export default function MobileBar({ generateRef, ...p }: MobileBarProps) {
           {count}/{MAX_LEGOS}
         </span>
         <span id="m-need" className={styles.need}>
-          {need || (p.hasResult ? "Your set is ready" : "Ready to generate")}
+          {count === 0 ? "Pick 2+ Legos" : need || (p.hasResult ? "Idea ready" : "Ready")}
         </span>
       </p>
       <button

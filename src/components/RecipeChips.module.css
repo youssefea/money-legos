@@ -1,38 +1,56 @@
+/* One compact row: label + 5 chips (32px). Scrolls sideways when the column is narrower. */
 .root {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
   gap: var(--space-2);
   min-width: 0;
 }
 
 .label {
-  margin: 0 var(--space-1) 0 0;
-  font-size: var(--text-small);
+  flex: none;
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
   color: var(--color-fg-muted);
   white-space: nowrap;
 }
 
 .list {
-  flex: 1 1 320px;
+  flex: 1 1 auto;
   min-width: 0;
   margin: 0;
-  padding: 0;
+  padding: 2px;
   list-style: none;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: var(--space-2);
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  /* Edge fade says "more this way" without a scrollbar. */
+  mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+}
+.list::-webkit-scrollbar {
+  display: none;
+}
+.list li {
+  flex: none;
+  scroll-snap-align: start;
+}
+.list li:last-child {
+  padding-right: 16px;
 }
 
 .chip {
-  min-height: var(--hit-target);
-  padding: 0 var(--space-4);
+  height: 32px;
+  padding: 0 var(--space-3);
   border: 1px solid var(--color-hairline);
   border-radius: var(--radius-pill);
   background: var(--color-surface);
   color: var(--color-fg);
   font: inherit;
-  font-size: var(--text-small);
+  font-size: 13px;
+  line-height: 20px;
   white-space: nowrap;
   cursor: pointer;
   transition: border-color var(--dur-fast) var(--ease-hover), background var(--dur-fast) var(--ease-hover);
@@ -46,38 +64,37 @@
   color: var(--color-link);
 }
 
-@media (min-width: 1920px) {
+@media (min-width: 1600px) {
   .chip,
   .label {
-    font-size: var(--text-body);
+    font-size: 16px;
+    line-height: 24px;
+  }
+  .chip {
+    height: 40px;
+    padding: 0 var(--space-4);
   }
 }
 
-/* Phone: one row that scrolls sideways. */
+/* Phone: the row is full-bleed; touch targets stay 44px tall. */
 @media (max-width: 767.98px) {
-  .root {
-    flex-direction: column;
-    flex-wrap: nowrap;
-    align-items: stretch;
-  }
   .list {
-    flex: none;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scroll-snap-type: x proximity;
-    margin: 0 calc(var(--page-pad-x) * -1);
-    padding: 2px var(--page-pad-x) 4px;
-    scrollbar-width: none;
-  }
-  .list::-webkit-scrollbar {
-    display: none;
-  }
-  .list li {
-    scroll-snap-align: start;
+    margin: 0 calc(var(--page-pad-x) * -1) 0 0;
+    padding: 2px var(--page-pad-x) 2px 2px;
   }
   .chip {
+    height: var(--hit-target);
     font-size: 15px;
-    padding: 0 var(--space-5);
+    padding: 0 var(--space-4);
+  }
+  /* The label stays for screen readers; the row itself says "recipes" by its chips. */
+  .root > .label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
 }
 

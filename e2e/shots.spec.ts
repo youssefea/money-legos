@@ -4,9 +4,9 @@ import { join } from "node:path";
 /**
  * Design QA screenshots (not a test). Run with:
  *   SHOTS=1 npx playwright test shots
- * Writes PNGs to SHOTS_DIR (default ../design/ui-shots).
+ * Writes PNGs to SHOTS_DIR (default ../design/ui-shots-v2).
  */
-const DIR = process.env.SHOTS_DIR ?? join(process.cwd(), "..", "design", "ui-shots");
+const DIR = process.env.SHOTS_DIR ?? join(process.cwd(), "..", "design", "ui-shots-v2");
 const SIZES = [
   [390, 844],
   [768, 1024],

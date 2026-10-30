@@ -50,9 +50,9 @@ export default function Board({ dropRef, ...p }: BoardProps) {
           lastAdded={p.lastAdded}
           live={p.live}
         />
-        {count === 0 && (
-          <p className={styles.start} aria-hidden="true">
-            Start here: tap a Lego
+        {count === 0 && !p.dragging && (
+          <p className={styles.quiet} aria-hidden="true">
+            Your stack builds here
           </p>
         )}
         {p.dragging && (
@@ -70,8 +70,9 @@ export default function Board({ dropRef, ...p }: BoardProps) {
             aria-disabled={!ready}
             aria-describedby={need ? "generate-need" : undefined}
             onClick={p.onGenerate}
+            data-testid="generate"
           >
-            Generate app
+            {p.hasResult ? "Regenerate idea" : "Generate idea + prompt"}
           </button>
         </div>
         <button type="button" className={styles.secondary} onClick={p.onSurprise}>

@@ -26,7 +26,7 @@
   display: block;
   width: min(78%, 300px);
   margin: auto auto var(--space-6);
-  color: var(--color-border-strong);
+  color: var(--color-box-line);
 }
 
 .blueprintText {
@@ -41,7 +41,10 @@
   font-weight: var(--weight-medium);
 }
 
-/* ---------------------------------------------------------- open set card */
+/* ---------------------------------------------------------- open set card
+ * Budget at 1440x900 (column ~560px tall): band 64, body (pitch 2 lines, chips 28,
+ * why 1 line each, docs 24, steps 64), foot (prompt 80, copy 44, hint, links). The body
+ * scrolls inside the card, never the page, with a fade + scrollbar when it overflows. */
 .card {
   height: 100%;
   min-height: 0;
@@ -64,9 +67,10 @@
   position: relative;
   flex: none;
   display: flex;
-  align-items: flex-start;
-  gap: var(--space-4);
-  padding: var(--space-4) var(--space-5);
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  min-height: 56px;
   background: var(--base-blue);
   color: var(--base-gray-0);
 }
@@ -77,10 +81,11 @@
 }
 
 .bandLabel {
-  margin: 0 0 var(--space-1);
+  margin: 0 0 2px;
   font-family: var(--font-mono);
   font-weight: var(--weight-medium);
   font-size: var(--text-label);
+  line-height: 16px;
   letter-spacing: var(--text-label-tracking);
   text-transform: uppercase;
   font-variant-numeric: tabular-nums;
@@ -100,8 +105,8 @@
 .pieces {
   flex: none;
   margin: 0;
-  min-width: 64px;
-  padding: 6px 8px;
+  min-width: 52px;
+  padding: 4px 6px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -110,13 +115,13 @@
   color: var(--base-gray-100);
 }
 .piecesN {
-  font-size: 26px;
+  font-size: 20px;
   line-height: 1;
   font-weight: var(--weight-bold);
   font-variant-numeric: tabular-nums;
 }
 .piecesL {
-  margin-top: 3px;
+  margin-top: 2px;
   font-family: var(--font-mono);
   font-weight: var(--weight-medium);
   font-size: 10px;
@@ -128,7 +133,7 @@
   flex: none;
   width: var(--hit-target);
   height: var(--hit-target);
-  margin: -6px -10px 0 -8px;
+  margin: -8px -8px -8px -4px;
   display: grid;
   place-items: center;
   border: 0;
@@ -142,36 +147,47 @@
 }
 
 .body {
+  position: relative;
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
-  padding: var(--space-4) var(--space-5) var(--space-3);
+  padding: var(--space-2) var(--space-4) var(--space-3);
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
   scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
 }
-/* Fade at the bottom edge while there is more to scroll. */
+/* Fade + shadow at the bottom edge while there is more to scroll. */
 .body::after {
   content: "";
   position: sticky;
   bottom: calc(var(--space-3) * -1);
   flex: none;
-  height: 24px;
-  margin-top: -24px;
+  height: 32px;
+  margin: -32px calc(var(--space-4) * -1) calc(var(--space-3) * -1);
   background: linear-gradient(to bottom, transparent, var(--color-surface));
+  border-bottom: 2px solid var(--color-border-strong);
   pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-hover);
 }
-.body > .label {
-  margin-top: var(--space-2);
-  padding-top: var(--space-3);
+.body[data-more]::after {
+  opacity: 1;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-top: var(--space-2);
   border-top: 1px solid var(--color-hairline);
 }
 
 .pitch {
   margin: 0;
-  font-size: var(--text-body);
-  line-height: var(--text-body-lh);
+  font-size: var(--text-small);
+  line-height: 20px;
 }
 
 .flow {
@@ -179,12 +195,11 @@
   padding: 0;
   list-style: none;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2) var(--space-1);
+  gap: var(--space-1);
 }
 .flowItem {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   min-width: 0;
   display: flex;
   align-items: center;
@@ -196,15 +211,18 @@
 }
 .flowChip {
   flex: 1;
-  min-width: fit-content;
-  min-height: 40px;
+  min-width: 0;
+  height: 28px;
   display: grid;
   place-items: center;
-  padding: 0 var(--space-2);
+  padding: 4px var(--space-2);
   border-radius: var(--radius-sm);
   font-weight: var(--weight-medium);
-  font-size: 15px;
+  font-size: 13px;
+  line-height: 20px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .flowChip[data-light] {
   box-shadow: inset 0 0 0 1px var(--base-gray-30);
@@ -216,42 +234,57 @@
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 0;
 }
 .why li {
   display: grid;
-  grid-template-columns: 44px 1fr;
+  grid-template-columns: 24px 1fr;
   align-items: start;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 .why p {
   margin: 0;
-  font-size: var(--text-small);
-  line-height: var(--text-small-lh);
+  font-size: 13px;
+  line-height: 20px;
 }
 .why strong {
   font-weight: var(--weight-bold);
 }
+.note {
+  color: var(--color-fg-muted);
+}
 .glyph {
-  width: 44px;
+  width: 24px;
   height: auto;
-  margin-top: 1px;
+  margin-top: 4px;
 }
 
 .docs {
   margin: 0;
-  padding: 0;
-  list-style: none;
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--color-hairline);
   display: flex;
   flex-wrap: wrap;
-  column-gap: var(--space-5);
-  row-gap: var(--space-1);
-  font-size: var(--text-small);
+  align-items: baseline;
+  column-gap: var(--space-2);
+  row-gap: 0;
+  font-size: 13px;
+  line-height: 24px;
 }
-.docs a {
-  display: inline-block;
-  padding: 2px 0;
+.docs > .label {
+  margin-right: var(--space-1);
+}
+.docItem {
+  display: inline-flex;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+.docs a,
+.links a {
   text-underline-offset: 3px;
+}
+.dot {
+  color: var(--color-fg-muted);
 }
 
 .steps {
@@ -259,55 +292,47 @@
   padding: 0;
   list-style: none;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr));
   gap: var(--space-2);
 }
 .steps[data-n="2"] {
-  grid-template-columns: repeat(2, 1fr);
+  --n: 2;
 }
 .steps[data-n="4"] {
-  grid-template-columns: repeat(2, 1fr);
+  --n: 4;
 }
 .steps li {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
+  min-height: 48px;
+  display: block;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
   background: var(--color-panel);
   border: 1px solid var(--color-hairline);
 }
-.stepHead {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-.stepArt {
-  height: 34px;
-  width: auto;
-  max-width: 60%;
-}
+/* The badge floats so the second line of text runs under it: two lines, 48px tiles. */
 .stepN {
-  flex: none;
-  width: 26px;
-  height: 26px;
+  float: left;
+  margin: -1px 6px -3px 0;
+  width: 20px;
+  height: 20px;
   display: grid;
   place-items: center;
   border-radius: var(--radius-pill);
   background: var(--base-blue);
   color: var(--base-gray-0);
-  font-size: 13px;
+  font-size: 12px;
+  line-height: 1;
   font-weight: var(--weight-bold);
 }
 .stepText {
-  font-size: 13px;
-  line-height: 1.35;
+  display: block;
+  font-size: 12px;
+  line-height: 16px;
 }
 
 .foot {
   flex: none;
-  padding: var(--space-3) var(--space-5) var(--space-4);
+  padding: var(--space-2) var(--space-4) var(--space-3);
   border-top: 1px solid var(--color-hairline);
 }
 
@@ -316,22 +341,95 @@
   flex-direction: column;
   gap: var(--space-2);
 }
+.promptHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 24px;
+  margin-bottom: -4px;
+}
+.expand {
+  min-height: 24px;
+  margin-right: -6px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--color-link);
+  font: inherit;
+  font-size: 13px;
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+.expand:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.expand svg[data-up] {
+  transform: rotate(180deg);
+}
 
+.preWrap {
+  position: relative;
+}
+/* Exactly 4 lines + padding, so a line is never cut through the middle. */
 .pre {
+  --pre-lh: 16px;
+  --pre-lines: 4;
   margin: 0;
-  max-height: clamp(64px, 9dvh, 150px);
+  height: calc(var(--pre-lh) * var(--pre-lines) + 16px);
   overflow: auto;
-  padding: var(--space-3) var(--space-4);
+  padding: 8px 12px;
   border-radius: var(--radius-sm);
   background: var(--base-gray-100);
   color: var(--base-gray-0);
   font-family: var(--font-mono);
-  font-size: 12.5px;
-  line-height: 1.55;
+  font-size: 12px;
+  line-height: var(--pre-lh);
   white-space: pre-wrap;
   word-break: break-word;
   scrollbar-width: thin;
   scrollbar-color: var(--base-gray-60) transparent;
+}
+.pre[data-expanded] {
+  --pre-lines: 14;
+}
+.preWrap::after {
+  content: "";
+  position: absolute;
+  left: 1px;
+  right: 12px;
+  bottom: 0;
+  height: 24px;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  background: linear-gradient(to bottom, transparent, var(--base-gray-100));
+  pointer-events: none;
+  opacity: 0;
+}
+.preWrap[data-more]::after {
+  opacity: 1;
+}
+.scrollHint {
+  position: absolute;
+  right: 16px;
+  bottom: 4px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  border-radius: var(--radius-pill);
+  background: var(--base-gray-80);
+  color: var(--base-gray-0);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 16px;
+  letter-spacing: var(--text-label-tracking);
+  text-transform: uppercase;
+  pointer-events: none;
 }
 .pre::selection,
 .pre *::selection {
@@ -340,7 +438,7 @@
 }
 
 .copy {
-  min-height: 52px;
+  min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -350,8 +448,8 @@
   background: var(--base-blue);
   color: var(--base-gray-0);
   font: inherit;
-  font-size: 17px;
-  font-weight: var(--weight-medium);
+  font-size: 16px;
+  font-weight: var(--weight-bold);
   cursor: pointer;
   transition: background var(--dur-fast) var(--ease-hover), transform var(--dur-instant) var(--ease-out);
 }
@@ -368,6 +466,19 @@
   text-transform: uppercase;
 }
 
+.hint {
+  margin: -4px 0 0;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--color-fg-muted);
+}
+/* Jargon gloss: dotted underline + tooltip where the term first appears. */
+.why abbr {
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: help;
+}
+
 .copyNote {
   margin: 0;
   font-size: 13px;
@@ -378,42 +489,88 @@
 }
 
 .links {
-  margin: var(--space-2) 0 0;
+  margin: var(--space-1) 0 0;
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: var(--space-1) var(--space-4);
+  gap: 0 var(--space-2);
   font-size: 13px;
-  color: var(--color-fg-muted);
-}
-.links a {
-  text-underline-offset: 3px;
+  line-height: 20px;
 }
 
 @media (prefers-color-scheme: dark) {
   .pre {
     background: var(--base-gray-80);
   }
+  .preWrap::after {
+    background: linear-gradient(to bottom, transparent, var(--base-gray-80));
+  }
+  .scrollHint {
+    background: var(--base-gray-100);
+  }
   .card {
+    border-color: var(--base-gray-80);
+  }
+  .steps li {
+    background: var(--base-gray-100);
     border-color: var(--base-gray-80);
   }
 }
 
-@media (min-width: 1920px) {
+/* Projector: 16px body, 14px mono, bigger prompt lines (still 4 whole lines). */
+@media (min-width: 1600px) {
+  .band {
+    padding: var(--space-4) var(--space-5);
+  }
+  .body {
+    padding: var(--space-4) var(--space-5) var(--space-3);
+  }
+  .foot {
+    padding: var(--space-3) var(--space-5) var(--space-4);
+  }
   .pitch {
-    font-size: 18px;
+    font-size: 16px;
+    line-height: 24px;
   }
   .why p,
   .docs,
-  .stepText {
-    font-size: var(--text-body);
+  .links,
+  .expand {
+    font-size: 16px;
+    line-height: 24px;
   }
-  .pre {
+  .stepText,
+  .hint {
     font-size: 14px;
+    line-height: 20px;
   }
   .flowChip {
-    font-size: 17px;
-    min-height: 46px;
+    height: 32px;
+    font-size: 16px;
+  }
+  .glyph {
+    width: 28px;
+  }
+  .why li {
+    grid-template-columns: 28px 1fr;
+  }
+  .stepN {
+    width: 22px;
+    height: 22px;
+    margin-bottom: -2px;
+    font-size: 13px;
+  }
+  .pre {
+    --pre-lh: 20px;
+    font-size: 14px;
+  }
+  .copy {
+    min-height: 52px;
+    font-size: 18px;
+  }
+  .scrollHint,
+  .piecesL {
+    font-size: 12px;
   }
 }
 
@@ -430,18 +587,24 @@
   }
 }
 
-/* Laptop heights: keep more of the set visible without scrolling. */
-@media (min-width: 1280px) and (max-height: 960px) {
-  .band {
-    padding: var(--space-3) var(--space-5);
+/* Narrow phones: 4 build steps go 2 x 2. */
+@media (max-width: 479.98px) {
+  .steps[data-n="4"] {
+    --n: 2;
   }
-  .pitch {
-    font-size: 15px;
+}
+
+/* Closed set box: white faces on Gray 10 (light); Gray 80 faces with Gray 30 lines (dark). */
+.boxArt {
+  --box-fill: var(--base-gray-0);
+  --box-stud-fill: var(--base-gray-0);
+}
+@media (prefers-color-scheme: dark) {
+  .blueprint {
+    border-color: var(--base-gray-60);
   }
-  .why p {
-    font-size: 13px;
-  }
-  .body {
-    gap: var(--space-2);
+  .boxArt {
+    --box-fill: var(--base-gray-80);
+    --box-stud-fill: var(--base-gray-80);
   }
 }

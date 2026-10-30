@@ -13,11 +13,17 @@ test.describe("desktop", () => {
   test("first screen explains itself and Generate says what it needs", async ({ page }) => {
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Snap together a money app.");
     await expect(page.getByTestId("board-count")).toHaveText("0 of 4");
-    const gen = page.getByRole("button", { name: "Generate app" });
+    const gen = page.getByRole("button", { name: "Generate idea + prompt" });
     await expect(gen).toHaveAttribute("aria-disabled", "true");
     await expect(page.locator("#generate-need")).toHaveText("Pick 2 or more Legos");
     await expect(page.getByText(/Set #00 · 0 of 4 pieces/i)).toBeVisible();
-    await expect(page.getByText("Live on Base Sepolia · mainnet targeting Nov 2026")).toBeVisible();
+    // The first-action cue sits on the first tray brick; the board only says where the stack goes.
+    await expect(page.getByTestId("start-here")).toBeVisible();
+    await expect(page.getByText("Your stack builds here")).toBeVisible();
+    // Every hero row shows plain text beside its sprite; the Denim line lives in the Speed popover.
+    await expect(page.locator('[data-lego="b20"]')).toContainText("Your own dollar");
+    await expect(page.locator('[data-lego="speed"]')).toContainText("Sepolia");
+    await expect(page.getByText(/mainnet targeting/)).toHaveCount(0);
   });
 
   test("place via click, then click again to remove", async ({ page }) => {
@@ -28,6 +34,8 @@ test.describe("desktop", () => {
     await expect(live(page)).toHaveText(/Issue added, 1 of 4/);
     await expect(page.locator("#generate-need")).toHaveText("1 more Lego needed");
     await expect(issue).toContainText("On board");
+    await expect(issue).toContainText("Remove");
+    await expect(page.getByTestId("start-here")).toHaveCount(0);
     await issue.click();
     await expect(issue).toHaveAttribute("aria-pressed", "false");
     await expect(live(page)).toHaveText(/Issue removed, 0 of 4/);
@@ -39,7 +47,7 @@ test.describe("desktop", () => {
     await brick(page, "Pay", "Accept payments").focus();
     await page.keyboard.press("Space");
     await expect(page.getByTestId("board-count")).toHaveText("2 of 4");
-    await expect(page.getByRole("button", { name: "Generate app" })).toHaveAttribute("aria-disabled", "false");
+    await expect(page.getByRole("button", { name: "Generate idea + prompt" })).toHaveAttribute("aria-disabled", "false");
   });
 
   test("place via drag and drop", async ({ page }) => {
@@ -58,12 +66,18 @@ test.describe("desktop", () => {
   test("generate opens the set box with steps, docs and the prompt", async ({ page }) => {
     await brick(page, "Issue", "B20").click();
     await brick(page, "Pay", "Accept payments").click();
-    await page.getByRole("button", { name: "Generate app" }).click();
+    await page.getByRole("button", { name: "Generate idea + prompt" }).click();
     const card = page.getByTestId("set-card");
     await expect(card).toBeVisible();
     await expect(card.getByText("Why each Lego matters")).toBeVisible();
     await expect(card.getByText("Build steps")).toBeVisible();
+    await expect(card.locator("li", { hasText: "Your own branded B20" })).toBeVisible();
+    await expect(card.locator("abbr", { hasText: "B20" })).toHaveAttribute("title", "Base’s native token standard");
+    await expect(card.getByRole("link", { name: "Test on Vibenet" })).toBeVisible();
+    await expect(card.getByRole("link", { name: "Docs MCP for your agent" })).toBeVisible();
+    await expect(card.getByText("Paste it into your coding agent.")).toBeVisible();
     await expect(page.getByTestId("prompt")).toContainText("Build an MVP of");
+    await expect(page.getByRole("button", { name: "Regenerate idea" })).toBeVisible();
     await expect(page.locator('[aria-label="Steps"] li').nth(1)).toHaveAttribute("data-state", "done");
     await expect(page).toHaveURL(/#b20,payments$/);
   });
@@ -155,6 +169,119 @@ test.describe("desktop", () => {
   });
 });
 
+test.describe("result card fits", () => {
+  test.use({ reducedMotion: "reduce" });
+  for (const [w, h] of [
+    [1440, 900],
+    [1920, 1080],
+  ] as const) {
+    test(`3-piece set shows every section without clipping at ${w}x${h}`, async ({ page }) => {
+      await page.setViewportSize({ width: w, height: h });
+      await page.goto("/#b20,payments,validity");
+      const card = page.getByTestId("set-card");
+      await expect(card).toBeVisible();
+      const r = await card.evaluate((c) => {
+        const body = c.children[1] as HTMLElement;
+        const box = c.getBoundingClientRect();
+        const copy = [...c.querySelectorAll("button")].find((b) => b.textContent?.includes("Copy prompt"))!.getBoundingClientRect();
+        return { overflow: body.scrollHeight - body.clientHeight, bottom: box.bottom, vh: innerHeight, copyH: copy.height, copyBottom: copy.bottom, page: document.documentElement.scrollHeight - innerHeight };
+      });
+      expect(r.overflow).toBeLessThanOrEqual(1);
+      expect(r.bottom).toBeLessThanOrEqual(r.vh);
+      expect(r.copyBottom).toBeLessThanOrEqual(r.bottom);
+      expect(r.copyH).toBeGreaterThanOrEqual(44);
+      expect(r.page).toBeLessThanOrEqual(0);
+      // The prompt preview is whole lines only: its height is a multiple of the line height (+16px padding).
+      const pre = await page.getByTestId("prompt").evaluate((el) => {
+        const cs = getComputedStyle(el);
+        return { h: el.clientHeight, lh: parseFloat(cs.lineHeight) };
+      });
+      expect((pre.h - 16) % pre.lh).toBe(0);
+    });
+  }
+
+  test("a longer prompt says it scrolls and can be expanded", async ({ page }) => {
+    await page.goto("/#recipe=neobroker");
+    await expect(page.getByText("Scroll", { exact: true })).toBeVisible();
+    const toggle = page.getByRole("button", { name: "Show all" });
+    await toggle.click();
+    await expect(page.getByRole("button", { name: "Show less" })).toHaveAttribute("aria-expanded", "true");
+  });
+});
+
+test.describe("accessibility", () => {
+  test("reduced motion: no animations or transitions run", async ({ browser }) => {
+    const context = await browser.newContext({ reducedMotion: "reduce", viewport: { width: 1440, height: 900 } });
+    const page = await context.newPage();
+    await page.goto("/#b20,payments");
+    await expect(page.getByTestId("set-card")).toBeVisible();
+    const durations = await page.evaluate(() =>
+      [...document.querySelectorAll("*")]
+        .map((el) => getComputedStyle(el))
+        .flatMap((cs) => [cs.animationDuration, cs.transitionDuration])
+        .flatMap((d) => d.split(",").map((x) => parseFloat(x)))
+        .filter((n) => n > 0),
+    );
+    expect(durations).toEqual([]);
+    await context.close();
+  });
+
+  test("keyboard focus order follows the page: header, tray, board, set box", async ({ page }) => {
+    await page.goto("/#b20,payments");
+    await expect(page.getByTestId("set-card")).toBeVisible();
+    const order: string[] = [];
+    for (let i = 0; i < 40; i++) {
+      await page.keyboard.press("Tab");
+      const tag = await page.evaluate(() => {
+        const el = document.activeElement as HTMLElement | null;
+        if (!el) return "";
+        if (el.dataset.lego) return `lego:${el.dataset.lego}`;
+        return (el.getAttribute("aria-label") || el.textContent || "").trim().slice(0, 40);
+      });
+      order.push(tag);
+    }
+    const at = (needle: string) => order.findIndex((t) => t.startsWith(needle));
+    expect(at("Docs")).toBeGreaterThanOrEqual(0);
+    expect(at("lego:b20")).toBeGreaterThan(at("Docs"));
+    expect(at("lego:payments")).toBeGreaterThan(at("lego:b20"));
+    expect(at("Regenerate idea")).toBeGreaterThan(at("lego:speed"));
+    expect(at("Surprise me")).toBeGreaterThan(at("Regenerate idea"));
+    expect(at("Neobank")).toBeGreaterThan(at("Surprise me"));
+    // Then the set box: docs links, Show all, the prompt and Copy prompt.
+    expect(at("Show all")).toBeGreaterThan(at("Neobank"));
+    expect(at("Copy prompt")).toBeGreaterThan(at("Show all"));
+    expect(at("Test on Vibenet")).toBeGreaterThan(at("Copy prompt"));
+  });
+
+  test("one polite live region announces every change", async ({ page }) => {
+    await page.goto("/");
+    const regions = page.locator('[aria-live="polite"]');
+    await expect(regions).toHaveCount(1);
+    await expect(regions).toHaveAttribute("role", "status");
+    await brick(page, "Issue", "B20").click();
+    await expect(live(page)).toHaveText(/Issue added, 1 of 4/);
+    await brick(page, "Pay", "Accept payments").click();
+    await page.getByRole("button", { name: "Generate idea + prompt" }).click();
+    await expect(live(page)).toHaveText(/Set opened: .+\. 2 pieces\./);
+    await page.getByRole("button", { name: "Clear" }).click();
+    await expect(live(page)).toHaveText(/Board cleared, 0 of 4/);
+  });
+});
+
+test.describe("tablet", () => {
+  test.use({ viewport: { width: 768, height: 1024 } });
+
+  test("Generate brings the set box into view and focuses its title", async ({ page }) => {
+    await page.goto("/");
+    await brick(page, "Issue", "B20").click();
+    await brick(page, "Pay", "Accept payments").click();
+    await page.getByRole("button", { name: "Generate idea + prompt" }).click();
+    const title = page.getByTestId("set-card").getByRole("heading", { level: 2 });
+    await expect(title).toBeFocused();
+    await expect(title).toBeInViewport();
+  });
+});
+
 test("hash restores the board and opens the set", async ({ page }) => {
   await page.goto("/#b20,payments,speed");
   await expect(brick(page, "Issue", "B20")).toHaveAttribute("aria-pressed", "true");
@@ -192,6 +319,18 @@ test.describe("phone", () => {
     await expect(page.getByRole("dialog")).toBeVisible();
     await page.getByRole("button", { name: "Close set" }).tap();
     await expect(page.getByRole("dialog")).toBeHidden();
+  });
+
+  test("first screen: the 5 hero Legos and + 8 more fit above the fold, choices before any big board", async ({ page }) => {
+    await page.goto("/");
+    for (const id of ["b20", "payments", "financing", "validity", "speed"]) {
+      await expect(page.locator(`[data-lego="${id}"]`)).toBeInViewport({ ratio: 1 });
+    }
+    await expect(page.getByRole("button", { name: "+ 8 more Legos" })).toBeInViewport({ ratio: 1 });
+    await expect(page.getByRole("button", { name: "Surprise me" })).toBeInViewport({ ratio: 1 });
+    const bar = await page.getByTestId("mobile-bar").boundingBox();
+    expect(bar!.height).toBeLessThanOrEqual(116);
+    await expect(page.getByTestId("mobile-bar").getByRole("button", { name: "Generate" })).toBeVisible();
   });
 
   test("recipe pill opens the sheet", async ({ page }) => {

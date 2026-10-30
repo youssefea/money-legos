@@ -46,7 +46,22 @@
   outline-color: var(--color-accent);
 }
 
-.start,
+.quiet {
+  position: absolute;
+  left: 50%;
+  top: var(--space-2);
+  transform: translateX(-50%);
+  margin: 0;
+  font-family: var(--font-mono);
+  font-weight: var(--weight-medium);
+  font-size: var(--text-label);
+  letter-spacing: var(--text-label-tracking);
+  text-transform: uppercase;
+  color: var(--color-fg-muted);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
 .dropHint {
   position: absolute;
   left: 50%;
@@ -61,37 +76,6 @@
   font-weight: var(--weight-medium);
   white-space: nowrap;
   pointer-events: none;
-  animation: bob 2.4s var(--ease-in-out) infinite;
-}
-.start::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 100%;
-  width: 2px;
-  height: 28px;
-  margin-left: -1px;
-  background: var(--base-blue);
-}
-.start::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: calc(100% + 22px);
-  width: 10px;
-  height: 10px;
-  margin-left: -5px;
-  border-right: 2px solid var(--base-blue);
-  border-bottom: 2px solid var(--base-blue);
-  transform: rotate(45deg);
-}
-.dropHint {
-  animation: none;
-}
-@keyframes bob {
-  50% {
-    transform: translateX(-50%) translateY(3px);
-  }
 }
 
 .controls {
@@ -123,7 +107,8 @@
 }
 
 .generate {
-  min-width: 152px;
+  min-width: 200px;
+  padding: 0 var(--space-5);
   border: 1px solid var(--base-blue);
   background: var(--base-blue);
   color: var(--base-gray-0);
@@ -139,7 +124,8 @@
 }
 
 .secondary {
-  min-width: 152px;
+  min-width: 128px;
+  padding: 0 var(--space-5);
   border: 1px solid var(--color-fg);
   background: var(--color-surface);
   color: var(--color-fg);
@@ -151,7 +137,7 @@
 .text {
   border: 0;
   background: transparent;
-  color: var(--color-fg-muted);
+  color: var(--color-fg-muted); /* #5B616E: 6.21:1 on white */
   padding: 0 var(--space-4);
 }
 .text:hover:not(:disabled) {
@@ -160,7 +146,6 @@
 }
 .text:disabled {
   cursor: default;
-  opacity: 0.6;
 }
 
 .need {
@@ -172,12 +157,12 @@
 }
 
 .recipes {
-  margin-top: var(--space-3);
-  padding-top: var(--space-4);
+  margin-top: var(--space-2);
+  padding-top: var(--space-3);
   border-top: 1px solid var(--color-hairline);
 }
 
-@media (min-width: 1920px) {
+@media (min-width: 1600px) {
   .count,
   .need {
     font-size: var(--text-body);

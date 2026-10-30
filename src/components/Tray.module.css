@@ -3,7 +3,7 @@
   flex-direction: column;
   min-height: 0;
   height: 100%;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 .head {
@@ -72,29 +72,30 @@
   min-height: 0;
 }
 
+/*
+ * Hero row: [sprite][verb · name / tag][(i)]. The sprite is sized by width only (BrickSprite keeps
+ * its aspect); --sprite-ratio is the visible brick's width / height so five rows fit the column.
+ * Sprites overflow their row by 4px top and bottom: a -8px cascade between rows.
+ */
 .item {
-  /* Visible brick height is about 0.48 x --art-w: fit five rows in the tray height. */
-  --art-w: clamp(150px, calc((100cqh / 5 - 12px) / 0.5), 280px);
+  --sprite-ratio: 2.08;
+  --art-w: clamp(132px, calc((100cqh / 5 + 8px) * var(--sprite-ratio)), var(--tray-art-max));
   position: relative;
   flex: 1 1 0;
-  min-height: 72px;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  grid-template-rows: 1fr auto;
+  min-height: 64px;
+  display: flex;
   align-items: center;
-  column-gap: var(--space-1);
 }
 
 .brick {
-  grid-column: 1;
-  grid-row: 1;
+  flex: 1;
+  min-width: 0;
   align-self: stretch;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-3);
   min-height: var(--hit-target-hero);
-  padding: 4px var(--space-2) 4px 4px;
+  padding: 0 36px 0 0;
   margin: 0;
   border: 0;
   border-radius: var(--radius-md);
@@ -109,41 +110,20 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/*
- * The baked sprites carry transparent padding around the brick (hero 480x360, brick at
- * x 8-91%, y 22-87%). .art is sized to the visible brick; the sprite overflows it by the
- * padding, so the brick lines up with the text column. Percent margins are of .art's width.
- */
 .art {
   position: relative;
+  z-index: 0;
   flex: none;
-  width: calc(var(--art-w) * 0.83);
+  width: var(--art-w);
+  margin-block: -4px;
   transition: transform var(--dur-fast) var(--ease-out), opacity var(--dur-base) var(--ease-hover);
 }
-
 .sprite {
   display: block;
-  width: 120.5%;
-  max-width: none;
-  margin: -20.4% 0 -12% -10%;
+  width: 100%;
 }
 .sprite img {
   pointer-events: none;
-}
-/* Secondary 2x2 sprites: 300x284, brick at x 13-83%, y 22-87%. */
-.small .sprite {
-  width: 142.9%;
-  margin: -29.5% 0 -18.1% -19%;
-}
-
-/* The sprite has the label printed on it; keep the text for screen readers only. */
-.art:has(> [data-state="loaded"]) > .print {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
 }
 
 @media (hover: hover) {
@@ -158,60 +138,115 @@
   opacity: 0.4;
 }
 
-/* Pad-printed label on the front face. */
-.print {
-  position: absolute;
-  left: var(--print-left, 9%);
-  right: 6%;
-  bottom: var(--print-bottom, 13%);
+.text {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  color: var(--brick-label);
-  pointer-events: none;
+  gap: 4px;
 }
 
+/* Desktop: verb (+ status chip) on line 1, the Lego name on line 2. Phone: "Verb · name" on one line. */
+.title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  min-width: 0;
+  font-size: 16px;
+  line-height: 20px;
+}
+.title > .name {
+  flex-basis: 100%;
+}
 .verb {
   font-weight: var(--weight-bold);
-  font-size: clamp(17px, calc(var(--art-w) * 0.105), 24px);
-  line-height: 1;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
 }
-
+.sep {
+  display: none;
+  white-space: pre;
+  color: var(--color-fg-muted);
+}
 .name {
+  max-width: 100%;
+  font-size: 14px;
+  font-weight: var(--weight-regular);
+  color: var(--color-fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chip {
+  margin-left: var(--space-2);
+  align-self: center;
+  padding: 0 6px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-xs);
   font-family: var(--font-mono);
   font-weight: var(--weight-medium);
-  font-size: clamp(9px, calc(var(--art-w) * 0.05), 11px);
-  line-height: 1.15;
-  letter-spacing: 0.06em;
+  font-size: 10px;
+  line-height: 16px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  color: var(--color-fg);
+}
+
+.tag {
+  font-size: 13px;
+  line-height: 16px;
+  color: var(--color-fg-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+/* Placed: the brick fades to 55%; the text stays full strength with an opaque pill and Remove. */
 .item[data-placed] .art {
-  opacity: 0.4;
+  opacity: 0.55;
 }
-
+.placed {
+  display: flex;
+  align-items: center;
+}
+/* The ON BOARD pill sits on the faded brick, fully opaque. */
 .badge {
-  flex: none;
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: var(--radius-pill);
+  background: var(--base-gray-10);
+  border: 1px solid var(--base-gray-15);
+  color: var(--base-gray-100);
   font-family: var(--font-mono);
   font-weight: var(--weight-medium);
-  font-size: 10px;
-  letter-spacing: var(--text-label-tracking);
+  font-size: 11px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  padding: 5px 10px;
-  border-radius: var(--radius-pill);
-  background: var(--color-panel);
-  border: 1px solid var(--color-hairline);
-  color: var(--color-fg);
   white-space: nowrap;
+}
+.remove {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  line-height: 16px;
+  color: var(--color-link);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .info {
-  grid-column: 2;
-  grid-row: 1;
+  position: absolute;
+  right: -6px;
+  top: 50%;
+  margin-top: -22px;
   width: var(--hit-target);
   height: var(--hit-target);
   display: grid;
@@ -223,19 +258,38 @@
   color: var(--color-fg-muted);
   cursor: pointer;
 }
+.info svg {
+  width: 24px;
+  height: 24px;
+}
 .info:hover,
 .info[aria-expanded="true"] {
   color: var(--color-link);
   background: var(--color-panel);
 }
 
-.note {
-  grid-column: 1 / -1;
-  grid-row: 2;
-  margin: -2px 0 0 4px;
-  font-size: 12px;
-  line-height: 1.3;
-  color: var(--color-fg-muted);
+/* First-action cue, anchored to the first brick while nothing is placed. */
+.start {
+  align-self: flex-start;
+  margin-top: 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 10px 0 8px;
+  border-radius: var(--radius-pill);
+  background: var(--base-blue);
+  color: var(--base-gray-0);
+  font-size: 13px;
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: nudge 2.4s var(--ease-in-out) infinite;
+}
+@keyframes nudge {
+  50% {
+    transform: translateX(-3px);
+  }
 }
 
 /* More Legos: 2x2 bricks in a two-column grid. */
@@ -246,54 +300,38 @@
   padding: var(--space-3) 0 var(--space-2);
 }
 .small {
-  --art-w: 96px;
+  --art-w: 72px;
   min-height: 0;
-  grid-template-columns: 1fr;
-  grid-template-rows: auto;
   border: 1px solid var(--color-hairline);
   border-radius: var(--radius-md);
   padding: var(--space-2);
 }
+.small .art {
+  margin-block: 0;
+}
 .small .brick {
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--space-2);
-  padding: 4px;
+  gap: var(--space-1);
+  padding: 0;
 }
-.small .print,
-.small .art:has(> [data-state="loaded"]) > .print {
-  position: static;
-  width: auto;
-  height: auto;
-  overflow: visible;
-  clip: auto;
-  white-space: normal;
-  color: var(--color-fg);
+.small .title {
+  font-size: 14px;
+  line-height: 18px;
 }
-.small .verb {
-  font-size: 15px;
-}
+.small .sep,
 .small .name {
-  font-size: 10px;
-  white-space: normal;
-  color: var(--color-fg-muted);
-}
-.small .badge {
-  position: absolute;
-  top: var(--space-2);
-  left: var(--space-2);
-  font-size: 10px;
-  padding: 3px 7px;
+  display: none;
 }
 .small .info {
-  position: absolute;
-  top: 2px;
-  right: 2px;
+  top: 0;
+  right: 0;
+  margin-top: 0;
 }
 
 .disclosure {
   flex: none;
-  min-height: 48px;
+  min-height: 44px;
   width: 100%;
   border: 1px solid var(--color-accent);
   border-radius: var(--radius-md);
@@ -312,9 +350,40 @@
   .disclosure {
     border-color: var(--base-cerulean);
   }
+  .badge {
+    background: var(--base-gray-80);
+    border-color: var(--base-gray-80);
+    color: var(--base-gray-0);
+  }
 }
 
-/* Tablet and phone: the tray scrolls with the page. */
+@media (min-width: 1600px) {
+  .title {
+    font-size: 18px;
+    line-height: 24px;
+  }
+  .tag,
+  .remove {
+    font-size: 16px;
+    line-height: 20px;
+  }
+  .badge {
+    font-size: 13px;
+    height: 28px;
+  }
+  .chip {
+    font-size: 12px;
+  }
+  .start {
+    font-size: 16px;
+    height: 28px;
+  }
+  .small .title {
+    font-size: 16px;
+  }
+}
+
+/* Tablet: the tray scrolls with the page. */
 @media (max-width: 1279.98px) {
   .scroll {
     container-type: normal;
@@ -324,82 +393,112 @@
     height: auto;
   }
   .item {
-    --art-w: 168px;
+    --art-w: 136px;
     flex: none;
-    min-height: 92px;
+    min-height: 80px;
   }
   .item.small {
-    --art-w: 96px;
+    --art-w: 72px;
     min-height: 0;
   }
 }
 
+/* Phone: 2-column cards, ~128px tall (sprite on top, text under it). */
 @media (max-width: 767.98px) {
   .hero {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: var(--space-3);
+    gap: var(--space-2);
   }
   .item {
-    --art-w: 100%;
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto;
+    --art-w: 112px;
+    min-height: 0;
+    height: 116px;
     border: 1px solid var(--color-hairline);
     border-radius: var(--radius-card);
-    padding: var(--space-3) var(--space-3) var(--space-2);
-    min-height: 0;
+    padding: var(--space-2);
+    align-items: stretch;
   }
   .brick {
     flex-direction: column;
     align-items: center;
-    padding: 18px 4px 4px;
+    justify-content: flex-end;
+    gap: 4px;
+    padding: 0;
+    min-height: 0;
+    text-align: center;
+  }
+  .art {
+    margin-block: -12px -4px;
+  }
+  .text {
+    flex: none;
+    width: 100%;
+    align-items: center;
     gap: 0;
   }
-  .item:not(.small) .art {
-    width: 76%;
+  .sep {
+    display: inline;
   }
-  .verb {
-    font-size: clamp(16px, 5vw, 22px);
+  .title > .name {
+    flex-basis: auto;
+    min-width: 0;
+  }
+  .title {
+    justify-content: center;
+    font-size: 14px;
+    line-height: 18px;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    overflow: hidden;
+    max-width: 100%;
   }
   .name {
-    font-size: 9px;
-    white-space: normal;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .chip {
+    display: none;
+  }
+  .tag {
+    font-size: 12px;
+    line-height: 16px;
+    max-width: 100%;
+  }
+  .placed {
+    justify-content: center;
   }
   .badge {
-    position: absolute;
-    top: var(--space-2);
-    left: var(--space-2);
+    height: 16px;
+    font-size: 10px;
+    padding: 0 6px;
+  }
+  .remove {
+    display: none;
   }
   .info {
-    position: absolute;
     top: 0;
     right: 0;
+    margin-top: 0;
   }
-  .note {
-    grid-row: 2;
-    margin: var(--space-1) 0 0;
-    font-size: 11px;
+  .start {
+    position: absolute;
+    z-index: 1;
+    left: var(--space-2);
+    top: var(--space-2);
+    margin: 0;
+    height: 24px;
+  }
+  .start svg {
+    transform: rotate(-90deg);
+  }
+  .more {
+    padding-top: var(--space-2);
   }
   .item.small {
-    padding: var(--space-2);
+    height: auto;
   }
-  .item.small .art {
-    width: 56%;
+  .small .art {
+    margin-block: 0;
   }
-}
-
-/* 2x2 sprites print the verb; the caption keeps only the name visible. */
-.small .art:has(> [data-state="loaded"]) .verb {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-}
-.small .art:has(> [data-state="loaded"]) .name {
-  font-family: var(--font-sans);
-  font-size: 13px;
-  letter-spacing: 0;
-  text-transform: none;
-  color: var(--color-fg);
 }
