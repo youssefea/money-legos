@@ -1,0 +1,350 @@
+import type { BrickColor, BrickColorId, DocKey, DocLink, Lego, LegoId } from "./types";
+
+const D = "https://docs.base.org";
+
+export const DOCS: Record<DocKey, DocLink> = {
+  b20: { label: "B20 token standard", url: D + "/upgrades/beryl/b20" },
+  stable: { label: "Issue stablecoins", url: D + "/get-started/issue-stablecoins" },
+  rwa: { label: "Issue tokenized assets", url: D + "/get-started/issue-rwa" },
+  pay: { label: "Accept payments", url: D + "/get-started/accept-payments" },
+  cpp: { label: "Commerce Payments Protocol on GitHub", url: "https://github.com/base/commerce-payments" },
+  defi: { label: "Integrate DeFi", url: D + "/get-started/integrate-defi" },
+  earn: { label: "Integrate an earn product", url: D + "/build-on-base/integrate-defi/integrate-earn-product" },
+  lend: { label: "Integrate lending", url: D + "/build-on-base/integrate-defi/integrate-lending" },
+  borrow: { label: "Integrate borrowing", url: D + "/build-on-base/integrate-defi/integrate-borrowing" },
+  vtx: { label: "Validity transactions", url: D + "/upgrades/cobalt/validity-transactions" },
+  vtxBuild: {
+    label: "Build a validity transaction",
+    url: D + "/specifications/build-transaction/build-a-validity-transaction",
+  },
+  denim: { label: "Denim upgrade overview", url: D + "/upgrades/denim/overview" },
+  guides: { label: "Build on Base guides", url: D + "/build-on-base/overview" },
+  stocks: { label: "Tokenized Stocks API", url: D + "/sdks/tokenized-stocks/overview" },
+  verify: { label: "Base Verify", url: D + "/sdks/base-verify/overview" },
+  codes: { label: "Builder Codes for app developers", url: D + "/specifications/builder-codes/for-app-developers" },
+};
+
+export const RES = {
+  docs: D,
+  mcp: D + "/mcp",
+  ai: D + "/get-started/resources-for-ai-agents",
+  guides: D + "/build-on-base/overview",
+  vibenet: "https://chain.base.org/vibenet",
+  faucet: "https://chain.base.org/vibenet/faucet",
+} as const;
+
+/** The one and only way to describe where 200ms blocks (Denim) stand. Never say mainnet is live. */
+export const DENIM_STATUS = "Live on Base Sepolia since Oct 21, 2026; mainnet targeting November 2026";
+
+/** Risk line shown in the footer on every screen. */
+export const RISK_FOOTER =
+  "Crypto products and NFTs are unregulated and can be highly risky. There may be no regulatory recourse for any loss from such transactions.";
+
+/** Brand-locked brick colours (DESIGN-SPEC v2). White labels only on #0000FF and #32353D. */
+export const BRICK_COLORS: Record<BrickColorId, BrickColor> = {
+  issue: { id: "issue", hex: "#0000FF", label: "#FFFFFF" },
+  pay: { id: "pay", hex: "#3C8AFF", label: "#0A0B0D" },
+  grow: { id: "grow", hex: "#66C800", label: "#0A0B0D" },
+  trade: { id: "trade", hex: "#FFD12F", label: "#0A0B0D" },
+  speed: { id: "speed", hex: "#FEA8CD", label: "#0A0B0D" },
+  lime: { id: "lime", hex: "#B6F569", label: "#0A0B0D" },
+  tan: { id: "tan", hex: "#B8A581", label: "#0A0B0D" },
+  white: { id: "white", hex: "#FFFFFF", label: "#0A0B0D" },
+  "gray-light": { id: "gray-light", hex: "#DEE1E7", label: "#0A0B0D" },
+  gray: { id: "gray", hex: "#B1B7C3", label: "#0A0B0D" },
+  "gray-dark": { id: "gray-dark", hex: "#32353D", label: "#FFFFFF" },
+};
+
+/** Secondary bricks cycle through these colours in tray order. */
+export const SECONDARY_CYCLE: BrickColorId[] = ["lime", "tan", "white", "gray-light", "gray", "gray-dark"];
+
+const HERO_SIZE: [number, number] = [4, 2];
+const SECONDARY_SIZE: [number, number] = [2, 2];
+
+type LegoInput = Omit<Lego, "brick" | "size"> & { color?: BrickColorId };
+
+const INPUT: LegoInput[] = [
+  {
+    id: "b20",
+    tier: "featured",
+    kicker: "Issue",
+    title: "B20",
+    color: "issue",
+    blurb: "Issue stablecoins and tokenized assets with one call.",
+    what: "B20 is Base’s native token standard. Issue stablecoins and tokenized assets (RWAs, equities) with one createB20 call — no contract to write or audit. Roles, allowlists, freeze and memos are built in.",
+    status: "Live on mainnet since Beryl (June 25, 2026)",
+    statusKind: "live",
+    example:
+      "A team issues a dollar stablecoin for its app with createB20, turns on an allowlist, and attaches a memo to every transfer.",
+    role: "Issues the app’s token with one createB20 call, with roles, allowlists and freeze built in — no contract to audit.",
+    build: "Issue the token with createB20; configure roles and an allowlist.",
+    docs: ["b20", "stable", "rwa"],
+    adj: "tokenized",
+    noun: "issuance desk",
+    verb: "issues its own token with B20",
+    prio: 2,
+    flow: 2,
+  },
+  {
+    id: "payments",
+    tier: "featured",
+    kicker: "Pay",
+    title: "Accept payments",
+    color: "pay",
+    blurb: "Charge, hold, refund and subscribe, or pay per call with x402.",
+    what: "The Commerce Payments Protocol covers charge, escrow (hold, then capture), refunds and subscriptions. x402 adds pay-per-call for APIs used by apps and AI agents, with usage-based and batched settlement.",
+    status: "Available now: Commerce Payments Protocol and x402",
+    statusKind: "available",
+    example: "A shop holds a payment at checkout, captures it when the order ships, and refunds from the same flow.",
+    role: "Moves money in: charge, hold-then-capture, refunds, subscriptions or x402 pay-per-call.",
+    build: "Accept payments with the Commerce Payments Protocol (or x402 for pay-per-call).",
+    docs: ["pay", "cpp"],
+    adj: "paid",
+    noun: "checkout",
+    verb: "accepts payments",
+    prio: 1,
+    flow: 5,
+  },
+  {
+    id: "financing",
+    tier: "featured",
+    kicker: "Grow",
+    title: "Financing",
+    color: "grow",
+    blurb: "Earn vaults, lending and borrowing via Morpho and Aave.",
+    what: "Add earn vaults, lending and borrowing to your app with the Morpho and Aave integration guides for Base. Yield is variable, not guaranteed.",
+    status: "Available now: Morpho and Aave guides",
+    statusKind: "available",
+    example:
+      "A wallet lets people opt in to an earn vault for an idle stablecoin balance, and shows that the rate is variable before they confirm.",
+    role: "Adds earn vaults, lending or borrowing through Morpho or Aave — yield is variable, not guaranteed.",
+    build:
+      "Integrate an earn vault, lending or borrowing via Morpho or Aave; label yield as variable, not guaranteed.",
+    docs: ["defi", "earn", "lend", "borrow"],
+    adj: "earn-enabled",
+    noun: "earn app",
+    verb: "offers earn vaults, lending or borrowing",
+    prio: 4,
+    flow: 11,
+  },
+  {
+    id: "validity",
+    tier: "featured",
+    kicker: "Trade",
+    title: "Validity transactions",
+    color: "trade",
+    blurb: "Sign now; included only while your conditions hold.",
+    what: "Sign a transaction now, and the sequencer includes it only while your onchain conditions hold — balance, nonce, storage or block number. Limit and conditional orders work without a keeper bot. Pair them with swaps via the 0x Swap API.",
+    status: "Live on mainnet since Cobalt (Sep 30, 2026)",
+    statusKind: "live",
+    example:
+      "Someone signs a limit order once; it is included only while the onchain conditions they set still hold, with no keeper bot watching.",
+    role: "Lets people sign once and be included only while their onchain conditions hold — no keeper bot.",
+    build: "Build validity transactions with conditions on balance, nonce, storage or block number.",
+    docs: ["vtx", "vtxBuild"],
+    adj: "conditional",
+    noun: "order desk",
+    verb: "lets people sign conditional orders",
+    prio: 3,
+    flow: 10,
+  },
+  {
+    id: "speed",
+    tier: "featured",
+    kicker: "Speed",
+    title: "200ms blocks",
+    color: "speed",
+    blurb: "Five blocks per second with the Denim upgrade.",
+    what: `With the Denim upgrade, Base produces native 200ms blocks: five canonical blocks per second, 10x faster than 2s blocks. It replaces Flashblocks. ${DENIM_STATUS}.`,
+    status: DENIM_STATUS,
+    statusKind: "testnet",
+    example:
+      "A checkout on Base Sepolia shows the payment confirmed in the next 200ms block, before the customer puts their phone away.",
+    role: `Confirms each step in a 200ms block so the app feels instant. Denim: ${DENIM_STATUS}.`,
+    build: `Design the UX around 200ms blocks (Denim: ${DENIM_STATUS}).`,
+    docs: ["denim"],
+    adj: "instant",
+    noun: "real-time app",
+    verb: "confirms in 200ms blocks",
+    prio: 13,
+    flow: 13,
+  },
+  {
+    id: "swaps",
+    tier: "secondary",
+    kicker: "Swap",
+    title: "Swaps",
+    blurb: "Swap tokens in-app with the 0x Swap API.",
+    what: "Swap between tokens inside your app with the 0x Swap API. Pairs well with validity transactions for conditional orders.",
+    status: "Available via the 0x Swap API",
+    statusKind: "available",
+    example: "A wallet lets someone swap into a stablecoin before paying, in one screen.",
+    role: "Swaps between tokens in-app via the 0x Swap API.",
+    build: "Add in-app swaps with the 0x Swap API.",
+    docs: ["guides"],
+    adj: "swap-enabled",
+    noun: "swap app",
+    verb: "swaps tokens in-app",
+    prio: 6,
+    flow: 4,
+  },
+  {
+    id: "stocks",
+    tier: "secondary",
+    kicker: "Data",
+    title: "Tokenized Stocks API",
+    blurb: "Read-only, no key. Eligible jurisdictions outside the US.",
+    what: "A read-only API for tokenized stock data on Base, with no API key. Available in eligible jurisdictions outside the US only.",
+    status: "Read-only API — eligible jurisdictions outside the US only",
+    statusKind: "available",
+    example: "An app lists tokenized stocks with their details, read from the API with no key.",
+    role: "Reads tokenized stock data with a read-only, no-key API (eligible jurisdictions outside the US only).",
+    build:
+      "Read tokenized stock data from the read-only Tokenized Stocks API (no key; eligible jurisdictions outside the US only).",
+    docs: ["stocks"],
+    adj: "stock-aware",
+    noun: "stock explorer",
+    verb: "shows tokenized stock data",
+    prio: 5,
+    flow: 3,
+  },
+  {
+    id: "verify",
+    tier: "secondary",
+    kicker: "Verify",
+    title: "Base Verify",
+    blurb: "Check a user is verified before a step.",
+    what: "Base Verify lets your app check that a user is verified before they reach a feature.",
+    status: "SDK available",
+    statusKind: "available",
+    example: "A claim page checks with Base Verify before letting someone claim.",
+    role: "Gates sensitive steps to verified users with Base Verify.",
+    build: "Gate the key step with Base Verify.",
+    docs: ["verify"],
+    adj: "verified",
+    noun: "member portal",
+    verb: "gates steps to verified users",
+    prio: 10,
+    flow: 1,
+  },
+  {
+    id: "builder",
+    tier: "secondary",
+    kicker: "Attribute",
+    title: "Builder Codes",
+    blurb: "Attribute onchain activity to your app.",
+    what: "Builder Codes attribute onchain activity to your app, so the transactions it drives are credited to it.",
+    status: "Spec for app developers",
+    statusKind: "available",
+    example: "Every transaction an app sends carries its Builder Code, so its activity is attributed to it.",
+    role: "Attributes every transaction the app sends with a Builder Code.",
+    build: "Add a Builder Code to every transaction the app sends.",
+    docs: ["codes"],
+    adj: "attributed",
+    noun: "attribution dashboard",
+    verb: "attributes activity with Builder Codes",
+    prio: 12,
+    flow: 12,
+  },
+  {
+    id: "memos",
+    tier: "secondary",
+    kicker: "Reconcile",
+    title: "Memos",
+    blurb: "Tag B20 transfers for reconciliation.",
+    what: "Memos ride along with B20 transfers, so each payment can carry an order or invoice reference for reconciliation.",
+    status: "Built into B20 — live on mainnet since Beryl",
+    statusKind: "live",
+    example: "Each payment carries the invoice number as a memo, so the books match the chain.",
+    role: "Tags each B20 transfer with an order or invoice reference for reconciliation.",
+    build: "Attach a memo with the order or invoice ID to every B20 transfer.",
+    docs: ["b20"],
+    adj: "reconciled",
+    noun: "reconciliation tool",
+    verb: "tags transfers with memos",
+    prio: 11,
+    flow: 8,
+  },
+  {
+    id: "subscriptions",
+    tier: "secondary",
+    kicker: "Recur",
+    title: "Subscriptions",
+    blurb: "Charge on a schedule.",
+    what: "Recurring charges with the Commerce Payments Protocol: approve once, get charged on a schedule.",
+    status: "Part of the Commerce Payments Protocol",
+    statusKind: "available",
+    example: "A newsletter charges subscribers monthly after a single approval.",
+    role: "Charges on a schedule after a single approval.",
+    build: "Set up recurring charges with the Commerce Payments Protocol.",
+    docs: ["pay", "cpp"],
+    adj: "recurring",
+    noun: "billing app",
+    verb: "bills on a schedule",
+    prio: 7,
+    flow: 6,
+  },
+  {
+    id: "escrow",
+    tier: "secondary",
+    kicker: "Hold",
+    title: "Escrow",
+    blurb: "Hold funds, then capture.",
+    what: "Hold funds at checkout, then capture when the order is fulfilled — hold-then-capture in the Commerce Payments Protocol.",
+    status: "Part of the Commerce Payments Protocol",
+    statusKind: "available",
+    example: "A marketplace holds payment until the seller ships, then captures.",
+    role: "Holds funds until the order is fulfilled, then captures.",
+    build: "Use hold-then-capture (escrow) from the Commerce Payments Protocol.",
+    docs: ["pay", "cpp"],
+    adj: "escrowed",
+    noun: "marketplace",
+    verb: "holds funds until capture",
+    prio: 8,
+    flow: 7,
+  },
+  {
+    id: "refunds",
+    tier: "secondary",
+    kicker: "Return",
+    title: "Refunds and payouts",
+    blurb: "Send money back out.",
+    what: "Send refunds and payouts from the same payments flow you charge with.",
+    status: "Part of the Commerce Payments Protocol",
+    statusKind: "available",
+    example: "A store refunds a returned order from its admin screen in one click.",
+    role: "Sends refunds and payouts from the same payments flow.",
+    build: "Support refunds and payouts with the Commerce Payments Protocol.",
+    docs: ["pay", "cpp"],
+    adj: "refundable",
+    noun: "payout console",
+    verb: "sends refunds and payouts",
+    prio: 9,
+    flow: 9,
+  },
+];
+
+let secondaryIndex = 0;
+
+/** All Legos. The 5 hero (featured) Legos come first, in tray order. */
+export const LEGOS: readonly Lego[] = INPUT.map(({ color, ...rest }) => {
+  const featured = rest.tier === "featured";
+  const colorId: BrickColorId = color ?? SECONDARY_CYCLE[secondaryIndex++ % SECONDARY_CYCLE.length]!;
+  return {
+    ...rest,
+    brick: BRICK_COLORS[colorId],
+    size: featured ? HERO_SIZE : SECONDARY_SIZE,
+  };
+});
+
+export const HERO_LEGOS: readonly Lego[] = LEGOS.filter((l) => l.tier === "featured");
+export const MORE_LEGOS: readonly Lego[] = LEGOS.filter((l) => l.tier === "secondary");
+
+export const BY_ID: Readonly<Record<LegoId, Lego>> = Object.fromEntries(LEGOS.map((l) => [l.id, l])) as Record<
+  LegoId,
+  Lego
+>;
+
+export function isLegoId(id: string): id is LegoId {
+  return Object.prototype.hasOwnProperty.call(BY_ID, id);
+}
