@@ -4,45 +4,54 @@ import type { GenerateResult, LegoId } from "@/lib";
 /** One message for the polite live region. `n` changes on every message so repeats are read again. */
 export type Announcement = { text: string; n: number };
 
+/** Shown on the board for a moment after a fifth brick swapped out the oldest one. */
+export type Swap = { added: LegoId; removed: LegoId; n: number };
+
 export type State = {
   /** The stack on the baseplate, bottom brick first (max 4). */
   ids: LegoId[];
-  /** Recipe name when the stack came from a recipe chip or #recipe= hash. */
+  /** Recipe name when the stack came from a recipe or a #recipe= hash. */
   recipe: string | null;
-  /** The open set box, or null while the box is still closed. */
-  result: GenerateResult | null;
-  /** Bumps on each Generate, so the 3D stack can play its settle bounce. */
+  /**
+   * True after the first Build app (or a recipe, Surprise me or a shared link). From then on the app
+   * is live: every change to the stack updates the phone, name, prompt and Details at once.
+   * Only Clear turns it off again.
+   */
+  built: boolean;
+  /** Bumps on every Build, so the phone plays its boot and the stack its settle bounce. */
   generation: number;
-  /** True for 2s after Copy prompt (the green COPIED button). */
+  /** True for 2s after Copy prompt (the green "Copied" button). */
   copied: boolean;
-  /** True once the prompt was copied for the current result (step 3 checks off). */
+  /** True once the prompt was copied for the current stack (step 3 checks off). */
   copiedOnce: boolean;
   /** Last brick added by the user (for the drop animation and the sound). */
   lastAdded: LegoId | null;
-  /** Shown under the tray when someone tries to add a fifth brick. */
-  fullHint: boolean;
+  /** The last capacity swap (a fifth brick replaced the oldest), or null. */
+  swap: Swap | null;
   announce: Announcement;
 };
+
+export type LoadSource = "recipe" | "surprise" | "link";
 
 export type Action =
   | { type: "toggle"; id: LegoId }
   | { type: "add"; id: LegoId }
   | { type: "remove"; id: LegoId }
   | { type: "clear" }
-  | { type: "generate" }
-  | { type: "load"; ids: readonly string[]; recipe?: string | null; generate: boolean; source: "recipe" | "surprise" | "link" }
+  | { type: "build" }
+  | { type: "load"; ids: readonly string[]; recipe?: string | null; build: boolean; source: LoadSource }
   | { type: "copied" }
   | { type: "copyReset" };
 
 export const initialState: State = {
   ids: [],
   recipe: null,
-  result: null,
+  built: false,
   generation: 0,
   copied: false,
   copiedOnce: false,
   lastAdded: null,
-  fullHint: false,
+  swap: null,
   announce: { text: "", n: 0 },
 };
 
@@ -54,12 +63,29 @@ function names(ids: readonly LegoId[]): string {
   return ids.map((id) => BY_ID[id].kicker).join(", ");
 }
 
-/** Number shown on the set box: the curated combo's position, or null for a custom set. */
+/** The app is live: built once and 2 to 4 bricks on the board. */
+export function isLive(state: Pick<State, "built" | "ids">): boolean {
+  return state.built && state.ids.length >= MIN_LEGOS;
+}
+
+/** The result for the stack while the app is live, else null. Deterministic, so it never goes stale. */
+export function resultOf(state: Pick<State, "built" | "ids">): GenerateResult | null {
+  return isLive(state) ? generate(state.ids) : null;
+}
+
+/** Number shown for a curated combo, or null for a custom set. */
 export function setNumber(result: GenerateResult): number | null {
   if (!result.curated) return null;
   const k = keyOf(result.ids);
   const i = COMBOS.findIndex((c) => keyOf(c.ids) === k);
   return i >= 0 ? i + 1 : null;
+}
+
+/** Live-region text after the stack changed: the count, and the app's new name when it is live. */
+function changed(next: State, head: string): State {
+  const r = resultOf(next);
+  const tail = r ? `. App: ${r.name}` : "";
+  return { ...next, announce: say(next, `${head}, ${next.ids.length} of ${MAX_LEGOS}${tail}`) };
 }
 
 export function reducer(state: State, action: Action): State {
@@ -69,76 +95,64 @@ export function reducer(state: State, action: Action): State {
 
     case "add": {
       if (state.ids.includes(action.id)) return state;
+      const base = { ...state, recipe: null, copied: false, copiedOnce: false, lastAdded: action.id };
       if (state.ids.length >= MAX_LEGOS) {
-        return { ...state, fullHint: true, announce: say(state, "Max 4 Legos. Click a placed brick to swap.") };
+        // Full: the new brick replaces the oldest (bottom) one.
+        const removed = state.ids[0]!;
+        const ids = [...state.ids.slice(1), action.id];
+        const swap = { added: action.id, removed, n: (state.swap?.n ?? 0) + 1 };
+        return changed({ ...base, ids, swap }, `Board full: ${BY_ID[action.id].kicker} replaced ${BY_ID[removed].kicker}`);
       }
-      const ids = [...state.ids, action.id];
-      return {
-        ...state,
-        ids,
-        recipe: null,
-        result: null,
-        copied: false,
-        copiedOnce: false,
-        lastAdded: action.id,
-        fullHint: false,
-        announce: say(state, `${BY_ID[action.id].kicker} added, ${ids.length} of ${MAX_LEGOS}`),
-      };
+      return changed({ ...base, ids: [...state.ids, action.id], swap: null }, `${BY_ID[action.id].kicker} added`);
     }
 
     case "remove": {
       if (!state.ids.includes(action.id)) return state;
       const ids = state.ids.filter((id) => id !== action.id);
-      return {
-        ...state,
-        ids,
-        recipe: null,
-        result: null,
-        copied: false,
-        copiedOnce: false,
-        lastAdded: null,
-        fullHint: false,
-        announce: say(state, `${BY_ID[action.id].kicker} removed, ${ids.length} of ${MAX_LEGOS}`),
-      };
+      return changed({ ...state, ids, recipe: null, copied: false, copiedOnce: false, lastAdded: null, swap: null }, `${BY_ID[action.id].kicker} removed`);
     }
 
     case "clear":
-      if (!state.ids.length && !state.result) return state;
+      if (!state.ids.length && !state.built) return state;
       return { ...initialState, generation: state.generation, announce: say(state, "Board cleared, 0 of 4") };
 
-    case "generate": {
+    case "build": {
       const result = generate(state.ids);
       if (!result) {
         const need = MIN_LEGOS - state.ids.length;
-        return { ...state, announce: say(state, need === 1 ? "1 more Lego needed" : "Pick 2 or more Legos") };
+        return { ...state, announce: say(state, need === 1 ? "1 more brick needed" : "Pick 2 or more bricks") };
       }
       return {
         ...state,
-        result,
+        built: true,
         generation: state.generation + 1,
         copied: false,
-        copiedOnce: false,
-        fullHint: false,
-        announce: say(state, `${result.name} ready. Copy prompt to use it.`),
+        swap: null,
+        announce: say(state, `${result.name} built. Copy prompt to use it.`),
       };
     }
 
     case "load": {
       // Keep the given order: recipes and surprises arrive in flow order, links in the order written.
       const ids = cleanIds(action.ids).slice(0, MAX_LEGOS);
-      if (!ids.length) return state;
+      if (!ids.length) {
+        if (action.source !== "link") return state;
+        // A link with no known bricks (or an empty hash after Back): show an empty board, never the old stack.
+        if (!state.ids.length && !state.built) return state;
+        return { ...initialState, generation: state.generation, announce: say(state, "No bricks in this link. Board cleared, 0 of 4") };
+      }
       const next: State = {
         ...state,
         ids,
         recipe: action.recipe ?? null,
-        result: null,
+        built: false,
         copied: false,
         copiedOnce: false,
         lastAdded: null,
-        fullHint: false,
+        swap: null,
         announce: say(state, `${names(ids)} on the board, ${ids.length} of ${MAX_LEGOS}`),
       };
-      return action.generate ? reducer(next, { type: "generate" }) : next;
+      return action.build && ids.length >= MIN_LEGOS ? reducer(next, { type: "build" }) : next;
     }
 
     case "copied":
@@ -149,17 +163,12 @@ export function reducer(state: State, action: Action): State {
   }
 }
 
-/** Three-step rail: 1 pick (2+ Legos), 2 snap (set opened), 3 copy (prompt copied). */
+/** Three-step rail: 1 pick (2+ bricks), 2 build (app live), 3 copy (prompt copied). */
 export type StepState = "done" | "current" | "todo";
 
-export function stepStates(state: Pick<State, "ids" | "result" | "copiedOnce">): [StepState, StepState, StepState] {
-  const done = [state.ids.length >= MIN_LEGOS, !!state.result, !!state.result && state.copiedOnce];
+export function stepStates(state: Pick<State, "ids" | "built" | "copiedOnce">): [StepState, StepState, StepState] {
+  const live = isLive(state);
+  const done = [state.ids.length >= MIN_LEGOS, live, live && state.copiedOnce];
   const current = done.indexOf(false);
   return done.map((d, i) => (d ? "done" : i === current ? "current" : "todo")) as [StepState, StepState, StepState];
-}
-
-/** What Generate still needs, or "" once it can run. */
-export function requirementText(count: number): string {
-  if (count >= MIN_LEGOS) return "";
-  return count === 1 ? "1 more Lego needed" : "Pick 2 or more Legos";
 }

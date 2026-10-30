@@ -24,6 +24,8 @@ import {
   buildFakeApp,
   cleanIds,
   describeFakeApp,
+  tileRoles,
+  wireLabel,
   flowOrder,
   generate,
   keyOf,
@@ -488,6 +490,30 @@ describe("fake app", () => {
       expect(buildFakeApp(ids), tag).toEqual(app);
       for (const t of app.tiles) checkTile(t, tag);
       expect(describeFakeApp(app)).toContain(app.brand);
+    }
+  });
+
+  it("gives each app one dominant module, confirmations as status rows, the rest compact", () => {
+    const roles = (ids: string[]) => {
+      const app = buildFakeApp(ids);
+      return Object.fromEntries(app.tiles.map((t, i) => [t.legoId, tileRoles(app.tiles)[i]]));
+    };
+    expect(roles(["b20", "payments", "speed", "validity"])).toEqual({ validity: "row", speed: "status", payments: "row", b20: "hero" });
+    expect(roles(["payments", "financing"])).toEqual({ financing: "row", payments: "hero" });
+    // No balance/checkout/earn/order/swap: the first non-status tile leads.
+    expect(roles(["speed", "verify"])).toEqual({ verify: "hero", speed: "status" });
+    for (const ids of sample(rng(7), 300, 1, 4)) {
+      const r = tileRoles(buildFakeApp(ids).tiles);
+      expect(r.filter((x) => x === "hero").length, ids.join(",")).toBeLessThanOrEqual(1);
+    }
+    expect(wireLabel(BY_ID.payments.ui)).toBe("Checkout");
+    expect(wireLabel(BY_ID.b20.ui)).toBe("Balance");
+  });
+
+  it("writes every amount with a currency", () => {
+    for (const l of LEGOS) {
+      const strings = [l.ui.value, l.ui.cta, ...(l.ui.rows ?? []).map((r) => r[1])].filter(Boolean) as string[];
+      for (const s of strings) if (/\d+\.\d{2}\b/.test(s)) expect(s, l.id).toMatch(/\$\d/);
     }
   });
 
