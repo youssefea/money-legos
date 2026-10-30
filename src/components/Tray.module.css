@@ -81,32 +81,33 @@
 
 /* ---------------------------------------------------------------- hero shelf: 5 across, pinned */
 .heroShelf {
+  /* The same stud scale as the bin (16px), smaller only when 5 fronts + the last side face won't fit. */
+  --hero-stud: min(var(--stud), calc((100cqw - 12px - 4 * 4px) / 21.44));
   order: -1;
   flex: none;
   margin: 0 0 var(--space-3);
   padding: 6px 6px 4px;
   list-style: none;
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  display: flex;
   gap: 4px;
-  align-items: end;
+  align-items: flex-end;
   border-radius: var(--radius-md);
   background: var(--base-gray-10);
   box-shadow: inset 0 -1px 0 var(--base-gray-15);
 }
+/*
+ * Five 2x4 fronts side by side, like bricks in a row: each cell is its front face (4 studs); the
+ * sprite's side face runs under the next brick (drawn on top), only the last one shows it whole.
+ */
 .heroShelf .cell.cell {
-  grid-column: auto;
-  aspect-ratio: var(--hero-aspect);
+  --stud: var(--hero-stud);
+  flex: none;
+  width: calc(var(--stud) * 4);
+  height: calc(var(--stud) * var(--sh, 3.32));
 }
-.heroShelf .art {
-  width: 100%;
+.heroShelf .cell:last-child {
+  margin-right: calc(var(--stud) * 1.44);
 }
-.heroShelf .sprite,
-.heroShelf .drawn {
-  width: 100%;
-  margin-left: 0;
-}
-
 /* ---------------------------------------------------------------- scroll area (the other 35) */
 .scroll {
   flex: 1;
@@ -443,4 +444,14 @@
 .tray[data-layout="strip"] .chipsWrap[data-more-right] .chips {
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 72px), transparent calc(100% - 24px));
   mask-image: linear-gradient(to right, #000 calc(100% - 72px), transparent calc(100% - 24px));
+}
+
+/* Hero shelf: the check sits on the studs at the top-right of the front face (the side face is under the next brick). */
+.heroShelf .art {
+  position: static;
+}
+.heroShelf .check {
+  top: 2px;
+  right: 2px;
+  bottom: auto;
 }
