@@ -26,13 +26,13 @@ export function labelTexture(verb: string, name: string, ink: string, faceW: num
   };
   const L = layoutLabel(verb, name, faceW, faceH, measure);
   ctx.fillStyle = ink;
-  ctx.textAlign = "left";
+  ctx.textAlign = L.align === "middle" ? "center" : "left";
   ctx.textBaseline = "alphabetic";
   const x = L.x * PX_PER_MM;
   ctx.font = font("verb", L.verb.size);
   ctx.letterSpacing = `${VERB_TRACKING * L.verb.size * PX_PER_MM}px`;
   // Bold glyphs carry a little left side bearing: pull the verb back so both lines share one edge.
-  ctx.fillText(L.verb.text, x - L.verb.size * 0.045 * PX_PER_MM, L.verb.y * PX_PER_MM);
+  ctx.fillText(L.verb.text, x - (L.align === "start" ? L.verb.size * 0.045 * PX_PER_MM : 0), L.verb.y * PX_PER_MM);
   for (const line of L.name) {
     ctx.font = font("name", line.size);
     ctx.letterSpacing = `${NAME_TRACKING * line.size * PX_PER_MM}px`;

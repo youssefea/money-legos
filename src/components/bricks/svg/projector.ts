@@ -1,4 +1,4 @@
-import { DEFAULT_FRAMING, VIEW, boxCorners, frameBox, plateCorners, plateFraction, type Framing, type V3 } from "../core/layout";
+import { DEFAULT_FRAMING, MAX_STACK, VIEW, boxCorners, frameBox, plateCorners, plateFraction, type Framing, type V3 } from "../core/layout";
 
 /** Orthographic projector for the SVG fallback, looking along the same VIEW as the 3D camera. */
 type Basis = { right: V3; up: V3; dir: V3 };
@@ -28,7 +28,7 @@ export function depth(p: V3): number {
   return dot(p, basis.dir);
 }
 
-/** Projected extents (mm) of the board box (plate + full tower) and of the plate alone. */
+/** Projected extents (mm) of the board box (plate + FRAME_STACK tower), of the full 4-brick tower, and of the plate alone. */
 export const EXTENTS = (() => {
   const ext = (pts: V3[]) => {
     const p = pts.map(project);
@@ -36,10 +36,7 @@ export const EXTENTS = (() => {
     const ys = p.map((q) => q[1]);
     return { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
   };
-  const { min, max } = frameBox();
-  const box: V3[] = [];
-  for (const x of [min[0], max[0]]) for (const y of [min[1], max[1]]) for (const z of [min[2], max[2]]) box.push([x, y, z]);
-  return { box: ext(box), plate: ext(plateCorners()) };
+  return { box: ext(boxCorners(frameBox())), full: ext(boxCorners(frameBox(MAX_STACK))), plate: ext(plateCorners()) };
 })();
 
 export type ViewBox = { x: number; y: number; w: number; h: number; scale: number };
@@ -58,17 +55,17 @@ export function extentOf(box: { min: V3; max: V3 }) {
  * the stack, so the board never pans as bricks land.
  */
 export function svgViewBox(cw: number, ch: number, framing: Framing = DEFAULT_FRAMING): ViewBox {
-  const { box, plate } = EXTENTS;
+  const { box, full, plate } = EXTENTS;
   const bw = box.x1 - box.x0, bh = box.y1 - box.y0;
   if (cw <= 0 || ch <= 0) {
     const m = bw * 0.055;
     return { x: box.x0 - m, y: box.y0 - m, w: bw + 2 * m, h: bh + 2 * m, scale: 0 };
   }
-  const scale = Math.min((plateFraction(framing, cw) * cw) / (plate.x1 - plate.x0), (framing.maxH * ch) / bh, (framing.maxW * cw) / bw);
+  const scale = Math.min((plateFraction(framing, cw) * cw) / (plate.x1 - plate.x0), (framing.maxH * ch) / bh, (framing.maxW * cw) / bw, (0.985 * ch) / (full.y1 - full.y0));
   const w = cw / scale, h = ch / scale;
   const cx = (box.x0 + box.x1) / 2;
-  // centre y in view units, lifted by bias * h, clamped so the box stays 0.75% inside the frame
+  // centre y in view units, lifted by bias * h, clamped so the full tower's top and the plate stay 0.75% inside the frame
   const want = (box.y0 + box.y1) / 2 + framing.bias * h;
-  const cy = Math.min(box.y0 - 0.0075 * h + h / 2, Math.max(box.y1 + 0.0075 * h - h / 2, want));
+  const cy = Math.min(full.y0 - 0.0075 * h + h / 2, Math.max(box.y1 + 0.0075 * h - h / 2, want));
   return { x: cx - w / 2, y: cy - h / 2, w, h, scale };
 }

@@ -6,7 +6,7 @@ import * as THREE from "three";
 import type { BrickLayoutItem, PlacedBrick } from "@/lib/contract";
 import { ghostGeom, type GhostGeom } from "../core/ghost";
 import { DIM } from "../core/dims";
-import { BASEPLATE, BOARD, DEFAULT_FRAMING, FOV, GHOST_SIZE, VIEW, boxCorners, byLevel, coversFor, frameBox, brickLayoutItems, plateCorners, plateFraction, stackTopY, type Framing, type V3 } from "../core/layout";
+import { BASEPLATE, BOARD, DEFAULT_FRAMING, FOV, GHOST_SIZE, MAX_STACK, VIEW, boxCorners, byLevel, coversFor, frameBox, brickLayoutItems, plateCorners, plateFraction, stackTopY, type Framing, type V3 } from "../core/layout";
 import { AO } from "./AO";
 import { Baseplate } from "./Baseplate";
 import { MotionContext, MotionStore, useMotion } from "./motion";
@@ -41,7 +41,9 @@ function CameraRig({ bricks, nextLevel, ghostSize, framing, onGhost, onFrame, on
     if (size.width === 0 || size.height === 0) return;
     function fit(camera: THREE.PerspectiveCamera) {
       const fill = plateFraction({ plateFill, maxH, maxW, side, sideMax, bias }, size.width);
+      // Composed for a FRAME_STACK tower; the full tower only has to stay in frame.
       const corners = boxCorners(frameBox()).map((p) => new THREE.Vector3(...p));
+      const full = boxCorners(frameBox(MAX_STACK)).map((p) => new THREE.Vector3(...p));
       const plate = plateCorners().map((p) => new THREE.Vector3(...p));
       const dir = new THREE.Vector3(...VIEW).normalize();
       const { min, max } = frameBox();
@@ -68,7 +70,8 @@ function CameraRig({ bricks, nextLevel, ghostSize, framing, onGhost, onFrame, on
       const tooClose = () => {
         const p = extent(plate);
         const b = extent(corners);
-        return p.x1 - p.x0 > 2 * fill || b.y1 - b.y0 > 2 * maxH || b.x1 - b.x0 > 2 * maxW || Math.max(-b.x0, b.x1, -b.y0, b.y1) > 0.995;
+        const t = extent(full);
+        return p.x1 - p.x0 > 2 * fill || b.y1 - b.y0 > 2 * maxH || b.x1 - b.x0 > 2 * maxW || t.y1 - t.y0 > 1.97 || Math.max(-b.x0, b.x1, -b.y0, b.y1) > 0.995;
       };
       const halfH = () => Math.tan(THREE.MathUtils.degToRad(FOV / 2)) * camera.position.distanceTo(target);
       const shift = (dx: number, dy: number) => {
@@ -93,9 +96,10 @@ function CameraRig({ bricks, nextLevel, ghostSize, framing, onGhost, onFrame, on
         const e = extent(corners);
         shift(-(e.x0 + e.x1) / 2, -(e.y0 + e.y1) / 2);
       }
-      // Lift by `bias`, never pushing the board box out of frame.
+      // Lift by `bias`, never pushing the plate or the full tower out of frame.
       const e = extent(corners);
-      shift(0, Math.max(-0.985 - e.y0, Math.min(0.985 - e.y1, 2 * bias)));
+      const t = extent(full);
+      shift(0, Math.max(-0.985 - e.y0, Math.min(0.985 - t.y1, 2 * bias)));
     }
 
     /** Projects the ghost, the stack top and the front faces with the (fixed) camera. */

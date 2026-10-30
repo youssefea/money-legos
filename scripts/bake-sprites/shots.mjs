@@ -1,6 +1,6 @@
-// QA screenshots of the brick layer -> ../design/bricks-shots-v5/ (or OUT=dir). Real GPU, bundled Chromium.
+// QA screenshots of the brick layer -> ../design/bricks-shots-v6/ (or OUT=dir). Real GPU, bundled Chromium.
 // node scripts/bake-sprites/shots.mjs   [ONLY=substring]
-// Stages are drawn in fixed-size panels: desktop board panel 567x520 and the phone scene region 144x130.
+// Stages are drawn in fixed-size panels: a wide board panel 567x520, the 1440 board column 430x542 and the phone scene region 144x130.
 import { chromium } from "playwright";
 import fs from "node:fs";
 import path from "node:path";
@@ -8,11 +8,11 @@ import { fileURLToPath } from "node:url";
 import { serve, GPU_ARGS } from "./serve.mjs";
 
 const repo = fileURLToPath(new URL("../..", import.meta.url));
-const out = process.env.OUT ?? path.join(repo, "../design/bricks-shots-v5");
+const out = process.env.OUT ?? path.join(repo, "../design/bricks-shots-v6");
 fs.mkdirSync(out, { recursive: true });
 const STACKS = { 0: "", 1: "b20", 3: "b20,payments,validity", 4: "b20,payments,validity,speed" };
 // [panel, viewport w, h, dpr]
-const VIEWS = { desktop: ["567x520", 640, 580, 2], phone: ["144x130", 390, 180, 3] };
+const VIEWS = { desktop: ["567x520", 640, 580, 2], board1440: ["430x542", 500, 600, 2], phone: ["144x130", 390, 180, 3] };
 const jobs = [];
 for (const [v, [box, w, h, dpr]] of Object.entries(VIEWS)) {
   for (const theme of ["light", "dark"]) {
@@ -27,6 +27,11 @@ for (const theme of ["light", "dark"]) jobs.push([`sprites-${theme}`, `?only=spr
 jobs.push(["sprites-light-phone", "?only=sprites", [390, 844, 3], true]);
 jobs.push(["stage-light-desktop-ghost2x2", "?only=stage&box=567x520&ids=b20&ghost=2x2", [640, 580, 2]]);
 jobs.push(["layout-boxes-light-desktop-mixed", "?only=stage&box=567x520&mix=1&n=3&layoutbox=1", [640, 580, 2]]);
+jobs.push(["layout-boxes-light-board1440-4", "?only=stage&box=430x542&n=4&layoutbox=1", [500, 600, 2]]);
+jobs.push(["layout-boxes-svg-light-board1440-4", "?only=svg&box=430x542&n=4&layoutbox=1", [500, 600, 2]]);
+jobs.push(["stage-light-board1440-cantilever", "?only=stage&box=430x542&ids=verify,b20", [500, 600, 2]]);
+jobs.push(["stage-light-board1440-3big", "?only=stage&box=430x542&ids=b20,financing,speed", [500, 600, 2]]);
+jobs.push(["stage-light-board1440-samehue", "?only=stage&box=430x542&ids=b20,payments", [500, 600, 2]]);
 jobs.push(["layout-boxes-svg-light-desktop-mixed", "?only=svg&box=567x520&mix=1&n=3&layoutbox=1", [640, 580, 2]]);
 
 const only = process.env.ONLY;

@@ -41,7 +41,7 @@ function fromUrl() {
 /**
  * Dev test page: the live board with add/remove controls, the SVG fallback beside it, and the 13
  * baked tray sprites. URL: ?n=0..4 | ?ids=b20,payments  &dark=1  &rm=1  &only=stage|svg|sprites
- * &mix=1 (mixed footprints)  &layoutbox=1 (onLayout boxes in red)
+ * &mix=1 (mixed footprints)  &layoutbox=1 (onLayout face boxes in red, silhouettes in blue)
  * &ghost=2x2 (ghost footprint)  &bricks=svg|webgl (force a renderer)  &box=567x520 (stage/svg in a fixed-size panel; the ghost box is outlined in red with &ghostbox=1).
  */
 export default function DevBricks() {
@@ -76,6 +76,13 @@ export default function DevBricks() {
                 style={{ position: "absolute", left: `${(b.cx - b.w / 2) * 100}%`, top: `${(b.cy - b.h / 2) * 100}%`, width: `${b.w * 100}%`, height: `${b.h * 100}%`, outline: "1px solid red", pointerEvents: "none" }}
               />
             ))}
+          {init.layoutBox && (
+            <svg viewBox="0 0 1 1" preserveAspectRatio="none" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }} aria-hidden>
+              {layout.map((b) =>
+                b.hull ? <polygon key={b.id} data-layout-hull={b.id} points={b.hull.map((p) => p.join(",")).join(" ")} fill="none" stroke="#0000FF" strokeWidth={2} vectorEffect="non-scaling-stroke" strokeLinejoin="round" /> : null,
+              )}
+            </svg>
+          )}
         </div>
       </div>
     );

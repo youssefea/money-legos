@@ -1,7 +1,7 @@
 "use client";
 
 import "./quietClock";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { ContactShadows } from "@react-three/drei";
 import * as THREE from "three";
@@ -112,6 +112,8 @@ export default function SpriteBake({ brick, glyph = false }: { brick: PlacedBric
     };
   }, []);
   const pose = poseFor(brick);
+  // Tray print: the bold verb alone, centred (a sublabel would print at 4-8 CSS px in the tray).
+  const printed = useMemo<PlacedBrick>(() => ({ ...brick, label: { ...brick.label, name: "" } }), [brick]);
   return (
     <Canvas
       style={{ position: "fixed", inset: 0, width: "100%", height: "100%", background: "transparent" }}
@@ -126,14 +128,14 @@ export default function SpriteBake({ brick, glyph = false }: { brick: PlacedBric
         {/* the board's studio and contact shadow, moved up under the lone brick */}
         <Studio floorShadow floorY={pose.y - 0.02} />
         {/* a glyph is too small for print: never draw the label */}
-        <StackBrick brick={brick} drop={false} leaving={false} reducedMotion bounceSignal={0} index={0} fontsReady={fontsReady && !glyph} />
+        <StackBrick brick={printed} drop={false} leaving={false} reducedMotion bounceSignal={0} index={0} fontsReady={fontsReady && !glyph} />
         {/* shadow catcher: the key light's soft cast shadow, as the plate receives it on the board */}
         <mesh rotation-x={-Math.PI / 2} position={[0, pose.y - 0.01, 0]} receiveShadow>
           <planeGeometry args={[120, 120]} />
-          <shadowMaterial transparent opacity={0.32} color="#0a0b0d" depthWrite={false} />
+          <shadowMaterial transparent opacity={0.26} color="#0a0b0d" depthWrite={false} />
         </mesh>
         {/* tight contact blob: the dark line where the brick meets the table, so it sits instead of floating */}
-        <ContactShadows position={[0, pose.y - 0.03, 0]} scale={60} far={4} blur={1.6} opacity={0.35} resolution={1024} frames={1} color="#0a0b0d" />
+        <ContactShadows position={[0, pose.y - 0.03, 0]} scale={60} far={4} blur={2.2} opacity={0.3} resolution={1024} frames={1} color="#0a0b0d" />
         <AO />
         <ReadyFlag fontsReady={fontsReady} />
       </MotionContext.Provider>

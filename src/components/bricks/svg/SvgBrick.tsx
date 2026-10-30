@@ -93,8 +93,8 @@ export function SvgBrick({ size: [w, d], kind = "brick", color, id, label, matte
     const v = P([-fw / 2, H - DIM.fillet - 1, z1]);
     const m = [u[0] - o[0], u[1] - o[1], v[0] - o[0], v[1] - o[1], o[0], o[1]].map((n) => n.toFixed(4)).join(" ");
     print = (
-      <g transform={`matrix(${m})`} fill={label.ink} textAnchor="start">
-        <text x={L.x - L.verb.size * 0.045} y={L.verb.y} fontSize={L.verb.size} fontWeight={700} letterSpacing={VERB_TRACKING * L.verb.size} style={{ fontFamily: "var(--font-sans)" }}>
+      <g transform={`matrix(${m})`} fill={label.ink} textAnchor={L.align}>
+        <text x={L.x - (L.align === "start" ? L.verb.size * 0.045 : 0)} y={L.verb.y} fontSize={L.verb.size} fontWeight={700} letterSpacing={VERB_TRACKING * L.verb.size} style={{ fontFamily: "var(--font-sans)" }}>
           {L.verb.text}
         </text>
         {L.name.map((line, i) => (

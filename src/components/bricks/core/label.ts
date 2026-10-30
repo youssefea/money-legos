@@ -5,8 +5,11 @@
  */
 
 export type LabelLine = { text: string; size: number; y: number };
-/** `x` is the left edge of both lines (left-aligned pad print), mm from the face's left edge. */
-export type LabelLayout = { x: number; verb: LabelLine; name: LabelLine[]; tracking: number };
+/**
+ * `x` is the left edge of both lines (left-aligned pad print, `align: "start"`), mm from the face's left
+ * edge, or the centre of the verb when it is printed alone (`align: "middle"`, the tray sprites).
+ */
+export type LabelLayout = { x: number; align: "start" | "middle"; verb: LabelLine; name: LabelLine[]; tracking: number };
 
 export type Measure = (text: string, font: "verb" | "name", size: number) => number;
 
@@ -24,9 +27,21 @@ export const VERB_TRACKING = -0.02; // em
  * (a long name shrinks to stay on one line, down to `minName`, before it wraps). The board shows them
  * bigger.
  */
+/*
+ * Verb only (no name: the tray sprites, where a sublabel would print at 4-8 CSS px): one bold verb,
+ * centred, as big as the face allows. On the tray's stud scale (--stud CSS px per 8 mm stud) the verb's
+ * font size is 0.875 x --stud on a hero (2x4 and wider) and 0.7 x --stud on a smaller face, unless a
+ * long verb has to shrink to fit the face width.
+ */
+const VERB_ONLY = {
+  hero: { inset: 1.6, verb: 7.0 },
+  small: { inset: 1.0, verb: 5.6 },
+} as const;
+
 const PRINT = {
   hero: { inset: 2.4, verb: 5.1, name: 2.3, minName: 1.75 },
-  small: { inset: 1.6, verb: 3.9, name: 1.6, minName: 1.2 },
+  // minName 1.55 mm: >= 9 CSS px on the 1440 board (~5.9 px/mm)
+  small: { inset: 1.6, verb: 3.9, name: 1.6, minName: 1.55 },
 } as const;
 
 function wrap2(words: string[], fits: (s: string) => boolean): string[] | null {
@@ -39,6 +54,7 @@ function wrap2(words: string[], fits: (s: string) => boolean): string[] | null {
 }
 
 export function layoutLabel(verb: string, name: string, faceW: number, faceH: number, measure: Measure): LabelLayout {
+  if (name.trim() === "") return verbOnly(verb, faceW, faceH, measure);
   const P = faceW < 20 ? PRINT.small : PRINT.hero;
   const x = P.inset;
   const maxW = faceW - 2 * P.inset;
@@ -61,7 +77,20 @@ export function layoutLabel(verb: string, name: string, faceW: number, faceH: nu
       if (two) {
         lines = two;
         nameSize = sz + 0.05;
-      } else nameSize = shrunk; // one long word: always fit the face
+      } else {
+        // Nothing fits at minName: the larger of one line or the best two-line cut, shrunk to fit the face.
+        // (Board sublabels then print under 9 CSS px: keep names to <= 11 caps a line on a 2-wide brick.)
+        nameSize = shrunk;
+        const words = caps.split(" ");
+        for (let cut = 1; cut < words.length; cut++) {
+          const pair = [words.slice(0, cut).join(" "), words.slice(cut).join(" ")];
+          const sz2 = Math.min(...pair.map((t) => P.name * (maxW / measure(t, "name", P.name))), P.name);
+          if (sz2 > nameSize) {
+            nameSize = sz2;
+            lines = pair;
+          }
+        }
+      }
     }
   }
   // Two sublabel lines on a small face: give the verb a little less room.
@@ -84,10 +113,23 @@ export function layoutLabel(verb: string, name: string, faceW: number, faceH: nu
   const verbBaseline = top + capH;
   return {
     x,
+    align: "start",
     verb: { text: verb, size: verbSize, y: verbBaseline },
     name: lines.map((text, i) => ({ text, size: nameSize, y: verbBaseline + gap + nameSize * 0.72 + i * lineH })),
     tracking: NAME_TRACKING,
   };
+}
+
+/** The verb alone, centred on the face both ways (cap height centred, a hair low like the two-line print). */
+function verbOnly(verb: string, faceW: number, faceH: number, measure: Measure): LabelLayout {
+  const P = faceW < 20 ? VERB_ONLY.small : VERB_ONLY.hero;
+  const maxW = faceW - 2 * P.inset;
+  // cap height (0.71 em) within the face less a 0.9 mm margin top and bottom
+  let size = Math.min(P.verb, (faceH - 1.8) / 0.71);
+  const w = measure(verb, "verb", size) + verb.length * size * VERB_TRACKING;
+  if (w > maxW) size *= maxW / w;
+  const capH = size * 0.71;
+  return { x: faceW / 2, align: "middle", verb: { text: verb, size, y: (faceH + capH) / 2 + faceH * 0.02 }, name: [], tracking: NAME_TRACKING };
 }
 
 /** Font stacks from next/font (CSS variables on <html>), with the plain family as a fallback. */

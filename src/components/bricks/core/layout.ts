@@ -1,6 +1,7 @@
 import type { BrickLayoutItem, PlacedBrick } from "@/lib/contract";
 import { PLATES_PER_BRICK } from "@/lib/bricks";
 import { BASEPLATE_TOP, DIM } from "./dims";
+import { hull } from "./hull";
 
 export type V3 = [number, number, number];
 
@@ -33,10 +34,19 @@ function viewDir({ pitch, azimuth }: { pitch: number; azimuth: number }): V3 {
 /** Long lens (vertical field of view in degrees): close to product photography, little distortion. */
 export const FOV = 20;
 
-/** Baseplate size in studs. Even, so a centred 2x4 or 2x2 lands on the stud grid. */
-export const BASEPLATE: [number, number] = [8, 8];
+/**
+ * Baseplate size in studs. Even, so a centred 2x4 or 2x2 lands on the stud grid; 6x6 leaves a 1-stud
+ * border beside a 2x4 and 2 studs in front and behind, and lets the camera come close.
+ */
+export const BASEPLATE: [number, number] = [6, 6];
 /** Most bricks a stack can hold (the board frames for this height so it never re-zooms). */
 export const MAX_STACK = 4;
+/**
+ * Stack height (bricks) the board is composed for: sized and centred on a 3.5-brick tower, so an empty
+ * or one-brick board is not stranded low in the stage. The fourth brick still fits (it may reach the
+ * top few per cent of the stage).
+ */
+export const FRAME_STACK = 3.5;
 /** Footprint drawn for the ghost "next slot" when the next brick is not known (a hero 2x4). */
 export const GHOST_SIZE: [number, number] = [4, 2];
 
@@ -50,13 +60,13 @@ export const BOARD = {
  * Board framing. The camera (and the SVG fallback's view box) is fitted ONCE per container size: it
  * scales so the baseplate spans `plateFill` of the container width, keeping at least `side` px clear at
  * each side (capped at `sideMax` of the width, so a 144 px phone scene still gets a ~120 px plate),
- * unless the full 4-brick tower would then not fit: it is kept inside `maxH` of the height and `maxW`
- * of the width. The board box (plate + full tower, `frameBox`) is centred and lifted by `bias` of the
- * height. Nothing depends on the stack, so the board never pans or re-zooms as bricks are added: the
+ * unless the FRAME_STACK tower would then not fit (or the full 4-brick tower would leave the frame): it is kept inside `maxH` of the height and `maxW`
+ * of the width. The board box (plate + a FRAME_STACK tower, `frameBox`) is centred and lifted by `bias`
+ * of the height, never pushing the full 4-brick tower or the plate out of frame. Nothing depends on the stack, so the board never pans or re-zooms as bricks are added: the
  * plate is the fixed desk, and the empty space above it is where the ghost and the tower go.
  */
 export type Framing = { plateFill: number; maxH: number; maxW: number; side: number; sideMax: number; bias: number };
-export const DEFAULT_FRAMING: Framing = { plateFill: 0.97, maxH: 0.97, maxW: 0.98, side: 24, sideMax: 0.083, bias: 0.02 };
+export const DEFAULT_FRAMING: Framing = { plateFill: 0.97, maxH: 0.97, maxW: 0.98, side: 24, sideMax: 0.083, bias: 0.08 };
 
 /** Fraction of the container width the plate may take, after `plateFill` and the side clearance. */
 export function plateFraction(f: Framing, width: number): number {
@@ -139,11 +149,14 @@ export function plateCorners(): V3[] {
   return out;
 }
 
-/** World-space box the camera keeps in frame: the baseplate plus a full stack and its ghost label. */
-export function frameBox(): { min: V3; max: V3 } {
+/**
+ * World-space box the camera composes: the baseplate plus a tower of `stack` bricks (default
+ * FRAME_STACK; MAX_STACK = the full tower, which must stay in frame).
+ */
+export function frameBox(stack: number = FRAME_STACK): { min: V3; max: V3 } {
   const hx = (BASEPLATE[0] * DIM.pitch) / 2;
   const hz = (BASEPLATE[1] * DIM.pitch) / 2;
-  const top = levelY(MAX_STACK * PLATES_PER_BRICK) - DIM.stackGap + DIM.studH;
+  const top = levelY(stack * PLATES_PER_BRICK) - DIM.stackGap + DIM.studH;
   return { min: [-hx, 0, -hz], max: [hx, top, hz] };
 }
 
@@ -185,6 +198,28 @@ export function boxCorners({ min, max }: { min: V3; max: V3 }): V3[] {
   return out;
 }
 
+/** Stud-top ring points per stud corner: enough for a smooth silhouette over the round studs. */
+const STUD_RING = 8;
+
+/**
+ * A placed brick's outer silhouette in screen px (convex hull, clockwise on screen): the eight corners
+ * of its body plus the rims of its outer studs' tops. Convex is exact for the body and the stud row.
+ */
+function silhouette(b: PlacedBrick, p: BrickPose, project: (q: V3) => [number, number]): [number, number][] {
+  const W = b.size[0] * DIM.pitch - DIM.gap, D = b.size[1] * DIM.pitch - DIM.gap;
+  const pts: [number, number][] = [];
+  for (const x of [-W / 2, W / 2]) for (const y of [0, p.height]) for (const z of [-D / 2, D / 2]) pts.push(project([p.x + x, p.y + y, p.z + z]));
+  const sx = ((b.size[0] - 1) * DIM.pitch) / 2, sz = ((b.size[1] - 1) * DIM.pitch) / 2;
+  const top = p.y + p.height + DIM.studH;
+  for (const cx of [-sx, sx]) for (const cz of [-sz, sz]) {
+    for (let i = 0; i < STUD_RING; i++) {
+      const a = (i / STUD_RING) * Math.PI * 2;
+      pts.push(project([p.x + cx + Math.cos(a) * DIM.studR, top, p.z + cz + Math.sin(a) * DIM.studR]));
+    }
+  }
+  return hull(pts);
+}
+
 /** Accessible summary of the stack, bottom to top. */
 export function stackLabel(bricks: readonly PlacedBrick[], nextLevel: number | null): string {
   const sorted = [...bricks].sort((a, b) => a.level - b.level);
@@ -203,7 +238,8 @@ export function byLevel(bricks: readonly PlacedBrick[]): PlacedBrick[] {
 /**
  * Where each brick's front (label) face is on screen, as fractions of a `width` x `height` container
  * (`project` maps world mm to that container's px): cx/cy = centre of the face, w/h = its projected
- * bounding box. The BrickStage `onLayout` payload.
+ * bounding box; `hull` = the brick's whole outer silhouette (body and studs, clockwise). The BrickStage
+ * `onLayout` payload.
  */
 export function brickLayoutItems(bricks: readonly PlacedBrick[], project: (p: V3) => [number, number], width: number, height: number): BrickLayoutItem[] {
   if (width <= 0 || height <= 0) return [];
@@ -216,6 +252,6 @@ export function brickLayoutItems(bricks: readonly PlacedBrick[], project: (p: V3
     const ys = pts.map((q) => q[1]);
     const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
     const r = (n: number) => Math.round(n * 10000) / 10000;
-    return { id: b.id, cx: r((x0 + x1) / 2 / width), cy: r((y0 + y1) / 2 / height), w: r((x1 - x0) / width), h: r((y1 - y0) / height) };
+    return { id: b.id, cx: r((x0 + x1) / 2 / width), cy: r((y0 + y1) / 2 / height), w: r((x1 - x0) / width), h: r((y1 - y0) / height), hull: silhouette(b, p, project).map(([x, y]) => [r(x / width), r(y / height)] as [number, number]) };
   });
 }
