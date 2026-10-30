@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
-import { BY_ID, RECIPES, flowOrder, type Recipe } from "@/lib";
+import { BY_ID, RECIPES, stackOrder, type Recipe } from "@/lib";
 import { BrickGlyph } from "./BrickArt";
 import styles from "./RecipesMenu.module.css";
 
@@ -98,7 +98,7 @@ export default function RecipesMenu({ active, onPick, placement = "up", classNam
                   }}
                 >
                   <span className={styles.glyphs} aria-hidden="true">
-                    {flowOrder(r.ids).map((id) => (
+                    {stackOrder(r.ids).map((id) => (
                       <BrickGlyph key={id} color={BY_ID[id].brick.hex} studs={BY_ID[id].size} className={styles.glyph} />
                     ))}
                   </span>

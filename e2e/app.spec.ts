@@ -267,8 +267,8 @@ test.describe("desktop", () => {
     await expect(phone(page).locator("[data-tile]")).toHaveCount(4);
     expect(await tileIds(page)).toEqual(["validity", "speed", "payments", "b20"]);
     await expect(phone(page).locator('[data-role="hero"]')).toHaveCount(1);
-    // The top tile is the hero, whatever it is; the rest are compact rows.
-    await expect(phone(page).locator('[data-role="hero"]')).toHaveAttribute("data-tile", "validity");
+    // The anchor task (Checkout, lowest prio) is the hero wherever it sits; the rest are compact rows.
+    await expect(phone(page).locator('[data-role="hero"]')).toHaveAttribute("data-tile", "payments");
     const hh = (await phone(page).locator('[data-role="hero"]').boundingBox())!.height;
     expect(hh).toBeGreaterThanOrEqual(110);
     expect(hh).toBeLessThanOrEqual(144);
@@ -298,6 +298,18 @@ test.describe("desktop", () => {
     await expect(phone(page).locator('[data-tile="payments"]')).toContainText("Made with");
     await brick(page, "b20").hover();
     await expect(phone(page).locator('[data-tile="b20"]')).toHaveAttribute("data-inspect", "true");
+  });
+
+  test("every recipe opens on a task hero card with one primary action (never a toast, pill or badge)", async ({ page }) => {
+    // (The pyramid order, largest footprint at the bottom, is checked for every recipe in logic.test.ts.)
+    for (const slug of ["neobank", "neobroker", "stablecoin-checkout", "creator-payouts", "pay-a-name", "agent-data-market", "escrow-marketplace", "gas-free-onboarding"]) {
+      await page.goto(`/#recipe=${slug}`);
+      await expect(phone(page).locator("[data-tile]").first()).toBeVisible();
+      const hero = phone(page).locator('[data-role="hero"]');
+      await expect(hero, slug).toHaveCount(1);
+      expect(["toast", "pill", "badge"], slug).not.toContain(await hero.getAttribute("data-template"));
+      await expect(hero.locator('[class*="cta"]:not([class*="ctaQuiet"]):not([class*="ctaSmall"])').first(), slug).toBeVisible();
+    }
   });
 
   test("money values carry a currency and are never cut off", async ({ page }) => {

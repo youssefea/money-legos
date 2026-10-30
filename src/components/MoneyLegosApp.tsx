@@ -8,10 +8,10 @@ import {
   RECIPES,
   RISK_FOOTER,
   buildFakeApp,
-  flowOrder,
   generate,
   parseHash,
   recipeHash,
+  stackOrder,
   surprise,
   toHash,
   type Category,
@@ -215,7 +215,7 @@ export default function MoneyLegosApp() {
     else onBuild();
   };
 
-  const onRecipe = (r: Recipe) => load(flowOrder(r.ids), r.recipe, "recipe");
+  const onRecipe = (r: Recipe) => load(stackOrder(r.ids), r.recipe, "recipe");
   const onSurprise = () => load(surprise(state.ids), null, "surprise");
   const onClear = () => {
     dispatch({ type: "clear" });
@@ -505,7 +505,7 @@ export default function MoneyLegosApp() {
 }
 
 /** Recipe name for a #recipe= hash (parseHash resolves the slug to the recipe's ids). */
-const RECIPE_BY_IDS = new Map(RECIPES.map((r) => [toHash(flowOrder(r.ids)), r.recipe]));
+const RECIPE_BY_IDS = new Map(RECIPES.map((r) => [toHash(stackOrder(r.ids)), r.recipe]));
 function recipeFromHash(hash: string): string | null {
   return /^#recipe=/.test(hash) ? (RECIPE_BY_IDS.get(toHash(parseHash(hash))) ?? null) : null;
 }

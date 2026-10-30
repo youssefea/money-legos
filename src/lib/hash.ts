@@ -1,5 +1,5 @@
 import { RECIPES, recipeSlug } from "./combos";
-import { MAX_LEGOS, flowOrder } from "./generate";
+import { MAX_LEGOS, stackOrder } from "./generate";
 import { resolveId } from "./legos";
 import type { LegoId } from "./types";
 
@@ -15,7 +15,7 @@ export function parseHash(hash: string | null | undefined): LegoId[] {
   if (m) {
     const want = recipeSlug(safeDecode(m[1]!));
     const hit = RECIPES.find((r) => r.id === want || recipeSlug(r.recipe) === want);
-    return hit ? flowOrder(hit.ids) : [];
+    return hit ? stackOrder(hit.ids) : [];
   }
   const out: LegoId[] = [];
   for (const raw of h.split(/[,+]/)) {

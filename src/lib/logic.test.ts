@@ -25,8 +25,11 @@ import {
   cleanIds,
   describeFakeApp,
   tileRoles,
+  heroIndex,
+  HERO_TEMPLATES,
   wireLabel,
   flowOrder,
+  stackOrder,
   generate,
   keyOf,
   nextLevel,
@@ -403,9 +406,9 @@ describe("URL hash", () => {
     expect(parseHash("#nope,b20")).toEqual(["b20"]);
     expect(parseHash("#a,b20,payments,speed,memos,swaps")).toEqual(["b20", "payments", "speed", "memos"]);
     expect(parseHash("")).toEqual([]);
-    expect(parseHash("#recipe=Agent-paid%20API")).toEqual(flowOrder(["payments", "speed", "builder"]));
-    expect(parseHash("#recipe=safe-stablecoin-desk")).toEqual(flowOrder(["b20", "freeze", "pause", "memos"]));
-    expect(parseHash("#recipe=stablecoin-ops-desk")).toEqual(flowOrder(["b20", "freeze", "pause", "memos"]));
+    expect(parseHash("#recipe=Agent-paid%20API")).toEqual(stackOrder(["payments", "speed", "builder"]));
+    expect(parseHash("#recipe=safe-stablecoin-desk")).toEqual(stackOrder(["b20", "freeze", "pause", "memos"]));
+    expect(parseHash("#recipe=stablecoin-ops-desk")).toEqual(stackOrder(["b20", "freeze", "pause", "memos"]));
   });
 
   it("round-trips every id and every alias", () => {
@@ -426,8 +429,8 @@ describe("URL hash", () => {
   it("round-trips every recipe through recipeHash/parseHash", () => {
     for (const r of RECIPES) {
       expect(recipeHash(r.recipe)).toBe("#recipe=" + r.id);
-      expect(parseHash(recipeHash(r.recipe))).toEqual(flowOrder(r.ids));
-      expect(parseHash("#recipe=" + recipeSlug(r.recipe))).toEqual(flowOrder(r.ids));
+      expect(parseHash(recipeHash(r.recipe))).toEqual(stackOrder(r.ids));
+      expect(parseHash("#recipe=" + recipeSlug(r.recipe))).toEqual(stackOrder(r.ids));
     }
   });
 });
@@ -493,20 +496,56 @@ describe("fake app", () => {
     }
   });
 
-  it("makes the top tile the dominant module, confirmations status rows, the rest compact", () => {
+  it("makes the anchor task the dominant module (lowest prio task tile), confirmations status rows, the rest compact", () => {
     const roles = (ids: string[]) => {
       const app = buildFakeApp(ids);
       return Object.fromEntries(app.tiles.map((t, i) => [t.legoId, tileRoles(app.tiles)[i]]));
     };
-    expect(roles(["b20", "payments", "speed", "validity"])).toEqual({ validity: "hero", speed: "status", payments: "row", b20: "row" });
-    expect(roles(["payments", "financing"])).toEqual({ financing: "hero", payments: "row" });
-    // A status on top is the hero too (a big confirmation card).
-    expect(roles(["verify", "speed"])).toEqual({ speed: "hero", verify: "row" });
+    // Checkout (prio 10) is the hero even under a top Speed toast and a Verify badge.
+    expect(roles(["b20", "payments", "speed", "validity"])).toEqual({ validity: "row", speed: "status", payments: "hero", b20: "row" });
+    expect(roles(["payments", "financing"])).toEqual({ financing: "row", payments: "hero" });
+    // A toast or badge on top stays a compact row; the task below is the hero. With no task tile at all,
+    // the lowest-prio tile is the hero (Verify's badge over Speed's toast).
+    expect(roles(["verify", "speed"])).toEqual({ speed: "status", verify: "hero" });
+    expect(roles(["b20", "speed"])).toEqual({ speed: "status", b20: "hero" });
     for (const ids of sample(rng(7), 300, 1, 4)) {
-      const r = tileRoles(buildFakeApp(ids).tiles);
+      const tiles = buildFakeApp(ids).tiles;
+      const r = tileRoles(tiles);
       expect(r.filter((x) => x === "hero").length, ids.join(",")).toBe(1);
-      expect(r[0], ids.join(",")).toBe("hero");
+      const h = r.indexOf("hero");
+      expect(h, ids.join(",")).toBe(heroIndex(tiles));
+      // No task tile has a lower prio than the hero.
+      if (HERO_TEMPLATES.includes(tiles[h]!.template))
+        for (const t of tiles) if (HERO_TEMPLATES.includes(t.template)) expect(BY_ID[t.legoId].prio).toBeGreaterThanOrEqual(BY_ID[tiles[h]!.legoId].prio);
     }
+  });
+
+  it("every recipe opens on a task hero (never a toast, pill or badge) and builds a stable pyramid", () => {
+    const want: Record<string, string> = {
+      Neobank: "payments",
+      Neobroker: "validity",
+      "Agent-paid API": "payments",
+      "Stablecoin checkout": "payments",
+      "Creator payouts": "payouts",
+      "Pay a name": "base-pay",
+      "Members-only fund": "b20",
+      "Private payroll": "private-ledgers",
+    };
+    for (const r of RECIPES) {
+      const ids = stackOrder(r.ids);
+      // Bottom first: footprints never grow going up.
+      const areas = ids.map((id) => BY_ID[id].size[0] * BY_ID[id].size[1]);
+      for (let i = 1; i < areas.length; i++) expect(areas[i]!, r.recipe).toBeLessThanOrEqual(areas[i - 1]!);
+      const tiles = buildFakeApp(ids).tiles;
+      const hero = tiles[heroIndex(tiles)]!;
+      expect(HERO_TEMPLATES, r.recipe).toContain(hero.template);
+      if (want[r.recipe]) expect(hero.legoId, r.recipe).toBe(want[r.recipe]);
+      // Manual order is untouched: buildFakeApp keeps the given order.
+      expect(tiles.map((t) => t.legoId)).toEqual(ids.slice().reverse());
+    }
+  });
+
+  it("names wireframe modules", () => {
     expect(wireLabel(BY_ID.payments.ui)).toBe("Checkout");
     expect(wireLabel(BY_ID.b20.ui)).toBe("Balance");
   });

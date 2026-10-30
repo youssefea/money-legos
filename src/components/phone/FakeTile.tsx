@@ -76,8 +76,12 @@ function Value({ v, big }: { v?: string; big?: boolean }) {
 }
 
 /** The dominant module: the app's main task, 112-144px tall, with the one primary fake CTA. */
+/** The hero card always ends on one primary action: the tile's own, else a plain one for its kind. */
+const HERO_CTA: Partial<Record<Tile["template"], string>> = { list: "View all", rows: "Manage", qr: "Pay now", meter: "Adjust", input: "Continue" };
+
 function HeroBody({ t }: { t: Tile }) {
   const rows = t.rows ?? [];
+  const cta = t.cta ?? HERO_CTA[t.template];
   switch (t.template) {
     case "balance":
       return (
@@ -182,10 +186,7 @@ function HeroBody({ t }: { t: Tile }) {
     case "rows":
       return (
         <>
-          <div className={styles.row}>
-            <span className={styles.titleText}>{t.title}</span>
-            {t.cta && <span className={styles.ctaSmall}>{t.cta}</span>}
-          </div>
+          <span className={styles.titleText}>{t.title}</span>
           <span className={styles.lines}>
             {rows.map(([k, v]) => (
               <span key={k} className={styles.line}>
@@ -194,19 +195,23 @@ function HeroBody({ t }: { t: Tile }) {
               </span>
             ))}
           </span>
+          {cta && <Cta>{cta}</Cta>}
         </>
       );
     case "qr":
       return (
-        <div className={styles.hrow}>
-          <span className={styles.qrBig}>
-            <Qr />
-          </span>
-          <span className={styles.stackText}>
-            <span className={styles.label}>{t.title}</span>
-            <Value v={t.value} big />
-          </span>
-        </div>
+        <>
+          <div className={styles.hrow}>
+            <span className={styles.qrBig}>
+              <Qr />
+            </span>
+            <span className={styles.stackText}>
+              <span className={styles.label}>{t.title}</span>
+              <Value v={t.value} big />
+            </span>
+          </div>
+          {cta && <Cta>{cta}</Cta>}
+        </>
       );
     case "signin":
       return (
@@ -235,7 +240,7 @@ function HeroBody({ t }: { t: Tile }) {
             </span>
           )}
           {t.template === "meter" && rows.length > 0 && <span className={styles.sub}>{rows.map(([k, v]) => `${k} ${v}`).join(" · ")}</span>}
-          {t.cta && <Cta>{t.cta}</Cta>}
+          {cta && <Cta>{cta}</Cta>}
         </>
       );
   }

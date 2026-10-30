@@ -21,6 +21,16 @@ export function flowOrder(ids: readonly LegoId[]): LegoId[] {
   return ids.slice().sort((a, b) => BY_ID[a].flow - BY_ID[b].flow);
 }
 
+/**
+ * Stack order for presets (recipes, #recipe= links, Surprise me), bottom brick first: the largest
+ * footprint at the bottom (area, then width), then money-flow order, so a preset always builds a
+ * stable pyramid. Manual clicks keep the user's own order.
+ */
+export function stackOrder(ids: readonly LegoId[]): LegoId[] {
+  const area = (id: LegoId) => BY_ID[id].size[0] * BY_ID[id].size[1];
+  return ids.slice().sort((a, b) => area(b) - area(a) || BY_ID[b].size[0] - BY_ID[a].size[0] || BY_ID[a].flow - BY_ID[b].flow);
+}
+
 function words(s: string): string[] {
   return s.toLowerCase().split(/[\s-]+/);
 }
@@ -101,5 +111,5 @@ export function surprise(currentIds: readonly string[] | null | undefined, rand:
   const cur = keyOf(currentIds ?? []);
   const pool = COMBOS.filter((c) => keyOf(c.ids) !== cur);
   const pick = pool[Math.floor(rand() * pool.length) % pool.length]!;
-  return flowOrder(pick.ids);
+  return stackOrder(pick.ids);
 }

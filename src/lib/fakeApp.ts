@@ -56,18 +56,35 @@ export function tileStrings(t: Pick<FakeTile, "title" | "value" | "cta" | "chip"
 }
 
 /**
- * How a tile sits in the fake app. The top tile (the top brick) is always the dominant `hero` module,
- * 112-144px, whatever it is (a status or a badge gets a big hero treatment too), so the app always
- * opens on its biggest card. Below it, confirmations and notices are `status` rows and everything else
- * a compact `row` module (both 56px).
+ * How a tile sits in the fake app. One tile is the dominant `hero` module (112-144px, with the
+ * primary blue action): the app's anchor financial task, i.e. the tile with the lowest catalog `prio`
+ * among the task templates (balance, checkout, order, swap, earn, qr, rows, list, signin, input, meter),
+ * wherever it sits in the stack. Confirmations, notices and badges (toast, pill, badge) stay compact
+ * rows even on top, like a "Confirmed in 0.2s" toast above a big Checkout. Everything else is a compact
+ * `row` (56px). Tiles keep their stack order (top brick = top tile), so connectors never cross.
  */
 export type TileRole = "hero" | "row" | "status";
 
 const STATUS_TEMPLATES: readonly UiTemplate[] = ["toast", "pill"];
+export const HERO_TEMPLATES: readonly UiTemplate[] = ["balance", "checkout", "order", "swap", "earn", "qr", "rows", "list", "signin", "input", "meter"];
+
+/** Index of the hero tile: the lowest-prio task tile, else the lowest-prio tile (never -1 for 1+ tiles). */
+export function heroIndex(tiles: readonly Pick<FakeTile, "template" | "legoId">[]): number {
+  let best = -1;
+  for (const pass of [true, false]) {
+    tiles.forEach((t, i) => {
+      if (pass && !HERO_TEMPLATES.includes(t.template)) return;
+      if (best < 0 || BY_ID[t.legoId].prio < BY_ID[tiles[best]!.legoId].prio) best = i;
+    });
+    if (best >= 0) break;
+  }
+  return best;
+}
 
 /** One role per tile, in tile order. */
-export function tileRoles(tiles: readonly Pick<FakeTile, "template">[]): TileRole[] {
-  return tiles.map((t, i) => (i === 0 ? "hero" : STATUS_TEMPLATES.includes(t.template) ? "status" : "row"));
+export function tileRoles(tiles: readonly Pick<FakeTile, "template" | "legoId">[]): TileRole[] {
+  const hero = heroIndex(tiles);
+  return tiles.map((t, i) => (i === hero ? "hero" : STATUS_TEMPLATES.includes(t.template) ? "status" : "row"));
 }
 
 const WIRE_LABEL: Partial<Record<UiTemplate, string>> = {
