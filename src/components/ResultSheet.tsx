@@ -1,29 +1,33 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import type { FakeApp } from "@/lib";
+import { useEffect, useRef, useState } from "react";
+import type { FakeApp, LegoId } from "@/lib";
 import FakePhone from "./phone/FakePhone";
-import { CopyButton } from "./ResultPanel";
+import { AppName, CopyButton, DemoLabel } from "./ResultPanel";
 import styles from "./ResultSheet.module.css";
 
 export type ResultSheetProps = {
   open: boolean;
   app: FakeApp;
   name: string;
+  /** Bumps on Build: the name types in again. */
+  boot: number;
   copied: boolean;
   onCopy: () => void;
   onDetails: () => void;
-  /** Called after the sheet closes (Escape, backdrop, Back to Legos). */
+  /** Called after the sheet closes (Escape, backdrop, Back to bricks). */
   onClose: () => void;
 };
 
 /**
- * Compact layouts (<1024px): after Generate the fake phone opens as a bottom sheet with Copy prompt
- * pinned in a 72px action bar and "Back to Legos". Native modal <dialog>: focus trapped, Escape closes.
+ * Compact layouts (<1024px): the built app opens as a bottom sheet. The sheet is the screen (no device
+ * frame inside a device): the name as its title, the demo label, the app scrolling, and Copy prompt
+ * pinned in a 72px action bar with "Back to bricks". Tapping a tile shows "Made with <brick>".
+ * Native modal <dialog>: focus trapped, Escape closes.
  */
-export default function ResultSheet({ open, app, name, copied, onCopy, onDetails, onClose }: ResultSheetProps) {
+export default function ResultSheet({ open, app, name, boot, copied, onCopy, onDetails, onClose }: ResultSheetProps) {
+  const [inspect, setInspect] = useState<LegoId | null>(null);
   const ref = useRef<HTMLDialogElement>(null);
-  const titleRef = useRef<HTMLHeadingElement>(null);
   const onCloseRef = useRef(onClose);
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -34,7 +38,8 @@ export default function ResultSheet({ open, app, name, copied, onCopy, onDetails
     if (!d) return;
     if (open && !d.open) {
       d.showModal();
-      titleRef.current?.focus();
+      // Focus the dialog itself (no ring on the heading); Tab then moves into it.
+      d.focus();
     } else if (!open && d.open) d.close();
   }, [open]);
 
@@ -56,20 +61,23 @@ export default function ResultSheet({ open, app, name, copied, onCopy, onDetails
   }, []);
 
   return (
-    <dialog ref={ref} className={styles.sheet} aria-labelledby="sheet-h" data-testid="result-sheet">
+    <dialog ref={ref} className={styles.sheet} aria-labelledby="sheet-h" tabIndex={-1} data-testid="result-sheet">
       <div className={styles.grip} aria-hidden="true" />
       <header className={styles.head}>
-        <h2 id="sheet-h" ref={titleRef} tabIndex={-1} className={styles.title}>
-          {name}
-        </h2>
+        <div className={styles.heading}>
+          <AppName id="sheet-h" name={name} boot={boot} className={styles.title} />
+          <DemoLabel className={styles.demo} />
+        </div>
         <button type="button" className={styles.details} onClick={onDetails} aria-haspopup="dialog">
           Details
         </button>
       </header>
-      <FakePhone className={styles.phone} app={app} slots={0} />
+      <div className={styles.body}>
+        <FakePhone className={styles.phone} app={app} phase="live" boot={0} slots={0} frameless inspect={inspect} onInspect={setInspect} />
+      </div>
       <div className={styles.bar}>
         <button type="button" className={styles.back} onClick={() => ref.current?.close()}>
-          Back to Legos
+          Back to bricks
         </button>
         <CopyButton className={styles.copy} copied={copied} disabled={false} onCopy={onCopy} testId="sheet-copy" />
       </div>

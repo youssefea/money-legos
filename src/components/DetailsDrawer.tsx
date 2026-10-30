@@ -25,7 +25,6 @@ export type DetailsDrawerProps = {
  */
 export default function DetailsDrawer({ open, result, copied, onCopy, onClose, selectSignal }: DetailsDrawerProps) {
   const ref = useRef<HTMLDialogElement>(null);
-  const titleRef = useRef<HTMLHeadingElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
   const onCloseRef = useRef(onClose);
   useEffect(() => {
@@ -37,7 +36,8 @@ export default function DetailsDrawer({ open, result, copied, onCopy, onClose, s
     if (!d) return;
     if (open && !d.open) {
       d.showModal();
-      titleRef.current?.focus();
+      // Focus the dialog itself (no ring on the heading); Tab then moves into it.
+      d.focus();
     } else if (!open && d.open) d.close();
   }, [open]);
 
@@ -66,10 +66,10 @@ export default function DetailsDrawer({ open, result, copied, onCopy, onClose, s
   const terms = GLOSSARY.filter((g) => new RegExp(`\\b${g.term}\\b`).test(text));
 
   return (
-    <dialog ref={ref} className={styles.drawer} aria-labelledby="details-h" data-testid="details">
+    <dialog ref={ref} className={styles.drawer} aria-labelledby="details-h" tabIndex={-1} data-testid="details">
       <div className={styles.grip} aria-hidden="true" />
       <header className={styles.head}>
-        <h2 id="details-h" ref={titleRef} tabIndex={-1} className={styles.title}>
+        <h2 id="details-h" className={styles.title}>
           {result.name}
         </h2>
         <button type="button" className={styles.close} onClick={() => ref.current?.close()} aria-label="Close details">
@@ -84,7 +84,7 @@ export default function DetailsDrawer({ open, result, copied, onCopy, onClose, s
 
         <section aria-labelledby="d-why">
           <h3 id="d-why" className={styles.h3}>
-            Why each Lego
+            Why each brick
           </h3>
           <ul className={styles.why}>
             {result.steps.map((s) => (

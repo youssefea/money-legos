@@ -6,28 +6,53 @@
 }
 
 .head {
+  flex: none;
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  min-height: 24px;
 }
 
-.label {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-weight: var(--weight-medium);
-  font-size: var(--text-label);
-  line-height: var(--text-label-lh);
-  letter-spacing: var(--text-label-tracking);
-  text-transform: uppercase;
-  color: var(--color-fg-label);
+/* Four studs that fill as bricks land. */
+.studs {
+  display: inline-flex;
+  gap: 6px;
+}
+.studs i {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--base-gray-10);
+  box-shadow: inset 0 0 0 1.5px var(--base-gray-30);
+  transition: background-color var(--dur-fast) var(--ease-hover), box-shadow var(--dur-fast) var(--ease-hover);
+}
+.studs i[data-on] {
+  background: var(--base-gray-100);
+  box-shadow:
+    inset 0 -2px 0 rgb(255 255 255 / 0.12),
+    inset 0 1.5px 0 rgb(255 255 255 / 0.25);
+  animation: stud-in var(--dur-place) var(--ease-out) 150ms both;
+}
+@keyframes stud-in {
+  from {
+    transform: scale(0.6);
+  }
 }
 
-.count {
+.full {
   margin: 0;
-  font-size: var(--text-small);
-  font-weight: var(--weight-medium);
-  font-variant-numeric: tabular-nums;
-  color: var(--color-fg);
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--color-fg-muted);
+  animation: full-in var(--dur-base) var(--ease-out) both;
+}
+@keyframes full-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
 }
 
 .drop {
@@ -47,31 +72,12 @@
   outline-color: var(--color-accent);
 }
 
-.caption {
-  position: absolute;
-  z-index: 1;
-  left: 0;
-  right: 0;
-  top: 12%;
-  margin: 0;
-  text-align: center;
-  font-size: var(--text-small);
-  line-height: 20px;
-  color: var(--color-fg-muted);
-  pointer-events: none;
-}
-
 .controls {
   flex: none;
   display: flex;
   align-items: center;
   gap: var(--space-2);
   padding-bottom: var(--space-2);
-}
-
-.generateWrap {
-  position: relative;
-  display: flex;
 }
 
 .generate,
@@ -113,18 +119,6 @@
   transform: none;
 }
 
-/* Tiny requirement under Generate; absolutely placed so nothing shifts when it goes. */
-.need {
-  position: absolute;
-  top: calc(100% + 2px);
-  left: 0;
-  right: 0;
-  text-align: center;
-  font-size: 12px;
-  line-height: 16px;
-  color: var(--color-fg-muted);
-}
-
 .secondary {
   border: 1px solid var(--color-border-strong);
   background: var(--color-surface);
@@ -154,6 +148,13 @@
 }
 
 @media (prefers-color-scheme: dark) {
+  .studs i {
+    background: var(--base-gray-100);
+    box-shadow: inset 0 0 0 1.5px var(--base-gray-60);
+  }
+  .studs i[data-on] {
+    background: var(--base-gray-0);
+  }
   .generate[aria-disabled="true"] {
     background: var(--base-gray-80);
     border-color: var(--base-gray-80);
@@ -165,8 +166,13 @@
 }
 
 @media (min-width: 1600px) {
-  .count {
-    font-size: var(--text-body);
+  .studs i {
+    width: 16px;
+    height: 16px;
+  }
+  .full {
+    font-size: 14px;
+    line-height: 18px;
   }
   .generate,
   .secondary,
@@ -176,8 +182,5 @@
   }
   .generate {
     min-width: 176px;
-  }
-  .need {
-    font-size: 14px;
   }
 }

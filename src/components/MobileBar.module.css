@@ -1,4 +1,4 @@
-/* Compact sticky bar: a boxed 116px card. [mini stack 144x88] | n/4 + need | Generate 96x48 */
+/* Compact sticky bar: a boxed 116px card. [mini stack 144x88] | count studs + note | Build app 104x48 */
 .bar {
   position: sticky;
   top: 8px;
@@ -20,35 +20,29 @@
 }
 
 .count {
-  margin: 0;
   height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  gap: 2px;
+  gap: 6px;
   min-width: 0;
   padding: 0 var(--space-2);
   border-left: 1px solid var(--color-hairline);
   border-right: 1px solid var(--color-hairline);
   margin: 0 var(--space-2);
 }
-.n {
-  font-size: 20px;
-  line-height: 24px;
-  font-weight: var(--weight-medium);
-  font-variant-numeric: tabular-nums;
-}
 .need {
-  font-size: 12px;
+  font-size: 14px;
   line-height: 16px;
   color: var(--color-fg-muted);
 }
 
 .generate {
   height: 48px;
-  min-width: 96px;
+  min-width: 104px;
+  white-space: nowrap;
   padding: 0 var(--space-3);
   border: 1px solid var(--base-blue);
   border-radius: var(--radius-md);

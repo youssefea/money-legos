@@ -1,8 +1,8 @@
 import type { CSSProperties, ReactNode } from "react";
-import { BRICK_COLORS, type FakeTile as Tile } from "@/lib";
+import { BRICK_COLORS, BY_ID, wireLabel, type FakeTile as Tile, type LegoId, type TileRole } from "@/lib";
 import styles from "./FakePhone.module.css";
 
-/** Light brick colours need a darker line to show on a white card. */
+/** Pale brick colours need a hairline under their strip and a darker line to show on a white card. */
 const PALE = new Set(["white", "gray-light"]);
 
 /** CSS variables for one tile: brick colour, its label ink and a visible line colour. */
@@ -11,7 +11,7 @@ export function accentVars(accent: Tile["accent"]): CSSProperties {
   return {
     "--accent": c.hex,
     "--accent-ink": c.label,
-    "--accent-line-light": PALE.has(accent) ? "#B1B7C3" : c.hex,
+    "--accent-line-light": accent === "white" || accent === "gray-light" ? "#B1B7C3" : c.hex,
     "--accent-line-dark": accent === "gray-dark" ? "#B1B7C3" : c.hex,
   } as CSSProperties;
 }
@@ -22,7 +22,8 @@ const Check = () => (
   </svg>
 );
 
-const Icon = ({ kind }: { kind: "shield" | "key" | "swap" | "clock" | "bolt" | "spark" }) => {
+type IconKind = "shield" | "key" | "swap" | "clock" | "bolt" | "spark" | "qr" | "list" | "rows" | "meter" | "input";
+const Icon = ({ kind }: { kind: IconKind }) => {
   const p = { fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round", strokeLinejoin: "round" } as const;
   return (
     <svg viewBox="0 0 16 16" aria-hidden="true">
@@ -32,6 +33,11 @@ const Icon = ({ kind }: { kind: "shield" | "key" | "swap" | "clock" | "bolt" | "
       {kind === "clock" && <path {...p} d="M8 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2zM8 4.8V8l2.2 1.4" />}
       {kind === "bolt" && <path {...p} d="M9 1.8L3.8 9H8l-1 5.2L12.2 7H8z" />}
       {kind === "spark" && <path {...p} d="M8 2v3M8 11v3M2 8h3M11 8h3M4 4l2 2M10 10l2 2M12 4l-2 2M6 10l-2 2" />}
+      {kind === "qr" && <path {...p} d="M2.5 2.5h4v4h-4zM9.5 2.5h4v4h-4zM2.5 9.5h4v4h-4zM9.5 9.5h1.5M13.5 9.5v1.5M9.5 13.5h4M11.5 11.5v2" />}
+      {kind === "list" && <path {...p} d="M5.5 4h8M5.5 8h8M5.5 12h8M2.5 4h.01M2.5 8h.01M2.5 12h.01" />}
+      {kind === "rows" && <path {...p} d="M2.5 3.5h11v9h-11zM2.5 7h11M6 7v5.5" />}
+      {kind === "meter" && <path {...p} d="M2.5 11a5.5 5.5 0 0 1 11 0M8 11l2.5-3.5" />}
+      {kind === "input" && <path {...p} d="M2.5 5h11v6h-11zM5 8h4" />}
     </svg>
   );
 };
@@ -53,6 +59,9 @@ function Qr() {
   );
 }
 
+const isMoney = (s?: string) => !!s && /^\$/.test(s);
+
+/** Fake buttons look real but do nothing: they are plain text, not controls. */
 function Cta({ children, quiet }: { children: ReactNode; quiet?: boolean }) {
   return <span className={quiet ? `${styles.cta} ${styles.ctaQuiet}` : styles.cta}>{children}</span>;
 }
@@ -61,42 +70,38 @@ function Chip({ children }: { children: ReactNode }) {
   return <span className={styles.chip}>{children}</span>;
 }
 
-/** Inner layout per template kind (src/lib/fakeApp.ts). Text comes from data only. */
-function Body({ t }: { t: Tile }) {
+function Value({ v, big }: { v?: string; big?: boolean }) {
+  if (!v) return null;
+  return <span className={isMoney(v) ? (big ? styles.moneyBig : styles.money) : styles.strong}>{v}</span>;
+}
+
+/** The dominant module: the app's main task, 112-144px tall, with the one primary fake CTA. */
+function HeroBody({ t }: { t: Tile }) {
   const rows = t.rows ?? [];
   switch (t.template) {
     case "balance":
       return (
-        <div className={styles.hrow}>
-          <span className={styles.coin} aria-hidden="true">
-            A
-          </span>
-          <span className={styles.stackText}>
+        <>
+          <div className={styles.row}>
             <span className={styles.label}>{t.title}</span>
-            <span className={styles.big}>{t.value}</span>
+            {t.chip && <Chip>{t.chip}</Chip>}
+          </div>
+          <span className={styles.moneyHuge}>{t.value}</span>
+          <span className={styles.actions} aria-hidden="true">
+            <Cta>Send</Cta>
+            <Cta quiet>Receive</Cta>
           </span>
-          {t.chip && <Chip>{t.chip}</Chip>}
-        </div>
+        </>
       );
     case "checkout":
       return (
         <>
           <div className={styles.row}>
             <span className={styles.titleText}>{t.title}</span>
-            {t.chip ? <Chip>{t.chip}</Chip> : t.value ? <span className={styles.num}>{t.value}</span> : null}
+            {t.chip ? <Chip>{t.chip}</Chip> : <Value v={t.value} big />}
           </div>
           {t.cta && <Cta quiet={t.cta === "Refund"}>{t.cta}</Cta>}
         </>
-      );
-    case "toast":
-      return (
-        <div className={styles.hrow}>
-          <span className={styles.ok} aria-hidden="true">
-            <Check />
-          </span>
-          <span className={styles.titleText}>{t.title}</span>
-          {t.chip && <Chip>{t.chip}</Chip>}
-        </div>
       );
     case "earn":
       return (
@@ -119,8 +124,8 @@ function Body({ t }: { t: Tile }) {
           <div className={styles.row}>
             <span className={styles.titleText}>{t.title}</span>
             <span className={styles.seg} aria-hidden="true">
-              <i data-on="true" />
-              <i />
+              <i data-on="true">Buy</i>
+              <i>Sell</i>
             </span>
           </div>
           <span className={styles.field}>{t.value}</span>
@@ -144,158 +149,165 @@ function Body({ t }: { t: Tile }) {
               </span>
             ))}
           </div>
+          <Cta>Review swap</Cta>
         </>
       );
-    case "badge":
-      return (
-        <div className={styles.hrow}>
-          <span className={styles.badgeIcon} aria-hidden="true">
-            <Icon kind="shield" />
-          </span>
-          <span className={styles.stackText}>
-            <span className={styles.titleText}>{t.title}</span>
-            {t.value && <span className={styles.num}>{t.value}</span>}
-          </span>
-          {t.chip && <Chip>{t.chip}</Chip>}
-          {t.cta && (
-            <span className={styles.ctaSmall}>
-              {t.cta}
-            </span>
-          )}
-        </div>
-      );
-    case "signin":
-      return (
-        <>
-          <span className={styles.titleText}>{t.title}</span>
-          <Cta>
-            <span className={styles.ctaIcon} aria-hidden="true">
-              <Icon kind="key" />
-            </span>
-            {t.cta}
-          </Cta>
-        </>
-      );
-    case "pill":
-      return (
-        <div className={styles.hrow}>
-          <span className={styles.dot} aria-hidden="true" />
-          <span className={styles.titleText}>{t.title}</span>
-          {t.chip && <Chip>{t.chip}</Chip>}
-        </div>
-      );
-    case "rows":
-      return (
-        <>
-          <span className={styles.titleText}>{t.title}</span>
-          <dl className={styles.kv}>
-            {rows.map(([k, v]) => (
-              <div key={k}>
-                <dt>{k}</dt>
-                <dd>{v}</dd>
-              </div>
-            ))}
-          </dl>
-        </>
-      );
-    case "input":
-      return (
-        <>
-          <span className={styles.label}>{t.title}</span>
-          <span className={styles.field}>
-            <span className={styles.strong}>{t.value}</span>
-            <span className={styles.caret} aria-hidden="true" />
-          </span>
-          {t.cta && <Cta>{t.cta}</Cta>}
-        </>
-      );
-    case "list":
-      return (
-        <>
-          <div className={styles.row}>
-            <span className={styles.titleText}>{t.title}</span>
-            {t.cta && <span className={styles.ctaSmall}>{t.cta}</span>}
-          </div>
-          <ul className={styles.list}>
-            {rows.map(([k, v]) => (
-              <li key={k}>
-                <span className={styles.avatar} aria-hidden="true" />
-                <span>{k}</span>
-                <span className={styles.num}>{v}</span>
-              </li>
-            ))}
-          </ul>
-        </>
-      );
-    case "qr":
-      return (
-        <div className={styles.hrow}>
-          <Qr />
-          <span className={styles.stackText}>
-            <span className={styles.label}>{t.title}</span>
-            <span className={styles.big}>{t.value}</span>
-          </span>
-        </div>
-      );
-    case "meter": {
-      const split = rows.length > 0 && !t.value;
-      return (
-        <>
-          <div className={styles.row}>
-            <span className={styles.titleText}>{t.title}</span>
-            {t.value && <span className={styles.label}>{t.value}</span>}
-          </div>
-          {split ? (
-            <>
-              <span className={styles.bar} aria-hidden="true">
-                {rows.map(([k, v]) => (
-                  <i key={k} style={{ flexBasis: v }} />
-                ))}
-              </span>
-              <span className={styles.legend}>
-                {rows.map(([k, v]) => (
-                  <span key={k}>
-                    {k} <b>{v}</b>
-                  </span>
-                ))}
-              </span>
-            </>
-          ) : (
-            <span className={styles.bar} aria-hidden="true">
-              <i style={{ flexBasis: "64%" }} />
-            </span>
-          )}
-          {t.cta && <Cta>{t.cta}</Cta>}
-        </>
-      );
-    }
-    case "stat":
-      return (
-        <div className={styles.hrow}>
-          <span className={styles.badgeIcon} aria-hidden="true">
-            <Icon kind={/time/i.test(t.title) ? "clock" : /call/i.test(t.title) ? "bolt" : "spark"} />
-          </span>
-          <span className={styles.stackText}>
-            <span className={styles.label}>{t.title}</span>
-            <span className={styles.big}>{t.value}</span>
-          </span>
-        </div>
-      );
+    default:
+      return <RowBody t={t} hero />;
   }
 }
 
-/** One fake-app tile: a white card with the brick's studs on top and its colour on the left edge. */
-export default function FakeTile({ tile, studs, refCb }: { tile: Tile; studs: number; refCb?: (el: HTMLLIElement | null) => void }) {
+function iconFor(t: Tile): IconKind {
+  switch (t.template) {
+    case "badge":
+      return "shield";
+    case "signin":
+      return "key";
+    case "swap":
+      return "swap";
+    case "qr":
+      return "qr";
+    case "list":
+      return "list";
+    case "rows":
+      return "rows";
+    case "meter":
+      return "meter";
+    case "input":
+      return "input";
+    case "stat":
+      return /time/i.test(t.title) ? "clock" : /call/i.test(t.title) ? "bolt" : "spark";
+    default:
+      return "spark";
+  }
+}
+
+/** A compact supporting module, 48-72px: icon, title and one secondary line, value or chip on the right. */
+function RowBody({ t, hero }: { t: Tile; hero?: boolean }) {
+  const rows = t.rows ?? [];
+  const sub =
+    t.template === "swap"
+      ? rows.map((r) => r[1]).join(" → ")
+      : t.template === "meter" && rows.length
+        ? rows.map(([k, v]) => `${k} ${v}`).join(" · ")
+        : t.template === "list" || t.template === "rows"
+          ? rows.map(([k, v]) => `${k} ${v}`).join(" · ")
+          : t.template === "input" || t.template === "order" || t.template === "earn" || t.template === "stat"
+            ? t.value
+            : undefined;
+  const right = t.template === "input" || t.template === "order" || t.template === "earn" || t.template === "stat" || t.template === "swap" ? undefined : t.value;
   return (
-    <li ref={refCb} className={styles.tile} style={accentVars(tile.accent)} data-tile={tile.legoId} data-template={tile.template}>
-      <span className={styles.studs} aria-hidden="true">
+    <>
+      <div className={styles.hrow}>
+        {t.template === "qr" ? (
+          <Qr />
+        ) : t.template === "balance" ? (
+          <span className={styles.coin} aria-hidden="true">
+            A
+          </span>
+        ) : (
+          <span className={styles.badgeIcon} aria-hidden="true">
+            <Icon kind={iconFor(t)} />
+          </span>
+        )}
+        <span className={styles.stackText}>
+          <span className={styles.titleText}>{t.title}</span>
+          {sub && <span className={styles.sub}>{sub}</span>}
+        </span>
+        {/* One thing on the right: the amount, else the chip, else a quiet button. */}
+        {right ? <Value v={right} /> : t.chip ? <Chip>{t.chip}</Chip> : t.cta && !hero ? <span className={styles.ctaSmall}>{t.cta}</span> : null}
+      </div>
+      {t.template === "meter" && (
+        <span className={styles.bar} aria-hidden="true">
+          {rows.length ? rows.map(([k, v]) => <i key={k} style={{ flexBasis: v }} />) : <i style={{ flexBasis: "64%" }} />}
+        </span>
+      )}
+      {hero && t.cta && <Cta>{t.cta}</Cta>}
+    </>
+  );
+}
+
+/** A confirmation or notice: a slim status row, not a peer card. */
+function StatusBody({ t }: { t: Tile }) {
+  return (
+    <div className={styles.hrow}>
+      {t.template === "toast" ? (
+        <span className={styles.ok} aria-hidden="true">
+          <Check />
+        </span>
+      ) : (
+        <span className={styles.dot} aria-hidden="true" />
+      )}
+      <span className={styles.titleText}>{t.title}</span>
+      {t.chip && <Chip>{t.chip}</Chip>}
+    </div>
+  );
+}
+
+export type FakeTileProps = {
+  tile: Tile;
+  role: TileRole;
+  /** Position from the top, for the boot stagger. */
+  index: number;
+  /** Before Build app: the brick's strip and studs, a short title and grey bars. */
+  wire: boolean;
+  inspected: boolean;
+  onInspect?: (id: LegoId | null) => void;
+  refCb?: (el: HTMLLIElement | null) => void;
+};
+
+/** One fake-app tile: a card with the brick's colour strip and round studs on top. */
+export default function FakeTile({ tile, role, index, wire, inspected, onInspect, refCb }: FakeTileProps) {
+  const lego = BY_ID[tile.legoId];
+  const studs = Math.max(4, Math.min(8, lego.size[0] * 2));
+  const style = { ...accentVars(tile.accent), "--i": index } as CSSProperties;
+  return (
+    <li
+      ref={refCb}
+      className={styles.tile}
+      style={style}
+      data-tile={tile.legoId}
+      data-template={tile.template}
+      data-role={role}
+      data-wire={wire || undefined}
+      data-pale={PALE.has(tile.accent) || undefined}
+      data-inspect={inspected || undefined}
+      onMouseEnter={onInspect ? () => onInspect(tile.legoId) : undefined}
+      onMouseLeave={onInspect ? () => onInspect(null) : undefined}
+    >
+      <span className={styles.strip} aria-hidden="true">
         {Array.from({ length: studs }, (_, i) => (
           <i key={i} />
         ))}
       </span>
       <div className={styles.body}>
-        <Body t={tile} />
+        {wire ? (
+          <>
+            <span className={styles.wireTitle}>{wireLabel(tile)}</span>
+            <span className={styles.skelLine} />
+            {role === "hero" && <span className={styles.skelLine} data-short />}
+          </>
+        ) : role === "hero" ? (
+          <HeroBody t={tile} />
+        ) : role === "status" ? (
+          <StatusBody t={tile} />
+        ) : (
+          <RowBody t={tile} />
+        )}
       </div>
+      <span className={styles.madeWith} aria-hidden={!inspected || undefined} data-show={inspected || undefined}>
+        Made with <b style={{ background: lego.brick.hex, color: lego.brick.label }}>{lego.verb}</b>
+      </span>
+      {onInspect && (
+        <button
+          type="button"
+          className={styles.inspect}
+          aria-label={`${wire ? wireLabel(tile) : tile.title}: made with the ${lego.verb} brick (${lego.name})`}
+          onFocus={() => onInspect(tile.legoId)}
+          onBlur={() => onInspect(null)}
+          onClick={() => onInspect(tile.legoId)}
+        />
+      )}
     </li>
   );
 }

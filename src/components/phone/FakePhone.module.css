@@ -1,6 +1,7 @@
 /*
- * The fake phone. Everything scales from --pw (the phone's width), which follows the slot:
- * the phone is as large as the slot allows at a 9 : 18.6 aspect.
+ * The fake phone. The device fills its slot's height and takes a phone-like width
+ * (min(slot width, 0.56 x height, 420px), never under 300px), so it never shrinks its text: tiles use
+ * fixed type (14px body, 12px secondary, 22px+ money) and the screen scrolls when the slot is short.
  */
 
 .slot {
@@ -9,23 +10,27 @@
   min-height: 0;
   min-width: 0;
   display: grid;
-  place-items: center;
+  place-items: start center;
 }
 
 .device {
-  --pw: min(100cqw, calc(100cqh * 0.4839), 360px);
-  --u: calc(var(--pw) / 100); /* 1% of the phone width */
+  --fs: 14px;
+  --fs-sm: 12px;
+  --fs-money: 22px;
+  --fs-huge: 34px;
+  --pw: min(100cqw, max(calc(100cqh * 0.58), 300px), 420px);
   position: relative;
   width: var(--pw);
-  aspect-ratio: 9 / 18.6;
-  padding: calc(var(--u) * 3.4);
-  border-radius: calc(var(--u) * 15);
+  height: min(100cqh, calc(var(--pw) * 2.06));
+  padding: 9px;
+  border-radius: 48px;
   background: var(--base-gray-100);
   box-shadow:
     0 0 0 1px var(--base-gray-80),
-    0 calc(var(--u) * 6) calc(var(--u) * 12) calc(var(--u) * -4) rgb(10 11 13 / 0.28);
+    0 24px 48px -20px rgb(10 11 13 / 0.32),
+    0 4px 12px -4px rgb(10 11 13 / 0.12);
   font-family: var(--font-sans);
-  font-size: clamp(11px, calc(var(--u) * 5), 15px);
+  font-size: var(--fs);
   line-height: 1.3;
   color: var(--base-gray-100);
 }
@@ -41,13 +46,13 @@
 }
 .device::before {
   left: -3px;
-  top: 22%;
-  height: 12%;
+  top: 18%;
+  height: 9%;
 }
 .device::after {
   right: -3px;
-  top: 28%;
-  height: 16%;
+  top: 24%;
+  height: 13%;
 }
 
 .screen {
@@ -56,16 +61,17 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  border-radius: calc(var(--u) * 11.6);
+  border-radius: 39px;
   background: var(--base-gray-10);
 }
 
 .island {
   position: absolute;
-  top: calc(var(--u) * 3);
+  z-index: 2;
+  top: 9px;
   left: 50%;
-  width: calc(var(--u) * 30);
-  height: calc(var(--u) * 8.4);
+  width: 84px;
+  height: 24px;
   transform: translateX(-50%);
   border-radius: 999px;
   background: var(--base-gray-100);
@@ -76,14 +82,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: calc(var(--u) * 14.4);
-  padding: 0 calc(var(--u) * 8) 0 calc(var(--u) * 10);
-  font-size: calc(var(--u) * 4.6);
+  height: 40px;
+  padding: 2px 26px 0 30px;
+  font-size: 13px;
   font-weight: var(--weight-medium);
   font-variant-numeric: tabular-nums;
 }
 .sbIcons {
-  width: calc(var(--u) * 15);
+  width: 46px;
   fill: currentColor;
   color: var(--base-gray-100);
 }
@@ -92,54 +98,46 @@
   flex: none;
   display: flex;
   align-items: center;
-  gap: calc(var(--u) * 2.6);
-  height: calc(var(--u) * 13);
-  padding: 0 calc(var(--u) * 5.4);
+  gap: 10px;
+  height: 44px;
+  padding: 0 16px;
 }
 .logo,
 .skelCoin {
   flex: none;
-  width: calc(var(--u) * 8);
-  height: calc(var(--u) * 8);
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   display: grid;
   place-items: center;
   background: var(--base-blue);
   color: var(--base-gray-0);
-  font-size: calc(var(--u) * 4.4);
+  font-size: 14px;
   font-weight: var(--weight-bold);
 }
 .brand {
-  font-size: calc(var(--u) * 5.6);
+  min-width: 0;
+  font-size: 18px;
   font-weight: var(--weight-medium);
   letter-spacing: -0.01em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.15;
 }
-.menu {
+.avatar {
+  flex: none;
   margin-left: auto;
-  display: grid;
-  gap: calc(var(--u) * 0.9);
-  width: calc(var(--u) * 5);
-}
-.menu i {
-  display: block;
-  height: max(1.5px, calc(var(--u) * 0.6));
-  border-radius: 1px;
-  background: currentColor;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--base-gray-15);
 }
 .skelCoin {
   background: var(--base-gray-15);
 }
 .skelBar {
   width: 38%;
-  height: calc(var(--u) * 3.4);
+  height: 12px;
   border-radius: 999px;
   background: var(--base-gray-15);
-}
-.appbar[data-empty] .menu {
-  color: var(--base-gray-15);
 }
 
 /* ---------------------------------------------------------------- tiles */
@@ -147,83 +145,70 @@
   flex: 1;
   min-height: 0;
   margin: 0;
-  padding: calc(var(--u) * 3) calc(var(--u) * 4) calc(var(--u) * 7);
+  padding: 2px 10px 12px;
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: calc(var(--u) * 4.4);
+  gap: 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
 }
-
-.tile,
-.placeholder {
-  position: relative;
-  min-height: 0;
-  border-radius: 16px;
-}
-/* Tiles grow a little with few bricks, size to content like app cards, and shrink when four share a small phone. */
-.tile {
-  flex: 1 1 auto;
-  min-height: calc(var(--u) * 22);
-  max-height: calc(var(--u) * 40);
-}
-.placeholder {
-  flex: 1 1 0;
-  max-height: calc(var(--u) * 34);
+.tiles::-webkit-scrollbar {
+  display: none;
 }
 
 .tile {
   --accent-line: var(--accent-line-light);
+  --ring: var(--base-blue);
+  position: relative;
+  flex: none;
   display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  overflow: hidden;
   background: var(--base-gray-0);
-  border-left: calc(var(--u) * 1.4) solid var(--accent);
   box-shadow:
     0 0 0 1px var(--base-gray-15),
-    0 calc(var(--u) * 1) calc(var(--u) * 3) rgb(10 11 13 / 0.06);
-  animation: tile-in var(--dur-place) cubic-bezier(0.34, 1.36, 0.64, 1) both;
+    0 1px 2px rgb(10 11 13 / 0.05);
+  transition: box-shadow var(--dur-fast) var(--ease-hover);
+  animation: tile-in var(--dur-place) var(--ease-out) 150ms both;
 }
 @keyframes tile-in {
-  0% {
+  from {
     opacity: 0;
-    transform: translateY(calc(var(--u) * -6)) scale(0.98);
+    transform: translateY(-10px) scale(0.985);
   }
-  60% {
-    opacity: 1;
-  }
-  100% {
-    transform: none;
-  }
+}
+.tile[data-inspect] {
+  box-shadow:
+    0 0 0 2px var(--ring),
+    0 6px 16px -6px rgb(10 11 13 / 0.2);
 }
 
-/* Studs on the tile's top edge, in the brick colour. */
-.studs {
-  position: absolute;
-  left: calc(var(--u) * 4);
-  right: calc(var(--u) * 4);
-  top: calc(var(--u) * -2.2);
+/* The brick's colour strip with round, shaded studs: a filled tile reads as a brick, never a placeholder. */
+.strip {
+  flex: none;
+  height: 14px;
   display: flex;
-  justify-content: space-between;
-  pointer-events: none;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  background: var(--accent);
 }
-.studs i {
+.strip i {
   display: block;
-  width: calc(var(--u) * 5.2);
-  height: calc(var(--u) * 2.3);
-  border-radius: calc(var(--u) * 1.2) calc(var(--u) * 1.2) 1px 1px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
   background: var(--accent);
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.45),
-    inset 0 -1px 0 rgb(10 11 13 / 0.14),
-    0 0 0 0.5px var(--accent-line);
+    inset 0 -2px 0 rgb(10 11 13 / 0.2),
+    inset 0 1.5px 0 rgb(255 255 255 / 0.5),
+    0 1px 1px rgb(10 11 13 / 0.22);
 }
-.tile .studs {
-  left: calc(var(--u) * 3);
-}
-/* Fewer studs (a 2-wide brick) sit to the left, like a narrow brick on a wide plate. */
-.tile .studs:has(i:nth-child(4):last-child) {
-  right: 46%;
-}
-.tile .studs:has(i:nth-child(6):last-child) {
-  right: 24%;
+.tile[data-pale] .strip {
+  box-shadow: inset 0 -1px 0 var(--base-gray-15);
 }
 
 .body {
@@ -232,16 +217,50 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: calc(var(--u) * 2.4);
-  padding: calc(var(--u) * 4) calc(var(--u) * 4.4);
-  overflow: hidden;
+  gap: 8px;
+  padding: 10px 14px 12px;
+}
+.tile[data-role="hero"] .body {
+  min-height: 100px;
+  gap: 8px;
+  padding: 10px 14px 12px;
+}
+.tile[data-role="row"] .strip {
+  height: 11px;
+}
+.tile[data-role="row"] .strip i {
+  width: 7px;
+  height: 7px;
+}
+.tile[data-role="row"] .body {
+  min-height: 40px;
+  padding: 7px 12px 8px;
+}
+.tile[data-role="status"] .strip {
+  height: 8px;
+}
+.tile[data-role="status"] .strip i {
+  width: 6px;
+  height: 6px;
+}
+.tile[data-role="status"] .body {
+  padding: 6px 12px 7px;
+}
+.tile[data-role="status"] .hrow {
+  gap: 8px;
+}
+
+/* Wireframe (before Build app): short title and grey bars on the brick-strip card. */
+.wireTitle {
+  font-weight: var(--weight-medium);
+  color: var(--base-gray-60);
 }
 
 .row,
 .hrow {
   display: flex;
   align-items: center;
-  gap: calc(var(--u) * 2.6);
+  gap: 10px;
   min-width: 0;
 }
 .row {
@@ -258,44 +277,47 @@
   flex: 1;
   min-width: 0;
   font-weight: var(--weight-medium);
-  line-height: 1.2;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  line-height: 1.25;
 }
 .row .titleText {
   flex: 0 1 auto;
 }
-.label {
-  font-size: 0.86em;
+.label,
+.sub {
+  font-size: var(--fs-sm);
+  line-height: 1.3;
   color: var(--base-gray-60);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
-.big {
-  font-size: 1.5em;
-  line-height: 1.1;
+.money,
+.moneyBig,
+.moneyHuge {
+  flex: none;
   font-weight: var(--weight-medium);
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
+  line-height: 1.1;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
-.num,
+.money {
+  font-size: var(--fs-money);
+}
+.moneyBig {
+  font-size: calc(var(--fs-money) + 2px);
+}
+.moneyHuge {
+  font-size: var(--fs-huge);
+  letter-spacing: -0.03em;
+}
 .strong {
+  flex: none;
   font-weight: var(--weight-medium);
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
 .coin {
   flex: none;
-  width: 2.4em;
-  height: 2.4em;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -306,23 +328,26 @@
 
 .chip {
   flex: none;
-  padding: 0.12em 0.6em;
+  padding: 2px 8px;
   border-radius: 999px;
   background: var(--accent);
   color: var(--accent-ink);
   box-shadow: inset 0 0 0 1px var(--accent-line);
-  font-size: 0.82em;
+  font-size: var(--fs-sm);
   font-weight: var(--weight-medium);
+  line-height: 1.35;
   white-space: nowrap;
 }
 
+/* Fake buttons: inert text styled as buttons. Only the dominant module's is blue. */
 .cta {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4em;
-  height: 2.3em;
-  border-radius: calc(var(--u) * 2.6);
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
   background: var(--base-blue);
   color: var(--base-gray-0);
   font-weight: var(--weight-medium);
@@ -332,7 +357,22 @@
   background: var(--base-gray-10);
   color: var(--base-gray-100);
 }
-.ctaIcon svg,
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.ctaSmall {
+  flex: none;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--base-gray-10);
+  color: var(--base-gray-100);
+  font-size: var(--fs-sm);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+
 .ok svg,
 .badgeIcon svg,
 .swapIcon svg {
@@ -340,35 +380,21 @@
   width: 100%;
   height: 100%;
 }
-.ctaIcon {
-  width: 1.1em;
-  height: 1.1em;
-}
-.ctaSmall {
-  flex: none;
-  padding: 0.3em 0.8em;
-  border-radius: 999px;
-  background: var(--base-blue);
-  color: var(--base-gray-0);
-  font-size: 0.86em;
-  font-weight: var(--weight-medium);
-}
-
 .ok {
   flex: none;
-  width: 1.6em;
-  height: 1.6em;
-  padding: 0.2em;
+  width: 22px;
+  height: 22px;
+  padding: 3px;
   border-radius: 50%;
   background: var(--base-green);
-  color: var(--base-gray-0);
+  color: var(--base-gray-100);
 }
 
 .badgeIcon {
   flex: none;
-  width: 2em;
-  height: 2em;
-  padding: 0.42em;
+  width: 30px;
+  height: 30px;
+  padding: 7px;
   border-radius: 50%;
   background: var(--accent);
   color: var(--accent-ink);
@@ -377,8 +403,8 @@
 
 .dot {
   flex: none;
-  width: 0.6em;
-  height: 0.6em;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: var(--accent);
   box-shadow: 0 0 0 1px var(--accent-line);
@@ -388,38 +414,30 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 0.5em;
-  min-height: 2.1em;
-  padding: 0 0.7em;
-  border-radius: calc(var(--u) * 2.4);
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
   background: var(--base-gray-10);
-  white-space: nowrap;
-  overflow: hidden;
   font-variant-numeric: tabular-nums;
-}
-.caret {
-  width: 1px;
-  height: 1.1em;
-  background: var(--base-blue);
 }
 
 .swap {
   position: relative;
   display: grid;
-  gap: calc(var(--u) * 1.2);
+  gap: 6px;
 }
 .swap .field {
   justify-content: space-between;
-  overflow: visible;
 }
 .swapIcon {
   position: absolute;
   left: 50%;
-  bottom: -0.95em;
+  bottom: -15px;
   z-index: 1;
-  width: 1.5em;
-  height: 1.5em;
-  padding: 0.25em;
+  width: 24px;
+  height: 24px;
+  padding: 4px;
   transform: translateX(-50%);
   border-radius: 50%;
   background: var(--base-gray-0);
@@ -435,18 +453,21 @@
   background: var(--base-gray-10);
 }
 .seg i {
-  width: 1.4em;
-  height: 0.8em;
+  padding: 2px 10px;
   border-radius: 999px;
+  font-size: var(--fs-sm);
+  font-style: normal;
+  font-weight: var(--weight-medium);
+  color: var(--base-gray-60);
 }
 .seg i[data-on] {
-  background: var(--accent);
-  box-shadow: inset 0 0 0 1px var(--accent-line);
+  background: var(--base-gray-100);
+  color: var(--base-gray-0);
 }
 
 .spark {
   display: block;
-  height: 1.3em;
+  height: 28px;
   color: var(--base-green);
 }
 .spark svg {
@@ -458,7 +479,7 @@
 .bar {
   display: flex;
   gap: 2px;
-  height: 0.5em;
+  height: 6px;
   border-radius: 999px;
   overflow: hidden;
   background: var(--base-gray-10);
@@ -473,101 +494,236 @@
   background: var(--base-gray-30);
   box-shadow: none;
 }
-.legend {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.86em;
-  color: var(--base-gray-60);
-}
-.legend b {
-  color: var(--base-gray-100);
-  font-weight: var(--weight-medium);
-}
-
-.kv {
-  margin: 0;
-  display: grid;
-  gap: 0.25em;
-}
-.kv div {
-  display: flex;
-  justify-content: space-between;
-}
-.kv dt {
-  color: var(--base-gray-60);
-}
-.kv dd {
-  margin: 0;
-  font-weight: var(--weight-medium);
-  font-variant-numeric: tabular-nums;
-}
-
-.list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 0.3em;
-}
-.list li {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 0.5em;
-}
-.avatar {
-  width: 1.1em;
-  height: 1.1em;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: inset 0 0 0 1px var(--accent-line);
-}
 
 .qr {
   flex: none;
-  width: 3.4em;
-  height: 3.4em;
-  padding: 0.2em;
+  width: 36px;
+  height: 36px;
+  padding: 2px;
   border-radius: 6px;
   background: var(--base-gray-0);
   box-shadow: inset 0 0 0 1px var(--base-gray-15);
   fill: var(--base-gray-100);
 }
 
-/* ---------------------------------------------------------------- empty slots */
+/* "Made with Pay": shown while a tile is inspected (hover, focus or tap). */
+.madeWith {
+  position: absolute;
+  top: 2px;
+  right: 10px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px 3px 10px;
+  border-radius: 999px;
+  background: var(--base-gray-100);
+  color: var(--base-gray-0);
+  font-size: var(--fs-sm);
+  line-height: 1.3;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-2px);
+  transition:
+    opacity var(--dur-fast) var(--ease-hover),
+    transform var(--dur-fast) var(--ease-out);
+}
+.madeWith[data-show] {
+  opacity: 1;
+  transform: none;
+}
+.madeWith b {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-weight: var(--weight-medium);
+}
+.tile[data-role="status"] .madeWith {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* The whole tile is one inspect target (no fake actionable controls inside). */
+.inspect {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: default;
+}
+.inspect:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+/* ---------------------------------------------------------------- empty slots: faint wireframes, no studs */
 .placeholder {
+  flex: none;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: calc(var(--u) * 2.4);
-  padding: 0 calc(var(--u) * 5);
-  border: 1px dashed var(--base-gray-30);
-  background: transparent;
+  gap: 8px;
+  min-height: 60px;
+  padding: 0 16px;
+  border: 1px solid var(--base-gray-15);
+  border-radius: 14px;
 }
-.placeholder .studs i {
-  background: var(--base-gray-10);
-  box-shadow: inset 0 0 0 1px var(--base-gray-30);
+.placeholder[data-big] {
+  min-height: 128px;
 }
 .skelLine {
   display: block;
   width: 56%;
-  height: calc(var(--u) * 2.8);
+  height: 10px;
   border-radius: 999px;
   background: var(--base-gray-15);
 }
 .skelLine[data-short] {
   width: 34%;
 }
+.tile .skelLine {
+  background: var(--base-gray-10);
+}
+
+/* ---------------------------------------------------------------- tab bar */
+.tabbar {
+  flex: none;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  height: 50px;
+  padding: 0 18px 8px;
+  border-top: 1px solid var(--base-gray-15);
+  background: var(--base-gray-0);
+  color: var(--base-gray-15);
+}
+.tabbar svg {
+  width: 22px;
+  height: 22px;
+}
+.tabbar[data-live] {
+  color: var(--base-gray-30);
+}
+.tabbar[data-live] svg[data-on] {
+  color: var(--base-gray-100);
+}
 
 .home {
   position: absolute;
-  bottom: calc(var(--u) * 1.6);
+  bottom: 7px;
   left: 50%;
   width: 34%;
-  height: max(3px, calc(var(--u) * 1.2));
+  height: 4px;
   transform: translateX(-50%);
   border-radius: 999px;
   background: var(--base-gray-100);
+}
+
+/* ---------------------------------------------------------------- boot (Build app) */
+.screen[data-boot]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: var(--base-gray-100);
+  pointer-events: none;
+  animation: boot-dark 300ms linear both;
+}
+@keyframes boot-dark {
+  0%,
+  40% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.screen[data-boot] .appbar {
+  animation: fade-in 200ms var(--ease-hover) 120ms both;
+}
+.screen[data-boot] .tile {
+  animation-delay: calc(180ms + var(--i) * var(--dur-stagger));
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ---------------------------------------------------------------- frameless (the phone sheet) */
+.frameless {
+  container-type: normal;
+  display: block;
+}
+.frameless .device {
+  width: 100%;
+  height: auto;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.frameless .device::before,
+.frameless .device::after {
+  display: none;
+}
+.frameless .screen {
+  height: auto;
+  overflow: visible;
+  border-radius: 20px;
+}
+.frameless .appbar {
+  height: 56px;
+}
+.frameless .tiles {
+  overflow: visible;
+  padding-bottom: 16px;
+}
+.frameless .tabbar {
+  display: none;
+}
+
+/* ---------------------------------------------------------------- short screens (<=800px tall) */
+/* The device keeps its bezel but drops the status bar and tab bar, and the screen scrolls. */
+@media (max-height: 800px) {
+  .slot:not(.frameless) .status,
+  .slot:not(.frameless) .tabbar,
+  .slot:not(.frameless) .island,
+  .slot:not(.frameless) .home {
+    display: none;
+  }
+  .slot:not(.frameless) .appbar {
+    margin-top: 6px;
+  }
+  .tiles {
+    gap: 6px;
+    padding-bottom: 8px;
+  }
+  .tile[data-role="hero"] .body {
+    min-height: 0;
+    gap: 6px;
+    padding: 8px 12px 10px;
+  }
+  .device {
+    border-radius: 36px;
+  }
+  .screen {
+    border-radius: 28px;
+  }
+}
+
+/* ---------------------------------------------------------------- projector */
+@media (min-width: 1600px) and (min-height: 1000px) {
+  .device {
+    --fs: 16px;
+    --fs-sm: 13px;
+    --fs-money: 24px;
+    --fs-huge: 38px;
+  }
 }
 
 /* ---------------------------------------------------------------- dark */
@@ -575,11 +731,16 @@
   .device {
     color: var(--base-gray-0);
     box-shadow:
-      0 0 0 1px var(--base-gray-60),
-      0 calc(var(--u) * 6) calc(var(--u) * 12) calc(var(--u) * -4) rgb(0 0 0 / 0.5);
+      0 0 0 1px var(--base-gray-80),
+      0 24px 48px -20px rgb(0 0 0 / 0.6);
+  }
+  .device::before,
+  .device::after {
+    background: var(--base-gray-80);
   }
   .screen {
     background: var(--base-gray-100);
+    box-shadow: inset 0 0 0 1px var(--base-gray-80);
   }
   .sbIcons {
     color: var(--base-gray-0);
@@ -589,27 +750,32 @@
   }
   .tile {
     --accent-line: var(--accent-line-dark);
+    --ring: var(--base-cerulean);
     background: var(--base-gray-80);
-    border-left-color: var(--accent-line);
+    box-shadow: none;
+  }
+  .tile[data-pale] .strip {
     box-shadow: none;
   }
   .label,
-  .kv dt,
-  .legend {
+  .sub,
+  .wireTitle {
     color: var(--base-gray-30);
-  }
-  .legend b {
-    color: var(--base-gray-0);
   }
   .field,
   .seg,
   .bar,
-  .ctaQuiet {
+  .ctaQuiet,
+  .ctaSmall {
     background: var(--base-gray-100);
     color: var(--base-gray-0);
   }
-  .caret {
-    background: var(--base-cerulean);
+  .seg i {
+    color: var(--base-gray-30);
+  }
+  .seg i[data-on] {
+    background: var(--base-gray-0);
+    color: var(--base-gray-100);
   }
   .swapIcon {
     background: var(--base-gray-80);
@@ -617,18 +783,31 @@
     color: var(--base-gray-30);
   }
   .placeholder {
-    border-color: var(--base-gray-60);
-  }
-  .placeholder .studs i {
-    box-shadow: inset 0 0 0 1px var(--base-gray-80);
+    border-color: var(--base-gray-80);
   }
   .skelLine,
   .skelBar,
-  .skelCoin {
+  .skelCoin,
+  .avatar {
     background: var(--base-gray-80);
   }
-  .appbar[data-empty] .menu {
+  .tile .skelLine {
+    background: var(--base-gray-60);
+  }
+  .tabbar {
+    border-top-color: var(--base-gray-80);
+    background: var(--base-gray-100);
     color: var(--base-gray-80);
+  }
+  .tabbar[data-live] {
+    color: var(--base-gray-60);
+  }
+  .tabbar[data-live] svg[data-on] {
+    color: var(--base-gray-0);
+  }
+  .madeWith {
+    background: var(--base-gray-0);
+    color: var(--base-gray-100);
   }
   .home {
     background: var(--base-gray-0);

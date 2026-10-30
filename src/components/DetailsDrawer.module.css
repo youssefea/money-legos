@@ -15,6 +15,9 @@
   overflow: hidden;
   flex-direction: column;
 }
+.drawer:focus {
+  outline: none;
+}
 .drawer[open] {
   display: flex;
   animation: drawer-in var(--dur-open) var(--ease-out) both;

@@ -1,52 +1,64 @@
 /*
- * The Lego bin. One stud scale for every brick (--stud, px per stud), set so the 5 hero 2x4s fill
- * the hero row; the small bricks share it, so a 2x2 is half a hero, like real bricks.
+ * The brick bin on ONE stud scale (--stud, px per stud): a hero 2x4 is 4 studs wide, a 2x2 is 2,
+ * like real bricks. --stud is ~34px at 1440 (40px on the projector), smaller only when three heroes
+ * would not fit across the tray. The small bricks sit on a true stud grid: one cell = 2 studs,
+ * bricks wider than 2 studs span two cells, all baseline-aligned.
  */
 
 .tray {
-  --hero-cols: 5;
   --gap: 8px;
+  --stud-max: 34px;
   height: 100%;
   min-height: 0;
   display: flex;
   flex-direction: column;
 }
 
-/* ---------------------------------------------------------------- category chips */
-.chips {
+/* ---------------------------------------------------------------- category chips (shown first, tabbed after the bricks) */
+.chipsWrap {
+  order: -1;
   flex: none;
+  position: relative;
+  margin: 0 calc(var(--space-4) * -1);
+}
+.chips {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  padding: 2px 2px var(--space-3);
+  flex-wrap: nowrap;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px var(--space-4) var(--space-3);
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--space-4), #000 calc(100% - 40px), transparent);
+  mask-image: linear-gradient(to right, transparent 0, #000 var(--space-4), #000 calc(100% - 40px), transparent);
+}
+.chips::-webkit-scrollbar {
+  display: none;
 }
 
 .chip {
-  position: relative;
-  height: 32px;
-  padding: 0 var(--space-3);
+  flex: none;
+  height: 36px;
+  padding: 0 14px;
   border: 1px solid var(--color-hairline);
   border-radius: var(--radius-pill);
   background: var(--color-surface);
   color: var(--color-fg);
   font: inherit;
-  font-size: var(--text-small);
+  font-size: 14px;
   line-height: 1;
   white-space: nowrap;
   cursor: pointer;
   transition:
     background-color var(--dur-fast) var(--ease-hover),
-    border-color var(--dur-fast) var(--ease-hover);
+    border-color var(--dur-fast) var(--ease-hover),
+    color var(--dur-fast) var(--ease-hover);
 }
-/* 44px hit area around the 32px chip. */
-.chip::after {
-  content: "";
-  position: absolute;
-  inset: -6px -2px;
+.chip:focus-visible {
+  outline-offset: -2px;
 }
 .chip[aria-pressed="true"] {
-  border-color: var(--base-blue);
-  background: var(--base-blue);
+  border-color: var(--base-gray-100);
+  background: var(--base-gray-100);
   color: var(--base-gray-0);
 }
 
@@ -64,54 +76,56 @@
   mask-image: linear-gradient(to bottom, transparent 0, #000 var(--space-2), #000 calc(100% - var(--space-6)), transparent 100%);
 }
 
-.hero,
+/*
+ * One grid on a true stud grid: a cell is 3 studs wide (a 2x2 plus its side face), heroes and wider
+ * bricks span 2 cells. Four cells across the tray. Rows are 3 studs tall; the sprites' clear space
+ * above the rear studs may overlap the row above.
+ */
 .grid {
-  --stud: calc((100cqw - (var(--hero-cols) - 1) * var(--gap)) / var(--hero-cols) / 4.3);
+  --cols: 4;
+  --stud: min(var(--stud-max), calc((100cqw - (var(--cols) - 1) * var(--gap)) / (var(--cols) * 3)));
   margin: 0;
   padding: 0;
   list-style: none;
   display: grid;
-  gap: var(--gap);
-}
-.hero {
-  grid-template-columns: repeat(var(--hero-cols), minmax(0, 1fr));
-  grid-auto-rows: calc(var(--stud) * 2.5 + 8px);
-}
-/* Small bricks read at 1.3x the hero scale, so their printed verbs stay legible (6-7 per row at 1440). */
-.grid {
-  --stud-s: calc(var(--stud) * 1.3);
-  grid-template-columns: repeat(auto-fill, minmax(calc(var(--stud-s) * 2.6), 1fr));
-  grid-auto-rows: calc(var(--stud-s) * 2.45 + 4px);
+  grid-template-columns: repeat(var(--cols), calc(var(--stud) * 3));
+  grid-auto-rows: calc(var(--stud) * 3);
   grid-auto-flow: row dense;
+  column-gap: var(--gap);
+  row-gap: 6px;
+  align-items: end;
 }
-.grid .sprite,
-.grid .drawn {
-  width: calc(var(--stud-s) * var(--sw));
+/* Wider bins (tablet, a wide tray) get more cells on the same stud scale. */
+@container (min-width: 600px) {
+  .grid {
+    --cols: 6;
+  }
+}
+@container (min-width: 900px) {
+  .grid {
+    --cols: 8;
+  }
 }
 .cell {
   min-width: 0;
   display: flex;
+  align-items: flex-end;
 }
 .cell[data-span="2"] {
   grid-column: span 2;
-}
-
-.rule {
-  margin: var(--space-3) 0;
-  border: 0;
-  border-top: 1px solid var(--color-hairline);
 }
 
 /* ---------------------------------------------------------------- a brick */
 .brick {
   position: relative;
   flex: 1;
-  min-width: var(--hit-target);
+  min-width: 0;
   min-height: var(--hit-target);
+  height: 100%;
   display: flex;
   align-items: flex-end;
-  justify-content: center;
-  padding: 0 0 6px;
+  justify-content: flex-start;
+  padding: 0;
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -122,14 +136,15 @@
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
+  transition: opacity var(--dur-base) var(--ease-hover);
 }
 @media (hover: hover) {
-  .brick:hover {
-    background: var(--color-panel);
-  }
   .brick:hover .art {
     transform: translateY(-3px);
-    filter: drop-shadow(0 4px 3px rgb(10 11 13 / 0.12));
+  }
+  .brick:hover .sprite,
+  .brick:hover .drawn {
+    filter: drop-shadow(0 5px 4px rgb(10 11 13 / 0.14));
   }
   .chip:hover:not([aria-pressed="true"]) {
     border-color: var(--color-border-strong);
@@ -138,40 +153,51 @@
 .brick:focus-visible {
   outline-offset: 0;
 }
+/* Hero bricks a filter leaves out stay in place, quieter. */
+.brick[data-dim] {
+  opacity: 0.35;
+}
+.brick[data-inspect] {
+  background: var(--color-panel);
+  box-shadow: inset 0 0 0 2px var(--base-blue);
+}
 
 .art {
-  display: block;
+  position: relative;
+  display: flex;
   line-height: 0;
-  transition:
-    transform var(--dur-fast) var(--ease-out),
-    opacity var(--dur-base) var(--ease-hover),
-    filter var(--dur-fast) var(--ease-hover);
+  transition: transform var(--dur-fast) var(--ease-out);
 }
 .brick:active .art {
   transform: translateY(0) scale(0.97);
   transition-duration: var(--dur-instant);
 }
-.brick[data-placed] .art {
-  opacity: 0.4;
-}
-.brick[data-dragging] .art {
-  opacity: 0.25;
-}
 
+/* Sized on the stud scale and shifted so the front face starts at the cell's left edge. */
 .sprite,
 .drawn {
+  display: block;
+  flex: none;
   width: calc(var(--stud) * var(--sw));
-  max-width: 100%;
+  max-width: none;
+  margin-left: calc(var(--stud) * var(--fl) * -1);
+  transition:
+    opacity var(--dur-base) var(--ease-hover),
+    filter var(--dur-fast) var(--ease-hover);
+}
+.brick[data-placed] .sprite,
+.brick[data-placed] .drawn {
+  opacity: 0.5;
+}
+.brick[data-dragging] .sprite,
+.brick[data-dragging] .drawn {
+  opacity: 0.25;
 }
 
 /* Stand-in brick (until its sprite is baked): the drawn brick with the verb printed on its front face. */
 .drawn {
   --s: var(--stud);
   position: relative;
-  display: block;
-}
-.grid .drawn {
-  --s: var(--stud-s);
 }
 .glyph {
   display: block;
@@ -195,40 +221,46 @@
   white-space: nowrap;
 }
 
+/* Placed: a 16px check at the bottom-right of the front face, off the studs and the print. */
 .check {
   position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 18px;
-  height: 18px;
+  left: calc(var(--stud) * (var(--fr) - var(--fl)) - 22px);
+  bottom: calc(var(--stud) * 0.32);
+  width: 16px;
+  height: 16px;
   display: grid;
   place-items: center;
   border-radius: 50%;
   background: var(--base-blue);
   color: var(--base-gray-0);
-  box-shadow: 0 0 0 2px var(--color-surface);
+  box-shadow: 0 0 0 2px var(--base-gray-0);
+  animation: check-in var(--dur-base) var(--ease-out) both;
+}
+@keyframes check-in {
+  from {
+    transform: scale(0.5);
+    opacity: 0;
+  }
 }
 
-/* ---------------------------------------------------------------- tooltip */
+/* ---------------------------------------------------------------- tooltip (clamped to the viewport in JS) */
 .tip {
   position: fixed;
+  left: 0;
+  top: 0;
   z-index: 70;
-  max-width: 260px;
+  max-width: min(300px, calc(100vw - 32px));
   padding: var(--space-2) var(--space-3);
   display: grid;
   gap: 2px;
   border-radius: var(--radius-sm);
   background: var(--base-gray-100);
   color: var(--base-gray-0);
-  font-size: var(--text-small);
-  line-height: var(--text-small-lh);
+  font-size: 14px;
+  line-height: 1.4;
   pointer-events: none;
-  transform: translate(-50%, calc(-100% - 6px));
   animation: tip-in var(--dur-fast) var(--ease-out) both;
   box-shadow: 0 8px 24px rgb(10 11 13 / 0.18);
-}
-.tip[data-side="bottom"] {
-  transform: translate(-50%, 6px);
 }
 @keyframes tip-in {
   from {
@@ -248,7 +280,7 @@
   border: 1px solid var(--base-gray-60);
   border-radius: var(--radius-xs);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--base-gray-30);
@@ -277,18 +309,26 @@
     box-shadow: 0 8px 24px rgb(0 0 0 / 0.5);
   }
   .chip[aria-pressed="true"] {
-    color: var(--base-gray-0);
+    border-color: var(--base-gray-0);
+    background: var(--base-gray-0);
+    color: var(--base-gray-100);
+  }
+  .brick[data-inspect] {
+    box-shadow: inset 0 0 0 2px var(--base-cerulean);
+  }
+  .check {
+    box-shadow: 0 0 0 2px var(--base-gray-100);
   }
 }
 
 /* ---------------------------------------------------------------- projector */
 @media (min-width: 1600px) {
-  .chip {
-    height: 36px;
-    font-size: 16px;
+  .tray {
+    --stud-max: 40px;
   }
-  .chip::after {
-    inset: -4px -2px;
+  .chip {
+    height: 40px;
+    font-size: 16px;
   }
 }
 
@@ -296,26 +336,13 @@
 @media (max-width: 1023.98px) {
   .tray {
     height: auto;
+    --stud-max: 40px;
+  }
+  .chipsWrap {
+    margin: 0 calc(var(--page-pad-x) * -1);
   }
   .chips {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    margin: 0 calc(var(--page-pad-x) * -1);
     padding: 6px var(--page-pad-x) var(--space-3);
-    scrollbar-width: none;
-    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
-    mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
-  }
-  .chips::-webkit-scrollbar {
-    display: none;
-  }
-  .chip {
-    flex: none;
-    height: 36px;
-    font-size: 15px;
-  }
-  .chip::after {
-    inset: -4px -2px;
   }
   .scroll {
     overflow: visible;
@@ -325,19 +352,4 @@
   }
 }
 
-@media (max-width: 767.98px) {
-  .tray {
-    --hero-cols: 2;
-    --gap: 8px;
-  }
-  .hero {
-    --stud: calc((100cqw - var(--gap)) / 2 / 5.4);
-  }
-  .grid {
-    --stud-s: calc((100cqw - 2 * var(--gap)) / 3 / 2.9);
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-  .grid .cell[data-span="2"] {
-    grid-column: span 2;
-  }
-}
+

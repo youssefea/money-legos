@@ -125,9 +125,9 @@
   --page-max: 1760px;
   --page-pad-y: 24px;
   --page-pad-x: 32px;
-  --col-tray: 500px;
-  --col-board-min: 400px;
-  --col-result: 300px;
+  --col-tray: 400px;
+  --col-board-min: 360px;
+  --col-result: 450px;
   --col-gap: 24px;
   --tray-art-max: 192px;
   --hit-target: 44px;
@@ -163,11 +163,11 @@
   color-scheme: light dark;
 }
 
-/* 1280-1439: the phone is height-bound, so give its column less and the board more. */
+/* 1280-1439: a little narrower on both sides; the board keeps at least 360px. */
 @media (max-width: 1439.98px) {
   :root {
-    --col-tray: 420px;
-    --col-result: 260px;
+    --col-tray: 370px;
+    --col-result: 400px;
   }
 }
 
@@ -177,8 +177,8 @@
   :root {
     --page-pad-y: 32px;
     --page-pad-x: 48px;
-    --col-tray: 640px;
-    --col-result: 380px;
+    --col-tray: 440px;
+    --col-result: 520px;
     --col-gap: 32px;
     --text-label: 14px;
     --text-small: 16px;

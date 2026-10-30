@@ -1,9 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import BrickSprite from "@/components/bricks/BrickSprite";
-import { SPRITE_DPR, SPRITE_META } from "@/components/bricks/spriteMeta";
-import { CATEGORIES, DENIM_SHORT, HERO_LEGOS, MORE_LEGOS, type Category, type Lego, type LegoId } from "@/lib";
+import { SPRITE_DPR, SPRITE_META, SPRITE_STUD_PX } from "@/components/bricks/spriteMeta";
+import { CATEGORIES, HERO_LEGOS, MORE_LEGOS, type Category, type Lego, type LegoId } from "@/lib";
 import { BrickGlyph } from "./BrickArt";
 import { statusChip } from "./statusChip";
 import styles from "./Tray.module.css";
@@ -14,16 +23,17 @@ export type TrayProps = {
   onPointerDown: (e: ReactPointerEvent<HTMLElement>, id: LegoId) => void;
   wasDrag: () => boolean;
   dragging: LegoId | null;
+  /** The brick being inspected (its tile is hovered or focused), and a way to inspect a placed brick. */
+  inspect?: LegoId | null;
+  onInspect?: (id: LegoId | null) => void;
 };
 
-type Filter = "All" | Category;
 type Tip = { id: LegoId; x: number; top: number; bottom: number };
 
-const TIP_ID = "lego-tip";
-/** CSS px per stud in a baked sprite (a hero 2x4 is 192 px wide at 1x). */
-const BAKED_STUD = 48;
+const TIP_ID = "brick-tip";
 const HOVER_DELAY = 320;
 const LONG_PRESS = 450;
+const EDGE = 16;
 
 const Check = () => (
   <svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true">
@@ -31,10 +41,19 @@ const Check = () => (
   </svg>
 );
 
-/** Sprite width in studs (a hero 2x4 is 4): sets the brick's size on the tray's shared stud scale. */
-function spriteStuds(lego: Lego): number {
+/**
+ * Where a brick sits on the tray's stud scale, in studs: the whole sprite's width, the front face's
+ * left and right edges inside it, and how many 3-stud cells it needs (1, or 2 for a hero or anything
+ * wider than a 2x2 with its side face).
+ */
+function geometry(lego: Lego): { sw: number; fl: number; fr: number; span: 1 | 2 } {
   const meta = SPRITE_META[lego.id];
-  return meta ? meta.width / SPRITE_DPR / BAKED_STUD : lego.size[0] + 0.55 * lego.size[1];
+  const k = SPRITE_DPR * SPRITE_STUD_PX;
+  const [w, d] = lego.size;
+  const sw = meta ? meta.width / k : w + 0.6 * d;
+  const [fl, fr] = meta?.front ? [meta.front[0] / k, meta.front[1] / k] : [0, w];
+  const span = lego.tier === "hero" || sw - fl > 3.4 ? 2 : 1;
+  return { sw, fl, fr, span };
 }
 
 /** The brick picture: the baked sprite, or a drawn brick with its verb until the sprite exists. */
@@ -42,7 +61,6 @@ function BrickArtFor({ lego }: { lego: Lego }) {
   if (SPRITE_META[lego.id]) {
     return <BrickSprite id={lego.id} color={lego.brick.hex} size={lego.size} className={styles.sprite} />;
   }
-  // Front face of the drawn brick (BrickArt's oblique view, in mm), for the printed verb.
   const [w, d] = lego.size;
   const fw = (8 * w) / (8 * w + 0.55 * 8 * d);
   const fh = 9.6 / (9.6 + 1.7 + 0.42 * 8 * d);
@@ -55,26 +73,60 @@ function BrickArtFor({ lego }: { lego: Lego }) {
   );
 }
 
+/** Tooltip box after clamping to the viewport: flips below when there is no room above. */
+function TipBox({ tip, lego }: { tip: Tip; lego: Lego }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const w = el.offsetWidth;
+    const h = el.offsetHeight;
+    const vw = document.documentElement.clientWidth;
+    const vh = window.innerHeight;
+    const left = Math.min(Math.max(tip.x - w / 2, EDGE), Math.max(EDGE, vw - w - EDGE));
+    const above = tip.top - h - 8 >= EDGE || tip.bottom + h + 8 > vh - EDGE;
+    const top = above ? Math.max(EDGE, tip.top - h - 8) : tip.bottom + 8;
+    el.style.left = `${left}px`;
+    el.style.top = `${top}px`;
+    el.dataset.side = above ? "top" : "bottom";
+    el.style.visibility = "visible";
+  }, [tip]);
+  return (
+    <div ref={ref} id={TIP_ID} role="tooltip" className={styles.tip} style={{ visibility: "hidden" }}>
+      <span className={styles.tipHead}>
+        <span className={styles.tipName}>{lego.name}</span>
+        <span className={styles.tipChip} data-kind={lego.statusKind}>
+          {statusChip(lego)}
+        </span>
+      </span>
+      <span className={styles.tipTag}>{lego.tag}</span>
+      {lego.note && <span className={styles.tipNote}>{lego.note}</span>}
+    </div>
+  );
+}
+
 /**
- * The Lego bin: category chips, the 5 hero bricks pinned on top, then a calm grid of the rest. Bricks
- * are buttons (arrow keys move, Enter adds); name, tag and status show in a tooltip on hover,
- * keyboard focus or a long press. A placed brick fades with a check and removes on press.
+ * The brick bin on one stud scale: the 5 hero 2x4s always on top (dimmed when a filter leaves them
+ * out), then the rest on a true stud grid. Bricks are buttons (one Tab stop, arrow keys move, Enter
+ * adds); name, tag and status show in a tooltip on hover, keyboard focus or a long press. Category
+ * chips come after the bricks in tab order (shown above them) and are one Tab stop too.
  */
-export default function Tray({ ids, onToggle, onPointerDown, wasDrag, dragging }: TrayProps) {
-  const [filter, setFilter] = useState<Filter>("All");
+export default function Tray({ ids, onToggle, onPointerDown, wasDrag, dragging, inspect = null, onInspect }: TrayProps) {
+  const [filter, setFilter] = useState<Category | null>(null);
   const [tip, setTip] = useState<Tip | null>(null);
   const [focusId, setFocusId] = useState<LegoId | null>(null);
+  const [chipFocus, setChipFocus] = useState<Category | null>(null);
   const rootRef = useRef<HTMLElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const hoverTimer = useRef<number | undefined>(undefined);
   const pressTimer = useRef<number | undefined>(undefined);
   const longPressed = useRef(false);
 
-  const match = (l: Lego) => filter === "All" || l.category === filter;
-  const heroes = HERO_LEGOS.filter(match);
+  const match = (l: Lego) => filter === null || l.category === filter;
   const more = MORE_LEGOS.filter(match);
-  const visible = [...heroes, ...more];
+  const visible = [...HERO_LEGOS, ...more];
   const tabId = focusId && visible.some((l) => l.id === focusId) ? focusId : visible[0]?.id;
+  const chipTab = chipFocus ?? filter ?? CATEGORIES[0];
 
   const clearTimers = () => {
     window.clearTimeout(hoverTimer.current);
@@ -97,14 +149,18 @@ export default function Tray({ ids, onToggle, onPointerDown, wasDrag, dragging }
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") hideTip();
     };
+    // Scrolling only drops the open tooltip; a hover that is about to open one still may.
+    const drop = () => setTip(null);
     const sc = scrollRef.current;
     window.addEventListener("keydown", onKey);
     window.addEventListener("resize", hideTip);
-    sc?.addEventListener("scroll", hideTip, { passive: true });
+    window.addEventListener("scroll", drop, { passive: true });
+    sc?.addEventListener("scroll", drop, { passive: true });
     return () => {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("resize", hideTip);
-      sc?.removeEventListener("scroll", hideTip);
+      window.removeEventListener("scroll", drop);
+      sc?.removeEventListener("scroll", drop);
     };
   }, [tip, hideTip]);
 
@@ -143,12 +199,27 @@ export default function Tray({ ids, onToggle, onPointerDown, wasDrag, dragging }
     }
   };
 
+  const onChipKey = (e: ReactKeyboardEvent<HTMLButtonElement>, i: number) => {
+    let j: number;
+    if (e.key === "ArrowRight") j = (i + 1) % CATEGORIES.length;
+    else if (e.key === "ArrowLeft") j = (i - 1 + CATEGORIES.length) % CATEGORIES.length;
+    else if (e.key === "Home") j = 0;
+    else if (e.key === "End") j = CATEGORIES.length - 1;
+    else return;
+    e.preventDefault();
+    setChipFocus(CATEGORIES[j]!);
+    const el = rootRef.current?.querySelectorAll<HTMLButtonElement>("button[data-chip]")[j];
+    el?.focus();
+    el?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  };
+
   const item = (lego: Lego) => {
     const placed = ids.includes(lego.id);
     const hero = lego.tier === "hero";
-    const span = !hero && lego.size[0] >= 3 ? 2 : 1;
+    const dim = hero && !match(lego);
+    const g = geometry(lego);
     return (
-      <li key={lego.id} className={styles.cell} data-span={span > 1 ? span : undefined}>
+      <li key={lego.id} className={styles.cell} data-span={g.span > 1 ? g.span : undefined} data-hero={hero || undefined}>
         <button
           type="button"
           className={styles.brick}
@@ -158,20 +229,30 @@ export default function Tray({ ids, onToggle, onPointerDown, wasDrag, dragging }
           tabIndex={lego.id === tabId ? 0 : -1}
           data-lego={lego.id}
           data-placed={placed || undefined}
+          data-dim={dim || undefined}
+          data-inspect={(placed && inspect === lego.id) || undefined}
           data-dragging={dragging === lego.id || undefined}
-          style={{ "--sw": spriteStuds(lego).toFixed(3) } as CSSProperties}
+          style={{ "--sw": g.sw.toFixed(3), "--fl": g.fl.toFixed(3), "--fr": g.fr.toFixed(3) } as CSSProperties}
           onKeyDown={onKeyDown}
           onFocus={(e) => {
             setFocusId(lego.id);
+            if (placed) onInspect?.(lego.id);
             if (e.currentTarget.matches(":focus-visible")) showTip(lego.id, e.currentTarget);
           }}
-          onBlur={hideTip}
+          onBlur={() => {
+            hideTip();
+            if (placed) onInspect?.(null);
+          }}
           onMouseEnter={(e) => {
             const el = e.currentTarget;
+            if (placed) onInspect?.(lego.id);
             window.clearTimeout(hoverTimer.current);
             hoverTimer.current = window.setTimeout(() => showTip(lego.id, el), tip ? 0 : HOVER_DELAY);
           }}
-          onMouseLeave={hideTip}
+          onMouseLeave={() => {
+            hideTip();
+            if (placed) onInspect?.(null);
+          }}
           onPointerDown={(e) => {
             hideTip();
             longPressed.current = false;
@@ -202,65 +283,54 @@ export default function Tray({ ids, onToggle, onPointerDown, wasDrag, dragging }
         >
           <span className={styles.art}>
             <BrickArtFor lego={lego} />
+            {placed && (
+              <span className={styles.check} aria-hidden="true" data-testid="placed-check">
+                <Check />
+              </span>
+            )}
           </span>
-          {placed && (
-            <span className={styles.check} aria-hidden="true">
-              <Check />
-            </span>
-          )}
         </button>
       </li>
     );
   };
 
   const tipLego = tip ? visible.find((l) => l.id === tip.id) : undefined;
-  const above = tip ? tip.top > 120 : true;
 
   return (
     <section ref={rootRef} className={styles.tray} aria-labelledby="tray-h">
       <h2 id="tray-h" className="visually-hidden">
-        Legos
+        Bricks
       </h2>
-      <div className={styles.chips} role="group" aria-label="Filter Legos">
-        {(["All", ...CATEGORIES] as Filter[]).map((c) => (
-          <button
-            key={c}
-            type="button"
-            className={styles.chip}
-            aria-pressed={filter === c}
-            onClick={() => {
-              setFilter(c);
-              hideTip();
-              scrollRef.current?.scrollTo({ top: 0 });
-            }}
-          >
-            {c}
-          </button>
-        ))}
-      </div>
       <div ref={scrollRef} className={styles.scroll} data-testid="tray-scroll">
-        {heroes.length > 0 && <ul className={styles.hero}>{heroes.map(item)}</ul>}
-        {heroes.length > 0 && more.length > 0 && <hr className={styles.rule} />}
-        {more.length > 0 && <ul className={styles.grid}>{more.map(item)}</ul>}
+        <ul className={styles.grid} aria-label={filter ? `${filter} bricks` : "Bricks"}>
+          {HERO_LEGOS.map(item)}
+          {more.map(item)}
+        </ul>
       </div>
-      {tip && tipLego && (
-        <div
-          id={TIP_ID}
-          role="tooltip"
-          className={styles.tip}
-          data-side={above ? "top" : "bottom"}
-          style={{ left: tip.x, top: above ? tip.top : tip.bottom } as CSSProperties}
-        >
-          <span className={styles.tipHead}>
-            <span className={styles.tipName}>{tipLego.name}</span>
-            <span className={styles.tipChip} data-kind={tipLego.statusKind}>
-              {statusChip(tipLego)}
-            </span>
-          </span>
-          <span className={styles.tipTag}>{tipLego.tag}</span>
-          {tipLego.id === "speed" && <span className={styles.tipNote}>{DENIM_SHORT}</span>}
+      <div className={styles.chipsWrap}>
+        <div className={styles.chips} role="group" aria-label="Filter bricks">
+          {CATEGORIES.map((c, i) => (
+            <button
+              key={c}
+              type="button"
+              className={styles.chip}
+              aria-pressed={filter === c}
+              tabIndex={c === chipTab ? 0 : -1}
+              data-chip={c}
+              onKeyDown={(e) => onChipKey(e, i)}
+              onFocus={() => setChipFocus(c)}
+              onClick={() => {
+                setFilter((f) => (f === c ? null : c));
+                hideTip();
+                scrollRef.current?.scrollTo({ top: 0 });
+              }}
+            >
+              {c}
+            </button>
+          ))}
         </div>
-      )}
+      </div>
+      {tip && tipLego && <TipBox tip={tip} lego={tipLego} />}
     </section>
   );
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
-import { RECIPES, type Recipe } from "@/lib";
+import { BY_ID, RECIPES, flowOrder, type Recipe } from "@/lib";
+import { BrickGlyph } from "./BrickArt";
 import styles from "./RecipesMenu.module.css";
 
 export type RecipesMenuProps = {
@@ -13,8 +14,8 @@ export type RecipesMenuProps = {
 };
 
 /**
- * A small "Recipes" button with a popover list of named recipes (name + one-line idea). Picking one
- * loads it. Arrow keys move, Escape or a click outside closes, focus returns to the button.
+ * A small "Recipes" button with a popover list of named recipes: the recipe's bricks as mini glyphs in
+ * their colours, then its name (the idea lives in Details). Picking one loads and builds it. Arrow keys move, Escape or a click outside closes, focus returns to the button.
  */
 export default function RecipesMenu({ active, onPick, placement = "up", className }: RecipesMenuProps) {
   const [open, setOpen] = useState(false);
@@ -95,8 +96,12 @@ export default function RecipesMenu({ active, onPick, placement = "up", classNam
                     onPick(r);
                   }}
                 >
+                  <span className={styles.glyphs} aria-hidden="true">
+                    {flowOrder(r.ids).map((id) => (
+                      <BrickGlyph key={id} color={BY_ID[id].brick.hex} studs={BY_ID[id].size} className={styles.glyph} />
+                    ))}
+                  </span>
                   <span className={styles.name}>{r.recipe}</span>
-                  <span className={styles.idea}>{r.idea}</span>
                 </button>
               </li>
             ))}

@@ -1,35 +1,77 @@
+/*
+ * The column is a size container so the name, the phone and the buttons share the phone's width
+ * (the same formula FakePhone uses: about 0.58 x the phone's height, 300-420px).
+ */
 .panel {
+  container-type: size;
+  --pw: min(100cqw, max(calc((100cqh - var(--chrome)) * 0.58), 300px), 420px);
+  --chrome: 156px;
   height: 100%;
   min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: var(--space-2);
+  gap: var(--space-3);
+}
+
+.head,
+.actions,
+.phone {
+  width: var(--pw);
+  margin-inline: auto;
+}
+.head {
+  flex: none;
+  display: grid;
+  gap: var(--space-1);
+}
+
+/* The app name is the column title: 24px (28px on the projector), two lines allowed, never cut. */
+.name {
+  margin: 0;
+  min-height: calc(2 * 1.15em);
+  display: flex;
+  align-items: flex-end;
+  font-size: 24px;
+  line-height: 1.15;
+  font-weight: var(--weight-medium);
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+.name[data-empty] {
+  color: var(--base-gray-30);
+}
+.typed > span {
+  animation: char-in 90ms var(--ease-hover) calc(220ms + var(--c) * 22ms) both;
+}
+@keyframes char-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.demo {
+  margin: 0;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--base-gray-60);
 }
 
 .phone {
   flex: 1;
   min-height: 0;
-  margin-bottom: var(--space-2);
 }
 
-.name {
-  margin: 0;
-  text-align: center;
-  font-size: var(--text-small);
-  line-height: 20px;
-  font-weight: var(--weight-medium);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.name[data-empty] {
-  color: var(--color-fg-muted);
-  font-weight: var(--weight-regular);
+.actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .copy {
   display: flex;
+  flex: 1;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
@@ -61,35 +103,51 @@
   background: var(--base-green);
   color: var(--base-gray-100);
 }
+.copy[data-quiet]:not([aria-disabled="true"]) {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-fg);
+}
+.copy[data-quiet]:hover:not([aria-disabled="true"]) {
+  border-color: var(--color-fg);
+  box-shadow: none;
+}
 .copy[aria-disabled="true"] {
   border-color: var(--color-hairline);
-  background: var(--color-surface);
+  background: var(--base-gray-10);
   color: var(--color-fg-muted);
   cursor: not-allowed;
 }
 
 .details {
-  align-self: center;
-  min-height: var(--hit-target);
+  flex: none;
+  min-height: 52px;
   padding: 0 var(--space-4);
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--color-link);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-fg);
   font: inherit;
-  font-size: var(--text-small);
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
+  font-size: 16px;
+  font-weight: var(--weight-medium);
   cursor: pointer;
 }
+.details:hover:not([aria-disabled="true"]) {
+  border-color: var(--color-fg);
+}
 .details[aria-disabled="true"] {
+  border-color: var(--color-hairline);
   color: var(--color-fg-muted);
-  text-decoration: none;
-  cursor: default;
+  cursor: not-allowed;
 }
 
 @media (prefers-color-scheme: dark) {
+  .name[data-empty] {
+    color: var(--base-gray-60);
+  }
+  .demo {
+    color: var(--base-gray-30);
+  }
   .copy[aria-disabled="true"] {
     background: var(--base-gray-80);
     border-color: var(--base-gray-80);
@@ -97,15 +155,33 @@
   }
 }
 
+/* Short screens: the name sits on one line beside nothing else, the chrome shrinks. */
+@media (max-height: 800px) {
+  .panel {
+    --chrome: 128px;
+    gap: var(--space-2);
+  }
+  .name {
+    min-height: 0;
+    font-size: 20px;
+  }
+  .copy,
+  .details {
+    min-height: 48px;
+  }
+}
+
 @media (min-width: 1600px) {
   .name {
-    font-size: 16px;
+    font-size: 28px;
   }
-  .copy {
+  .demo {
+    font-size: 14px;
+    line-height: 18px;
+  }
+  .copy,
+  .details {
     min-height: 60px;
     font-size: 19px;
-  }
-  .details {
-    font-size: 16px;
   }
 }

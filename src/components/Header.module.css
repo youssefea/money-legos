@@ -55,6 +55,7 @@
 
 .docs {
   padding: 0 var(--space-3);
+  color: var(--color-fg);
   font-weight: var(--weight-medium);
   text-decoration: none;
 }
@@ -82,5 +83,9 @@
   }
   .name {
     font-size: 16px;
+  }
+  /* Room for the lockup and the name: the sound toggle is a desktop nicety. */
+  .sound {
+    display: none;
   }
 }

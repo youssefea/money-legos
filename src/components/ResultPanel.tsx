@@ -1,11 +1,19 @@
 "use client";
 
-import type { Ref } from "react";
-import type { FakeApp } from "@/lib";
-import FakePhone from "./phone/FakePhone";
+import type { CSSProperties, Ref } from "react";
+import type { FakeApp, LegoId } from "@/lib";
+import FakePhone, { type PhonePhase } from "./phone/FakePhone";
 import styles from "./ResultPanel.module.css";
 
-export type CopyButtonProps = { copied: boolean; disabled: boolean; onCopy: () => void; className?: string; testId?: string };
+export type CopyButtonProps = {
+  copied: boolean;
+  disabled: boolean;
+  onCopy: () => void;
+  /** Before Build app: enabled but quiet (outline), so Build app stays the one blue action. */
+  quiet?: boolean;
+  className?: string;
+  testId?: string;
+};
 
 const CopyIcon = () => (
   <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
@@ -20,12 +28,13 @@ const CheckIcon = () => (
 );
 
 /** The big Copy prompt button: green "Copied" for 2s. */
-export function CopyButton({ copied, disabled, onCopy, className, testId = "copy" }: CopyButtonProps) {
+export function CopyButton({ copied, disabled, onCopy, quiet, className, testId = "copy" }: CopyButtonProps) {
   return (
     <button
       type="button"
       className={[styles.copy, className].filter(Boolean).join(" ")}
       data-copied={copied || undefined}
+      data-quiet={(quiet && !copied) || undefined}
       aria-disabled={disabled}
       onClick={() => {
         if (!disabled) onCopy();
@@ -38,30 +47,67 @@ export function CopyButton({ copied, disabled, onCopy, className, testId = "copy
   );
 }
 
+/** "Demo · no real funds": always next to the fake screen. */
+export function DemoLabel({ className }: { className?: string }) {
+  return (
+    <p className={[styles.demo, className].filter(Boolean).join(" ")} data-testid="demo-label">
+      Demo · no real funds
+    </p>
+  );
+}
+
+/** The app name, typing in letter by letter after each Build (CSS only; reduced motion shows it at once). */
+export function AppName({ name, boot, id, className }: { name: string | null; boot: number; id?: string; className?: string }) {
+  return (
+    <h2 id={id} className={[styles.name, className].filter(Boolean).join(" ")} data-empty={!name || undefined} data-testid="app-name">
+      {name ? (
+        <span key={boot} className={styles.typed}>
+          {Array.from(name).map((c, i) => (
+            <span key={i} style={{ "--c": i } as CSSProperties}>
+              {c}
+            </span>
+          ))}
+        </span>
+      ) : (
+        "Your app"
+      )}
+    </h2>
+  );
+}
+
 export type ResultPanelProps = {
   app: FakeApp;
+  phase: PhonePhase;
+  boot: number;
   slots: number;
   tileRef: (id: string, el: HTMLLIElement | null) => void;
-  /** App name once generated. */
+  /** App name while the app is live. */
   name: string | null;
+  /** 2+ bricks: Copy prompt (and Details) build first if needed. */
+  ready: boolean;
   copied: boolean;
   onCopy: () => void;
   onDetails: () => void;
+  inspect: LegoId | null;
+  onInspect: (id: LegoId | null) => void;
   detailsRef?: Ref<HTMLButtonElement>;
 };
 
-/** Right column: the fake phone, the app name, Copy prompt and a quiet Details link. */
-export default function ResultPanel({ app, slots, tileRef, name, copied, onCopy, onDetails, detailsRef }: ResultPanelProps) {
+/** Right column: the app name as the column title, the demo label, the fake phone, Copy prompt and Details. */
+export default function ResultPanel({ app, phase, boot, slots, tileRef, name, ready, copied, onCopy, onDetails, inspect, onInspect, detailsRef }: ResultPanelProps) {
   return (
     <section className={styles.panel} aria-labelledby="app-name">
-      <FakePhone className={styles.phone} app={app} slots={slots} tileRef={tileRef} />
-      <h2 id="app-name" className={styles.name} data-empty={!name || undefined} data-testid="app-name">
-        {name ?? "Your app"}
-      </h2>
-      <CopyButton copied={copied} disabled={!name} onCopy={onCopy} />
-      <button ref={detailsRef} type="button" className={styles.details} aria-disabled={!name} onClick={() => name && onDetails()} aria-haspopup="dialog">
-        Details
-      </button>
+      <div className={styles.head}>
+        <AppName id="app-name" name={name} boot={boot} />
+        <DemoLabel />
+      </div>
+      <FakePhone className={styles.phone} app={app} phase={phase} boot={boot} slots={slots} tileRef={tileRef} inspect={inspect} onInspect={onInspect} />
+      <div className={styles.actions}>
+        <CopyButton copied={copied} disabled={!ready} quiet={phase !== "live"} onCopy={onCopy} />
+        <button ref={detailsRef} type="button" className={styles.details} aria-disabled={!ready} onClick={() => ready && onDetails()} aria-haspopup="dialog">
+          Details
+        </button>
+      </div>
     </section>
   );
 }
