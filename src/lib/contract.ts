@@ -31,7 +31,15 @@ export type BrickStageProps = {
   className?: string;
 };
 
-export type BrickLayoutItem = { id: string; cx: number; cy: number; w: number; h: number };
+export type BrickLayoutItem = {
+  id: string;
+  cx: number;
+  cy: number;
+  w: number;
+  h: number;
+  /** Optional screen-space silhouette of the brick (fractions of the container, clockwise) for outline highlights. */
+  hull?: [number, number][];
+};
 
 /** A Lego id; sprite files live at public/sprites/<legoId>.webp. */
 export type SpriteId = string;
