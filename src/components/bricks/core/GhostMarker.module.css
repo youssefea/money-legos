@@ -1,0 +1,78 @@
+.ghost {
+  animation: ghost-in 240ms cubic-bezier(0.23, 1, 0.32, 1) 280ms both;
+}
+
+.edges {
+  fill: none;
+  stroke: var(--ghost-color);
+  stroke-width: 2px;
+  stroke-dasharray: 6 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  animation: ghost-march 1.6s linear infinite;
+}
+
+.stud {
+  fill: none;
+  stroke: var(--ghost-color);
+  stroke-width: 1.25px;
+  stroke-dasharray: 3 3;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.7;
+}
+
+.badge {
+  animation: ghost-bob 2.4s ease-in-out infinite;
+}
+
+.badgePlate {
+  fill: var(--ghost-color);
+}
+
+.badgeText {
+  fill: var(--ghost-ink);
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 4.6px;
+  text-anchor: middle;
+  dominant-baseline: central;
+  font-variant-numeric: tabular-nums;
+}
+
+.still,
+.still * {
+  animation: none !important;
+}
+
+@keyframes ghost-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ghost-march {
+  to {
+    stroke-dashoffset: -22;
+  }
+}
+
+@keyframes ghost-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ghost,
+  .ghost * {
+    animation: none !important;
+  }
+}

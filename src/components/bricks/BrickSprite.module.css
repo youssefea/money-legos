@@ -4,6 +4,12 @@
   line-height: 0;
 }
 
+/* Reserve the sprite's box before it loads. Zero specificity: any width from the caller wins. */
+:where(.sized) {
+  width: var(--sprite-w);
+  max-width: 100%;
+}
+
 .img {
   display: block;
   width: 100%;

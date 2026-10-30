@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bricks harness</title>
+    <style>
+      @font-face {
+        font-family: "Base Sans";
+        src: url("/src/app/fonts/BaseSansVF.woff2") format("woff2");
+        font-weight: 100 900;
+      }
+      @font-face {
+        font-family: "Base Sans Mono";
+        src: url("/src/app/fonts/BaseSansMonoVF.woff2") format("woff2");
+        font-weight: 100 500;
+      }
+      :root {
+        --font-base-sans: "Base Sans", system-ui, sans-serif;
+        --font-base-sans-mono: "Base Sans Mono", ui-monospace, monospace;
+      }
+      html.bake,
+      html.bake body {
+        background: transparent !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/scripts/bake-sprites/main.tsx"></script>
+  </body>
+</html>
