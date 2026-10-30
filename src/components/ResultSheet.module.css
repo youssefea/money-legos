@@ -145,3 +145,17 @@
     border-top-color: var(--base-gray-80);
   }
 }
+
+/* 320px phones: a tighter action bar so Copy prompt stays on one line. */
+@media (max-width: 359.98px) {
+  .bar {
+    padding-inline: var(--space-3);
+  }
+  .back {
+    padding: 0 var(--space-3);
+    font-size: 14px;
+  }
+  .copy {
+    white-space: nowrap;
+  }
+}
