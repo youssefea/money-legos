@@ -4,9 +4,9 @@ import { join } from "node:path";
 /**
  * Design QA screenshots (not a test). Run with:
  *   SHOTS=1 npx playwright test shots
- * Writes PNGs to SHOTS_DIR (default ../design/ui-shots-v6).
+ * Writes PNGs to SHOTS_DIR (default ../design/ui-shots-v7).
  */
-const DIR = process.env.SHOTS_DIR ?? join(process.cwd(), "..", "design", "ui-shots-v6");
+const DIR = process.env.SHOTS_DIR ?? join(process.cwd(), "..", "design", "ui-shots-v7");
 const SIZES = [
   [320, 640],
   [390, 844],
@@ -24,7 +24,9 @@ test.skip(!process.env.SHOTS, "set SHOTS=1 to take design screenshots");
 async function open(page: Page, w: number, state: string) {
   const compact = w < 1024;
   const built = ["built", "details", "inspect", "full", "toast", "present"].includes(state);
-  await page.goto(built ? "/#b20,payments,speed,financing" : "/");
+  // recipe-<slug>: a curated recipe link (largest bricks at the bottom, the anchor task as the hero card).
+  const recipe = state.startsWith("recipe-") ? state.slice(7) : null;
+  await page.goto(recipe ? `/#recipe=${recipe}` : built ? "/#b20,payments,speed,financing" : "/");
   await page.waitForTimeout(1200);
   if (state === "wire") {
     await page.locator('button[data-lego="b20"]').click();
@@ -59,7 +61,19 @@ const EXTRA: [number, number, string, string][] = [
   [1440, 900, "dark", "inspect"],
   [1440, 900, "light", "toast"],
   [1440, 900, "dark", "toast"],
+  [1280, 720, "light", "present"],
+  [1280, 720, "dark", "present"],
   [1440, 900, "light", "present"],
+  [1440, 900, "dark", "present"],
+  [1280, 720, "light", "toast"],
+  [1920, 1080, "light", "toast"],
+  [1440, 900, "light", "recipe-stablecoin-checkout"],
+  [1440, 900, "light", "recipe-creator-payouts"],
+  [1440, 900, "dark", "recipe-neobroker"],
+  [1920, 1080, "light", "recipe-pay-a-name"],
+  [390, 844, "light", "recipe-neobank"],
+  [320, 640, "light", "toast"],
+  [320, 640, "light", "inspect"],
   [1920, 1080, "light", "present"],
   [1920, 1080, "dark", "present"],
   [1920, 1080, "dark", "details"],
