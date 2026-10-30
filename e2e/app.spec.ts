@@ -413,7 +413,7 @@ test.describe("deep links", () => {
     await expect(page).toHaveURL(/\/$/);
   });
 
-  test("URL and screen agree after a valid link turns unknown, and after Back to an empty hash", async ({ page }) => {
+  test("URL and screen agree after a valid link turns unknown, and after Back to an empty hash", async ({ page, browserName }) => {
     await page.goto("/");
     await page.getByTestId("brick-stage").waitFor();
     await page.evaluate(() => (window.location.hash = "#recipe=neobroker"));
@@ -429,6 +429,8 @@ test.describe("deep links", () => {
     await page.goBack();
     await expect.poll(() => page.evaluate(() => window.location.hash)).toBe("");
     await expect(count(page)).toHaveAttribute("aria-label", "0 of 4 bricks");
+    // WebKit's back list skips entries a script added without a user gesture (the recipe hash here).
+    if (browserName === "webkit") return;
     await page.goBack();
     await expect.poll(() => page.evaluate(() => window.location.hash)).toBe("#recipe=neobroker");
     await expect(page.getByTestId("app-name")).toHaveText("Neobroker");
