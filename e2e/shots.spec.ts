@@ -4,51 +4,54 @@ import { join } from "node:path";
 /**
  * Design QA screenshots (not a test). Run with:
  *   SHOTS=1 npx playwright test shots
- * Writes PNGs to SHOTS_DIR (default ../design/ui-shots-v4).
+ * Writes PNGs to SHOTS_DIR (default ../design/ui-shots-v5).
  */
-const DIR = process.env.SHOTS_DIR ?? join(process.cwd(), "..", "design", "ui-shots-v4");
+const DIR = process.env.SHOTS_DIR ?? join(process.cwd(), "..", "design", "ui-shots-v5");
 const SIZES = [
   [390, 844],
   [768, 1024],
+  [1280, 720],
   [1440, 900],
   [1920, 1080],
 ] as const;
 const SCHEMES = ["light", "dark"] as const;
-const STATES = ["empty", "one", "result"] as const;
+/** empty; wire = 2 bricks placed, not built (wireframe tiles); built = a 4-brick link (the phone sheet on compact). */
+const STATES = ["empty", "wire", "built"] as const;
 
 test.skip(!process.env.SHOTS, "set SHOTS=1 to take design screenshots");
 
 async function open(page: Page, w: number, state: string) {
   const compact = w < 1024;
-  await page.goto(state === "result" || state === "details" ? "/#b20,payments,speed" : state === "four" ? "/#b20,payments,speed,validity" : "/");
-  await page.waitForTimeout(900);
-  if (state === "one") await page.locator('button[data-lego="b20"]').click();
-  if ((state === "result" || state === "four") && compact) await page.getByTestId("mobile-bar").getByRole("button", { name: "Regenerate" }).click();
-  if (state === "filter") {
-    await page.getByRole("button", { name: "Money", exact: true }).click();
+  const built = ["built", "details", "inspect", "full"].includes(state);
+  await page.goto(built ? "/#b20,payments,speed,financing" : "/");
+  await page.waitForTimeout(1200);
+  if (state === "wire") {
     await page.locator('button[data-lego="b20"]').click();
-    await page.locator('button[data-lego="financing"]').focus();
-    await page.keyboard.press("ArrowLeft");
-    await page.keyboard.press("ArrowRight");
+    await page.locator('button[data-lego="payments"]').click();
+  }
+  if (state === "filter") {
+    await page.getByRole("button", { name: "Agents", exact: true }).click();
+    await page.locator('button[data-lego="x402-api"]').click();
   }
   if (state === "recipes") await page.getByTestId("recipes").locator("visible=true").click();
   if (state === "details") {
-    if (compact) {
-      await page.getByTestId("mobile-bar").getByRole("button", { name: "Regenerate" }).click();
-      await page.getByTestId("result-sheet").getByRole("button", { name: "Details" }).click();
-    } else await page.getByRole("button", { name: "Details" }).click();
+    if (compact) await page.getByTestId("result-sheet").getByRole("button", { name: "Details" }).click();
+    else await page.getByRole("button", { name: "Details" }).click();
   }
-  await page.waitForTimeout(900);
+  if (state === "inspect") await page.getByTestId("phone").locator('[data-tile="payments"]').hover();
+  if (state === "full") await page.locator('button[data-lego="validity"]').click();
+  await page.waitForTimeout(1000);
 }
 
 const EXTRA: [number, number, string, string][] = [
-  [1440, 900, "light", "four"],
-  [1920, 1080, "light", "four"],
-  [1440, 900, "dark", "four"],
   [1440, 900, "light", "filter"],
   [1440, 900, "light", "recipes"],
   [1440, 900, "light", "details"],
+  [1440, 900, "light", "inspect"],
+  [1440, 900, "light", "full"],
+  [1920, 1080, "dark", "details"],
   [390, 844, "light", "details"],
+  [390, 844, "dark", "details"],
 ];
 
 const ALL: [number, number, string, string][] = [
@@ -70,6 +73,17 @@ for (const [w, h, scheme, state] of ALL) {
     const page = await context.newPage();
     await open(page, w, state);
     await page.screenshot({ path: join(DIR, `${w}x${h}-${scheme}-${state}.png`) });
+    await context.close();
+  });
+}
+
+// 200% browser zoom on a 1440x900 laptop = a 720x450 CSS viewport at 2x.
+for (const state of ["empty", "built"] as const) {
+  test(`zoom200 light ${state}`, async ({ browser }) => {
+    const context = await browser.newContext({ viewport: { width: 720, height: 450 }, deviceScaleFactor: 2, reducedMotion: "reduce" });
+    const page = await context.newPage();
+    await open(page, 720, state);
+    await page.screenshot({ path: join(DIR, `zoom200-1440x900-light-${state}.png`) });
     await context.close();
   });
 }
