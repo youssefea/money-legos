@@ -231,8 +231,8 @@
 }
 .tile[data-role="hero"] .body {
   min-height: 96px;
-  gap: 8px;
-  padding: 10px 14px 12px;
+  gap: 6px;
+  padding: 8px 14px 10px;
 }
 .tile[data-role="row"] .strip,
 .tile[data-role="status"] .strip {
@@ -320,8 +320,41 @@
 .heroMark {
   display: flex;
   align-items: center;
+  gap: 12px;
+}
+.heroMark .heroTitle {
+  flex: 1;
+  min-width: 0;
+}
+.rowTop {
+  display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
+}
+.pair {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pair .field {
+  flex: 1;
+  min-width: 0;
+}
+.pair .cta {
+  flex: none;
+}
+/* Hero swap: From and To side by side, the swap mark between them. */
+.tile[data-role="hero"] .swap {
+  grid-template-columns: 1fr 1fr;
+}
+.tile[data-role="hero"] .swap .swapIcon {
+  top: 50%;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+}
+.tile[data-role="hero"] .cta {
+  min-height: 32px;
 }
 .heroTitle {
   font-size: calc(var(--fs) + 6px);
@@ -768,8 +801,24 @@
     margin-top: 6px;
   }
   .tiles {
-    gap: 6px;
-    padding-bottom: 8px;
+    gap: 4px;
+    padding-top: 4px;
+    padding-bottom: 6px;
+  }
+  .tile[data-role="row"] .body,
+  .tile[data-role="status"] .body {
+    min-height: 40px;
+    padding-top: 3px;
+    padding-bottom: 4px;
+  }
+  .tile[data-role="hero"] .strip {
+    height: 12px;
+  }
+  .tile[data-role="hero"] .cta {
+    min-height: 30px;
+  }
+  .tiles {
+    padding-bottom: 4px;
   }
   .tile[data-role="hero"] .body {
     min-height: 0;

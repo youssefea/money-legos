@@ -152,6 +152,20 @@
   margin-left: auto;
 }
 
+/* 1280-1599: the board column is ~400-430px; the toolbar stays on one row. */
+@media (min-width: 1024px) and (max-width: 1599.98px) {
+  .controls {
+    gap: var(--space-1);
+  }
+  .generate {
+    min-width: 120px;
+    padding: 0 var(--space-4);
+  }
+  .text {
+    padding: 0 var(--space-2);
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   .studs i {
     background: var(--base-gray-100);

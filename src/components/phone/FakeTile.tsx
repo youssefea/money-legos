@@ -82,11 +82,13 @@ function HeroBody({ t }: { t: Tile }) {
     case "balance":
       return (
         <>
-          <div className={styles.row}>
-            <span className={styles.label}>{t.title}</span>
+          <div className={styles.rowTop}>
+            <span className={styles.stackText}>
+              <span className={styles.label}>{t.title}</span>
+              <span className={styles.moneyHuge}>{t.value}</span>
+            </span>
             {t.chip && <Chip>{t.chip}</Chip>}
           </div>
-          <span className={styles.moneyHuge}>{t.value}</span>
           <span className={styles.actions} aria-hidden="true">
             <Cta>Send</Cta>
             <Cta quiet>Receive</Cta>
@@ -128,8 +130,10 @@ function HeroBody({ t }: { t: Tile }) {
               <i>Sell</i>
             </span>
           </div>
-          <span className={styles.field}>{t.value}</span>
-          {t.cta && <Cta>{t.cta}</Cta>}
+          <div className={styles.pair}>
+            <span className={styles.field}>{t.value}</span>
+            {t.cta && <Cta>{t.cta}</Cta>}
+          </div>
         </>
       );
     case "swap":
@@ -168,9 +172,9 @@ function HeroBody({ t }: { t: Tile }) {
                 <Icon kind={t.template === "badge" ? "shield" : "spark"} />
               </span>
             )}
+            <span className={styles.heroTitle}>{t.title}</span>
             {t.chip && <Chip>{t.chip}</Chip>}
           </div>
-          <span className={styles.heroTitle}>{t.title}</span>
           {t.cta && <Cta>{t.cta}</Cta>}
         </>
       );
@@ -207,10 +211,12 @@ function HeroBody({ t }: { t: Tile }) {
     case "signin":
       return (
         <>
-          <span className={styles.iconBig} aria-hidden="true">
-            <Icon kind="key" />
-          </span>
-          <span className={styles.heroTitle}>{t.title}</span>
+          <div className={styles.heroMark}>
+            <span className={styles.iconBig} aria-hidden="true">
+              <Icon kind="key" />
+            </span>
+            <span className={styles.heroTitle}>{t.title}</span>
+          </div>
           {t.cta && <Cta>{t.cta}</Cta>}
         </>
       );

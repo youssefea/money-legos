@@ -166,8 +166,8 @@
 /* 1280-1439: a little narrower on both sides; the board keeps at least 360px. */
 @media (max-width: 1439.98px) {
   :root {
-    --col-tray: 370px;
-    --col-result: 400px;
+    --col-tray: 340px;
+    --col-result: 380px;
   }
 }
 
