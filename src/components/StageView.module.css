@@ -1,0 +1,80 @@
+.stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.poster {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  transition: opacity var(--dur-base) var(--ease-hover);
+}
+.stage[data-live="true"] .poster {
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* The board is a picture: it never takes clicks meant for the buttons around it. */
+.live {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* A brick lands: drop with a tiny overshoot, squash, settle. */
+.drop {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: drop var(--dur-place) var(--ease-out) both;
+}
+@keyframes drop {
+  0% {
+    transform: translateY(-14px);
+    opacity: 0;
+  }
+  55% {
+    transform: translateY(1px) scale(1.03, calc(1 - var(--squash)));
+    opacity: 1;
+  }
+  100% {
+    transform: none;
+  }
+}
+
+/* Generate: each brick hops in turn (two names so the animation restarts every time). */
+.settleA,
+.settleB {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+.settleA {
+  animation: settle-a var(--dur-settle) var(--ease-out) both;
+}
+.settleB {
+  animation: settle-b var(--dur-settle) var(--ease-out) both;
+}
+@keyframes settle-a {
+  40% {
+    transform: translateY(-4px);
+  }
+  70% {
+    transform: scale(1.02, calc(1 - var(--squash)));
+  }
+}
+@keyframes settle-b {
+  40% {
+    transform: translateY(-4px);
+  }
+  70% {
+    transform: scale(1.02, calc(1 - var(--squash)));
+  }
+}

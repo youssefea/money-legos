@@ -1,0 +1,95 @@
+.rail {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  max-width: 920px;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1 1 0;
+  min-width: 0;
+}
+.step:last-child {
+  flex: 0 0 auto;
+}
+.step:not(:last-child)::after {
+  content: "";
+  flex: 1;
+  min-width: 24px;
+  height: 1px;
+  margin: 0 var(--space-4) 0 var(--space-2);
+  background: var(--color-hairline);
+  transition: background var(--dur-base) var(--ease-hover);
+}
+.step[data-state="done"]::after {
+  background: var(--base-blue);
+}
+
+.dot {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--color-panel);
+  color: var(--color-fg-muted);
+  font-family: var(--font-mono);
+  font-weight: var(--weight-medium);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  transition: background var(--dur-base) var(--ease-hover), color var(--dur-base) var(--ease-hover);
+}
+.step[data-state="current"] .dot,
+.step[data-state="done"] .dot {
+  background: var(--base-blue);
+  color: var(--base-gray-0);
+}
+.step[data-state="done"] .dot svg {
+  animation: tick var(--dur-base) var(--ease-out);
+}
+@keyframes tick {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+}
+
+.text {
+  font-family: var(--font-mono);
+  font-weight: var(--weight-medium);
+  font-size: var(--text-label);
+  letter-spacing: var(--text-label-tracking);
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--color-fg-muted);
+}
+.step[data-state="current"] .text,
+.step[data-state="done"] .text {
+  color: var(--color-link);
+}
+
+@media (prefers-color-scheme: dark) {
+  .dot {
+    background: var(--base-gray-80);
+  }
+  .step[data-state="done"]::after {
+    background: var(--base-cerulean);
+  }
+}
+
+@media (min-width: 1920px) {
+  .rail {
+    max-width: 1100px;
+  }
+  .dot {
+    width: 36px;
+    height: 36px;
+    font-size: 15px;
+  }
+}
