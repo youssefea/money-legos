@@ -34,7 +34,8 @@ test.describe("desktop", () => {
     await expect(page.getByRole("group", { name: "Filter bricks" })).toBeVisible();
   });
 
-  test("bricks first in tab order: Docs, Sound, then the bin", async ({ page }) => {
+  test("bricks first in tab order: Docs, Present, then the bin", async ({ page, browserName }) => {
+    test.skip(browserName === "webkit", "WebKit on macOS tabs to form fields only (Safari's default)");
     await page.keyboard.press("Tab");
     await page.keyboard.press("Tab");
     await page.keyboard.press("Tab");
@@ -280,7 +281,8 @@ test.describe("desktop", () => {
     expect(cut).toBe(false);
   });
 
-  test("copy prompt turns green, then resets", async ({ page, context }) => {
+  test("copy prompt turns green, then resets", async ({ page, context, browserName }) => {
+    test.skip(browserName === "webkit", "WebKit has no clipboard-write permission to grant");
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
     await page.goto("/#recipe=agent-paid-api");
     await page.getByRole("button", { name: "Copy prompt" }).click();
@@ -292,7 +294,8 @@ test.describe("desktop", () => {
     await expect(page.getByRole("button", { name: "Copy prompt" })).toBeVisible({ timeout: 4000 });
   });
 
-  test("Copy prompt before Build app builds first, then copies", async ({ page, context }) => {
+  test("Copy prompt before Build app builds first, then copies", async ({ page, context, browserName }) => {
+    test.skip(browserName === "webkit", "WebKit has no clipboard-write permission to grant");
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
     await brick(page, "b20").click();
     await brick(page, "payments").click();
@@ -302,7 +305,8 @@ test.describe("desktop", () => {
     expect(await page.evaluate(() => navigator.clipboard.readText())).toContain("Build a first working version of");
   });
 
-  test("copy falls back to selecting the prompt in Details when the clipboard is blocked", async ({ page }) => {
+  test("copy falls back to selecting the prompt in Details when the clipboard is blocked", async ({ page, browserName }) => {
+    test.skip(browserName === "webkit", "WebKit's navigator.clipboard cannot be stubbed from an init script");
     await page.addInitScript(() => {
       Object.defineProperty(navigator, "clipboard", { value: { writeText: () => Promise.reject(new Error("blocked")) } });
     });
@@ -312,7 +316,7 @@ test.describe("desktop", () => {
     await expect.poll(() => page.evaluate(() => window.getSelection()?.toString() ?? "")).toContain("Build a first working version of");
   });
 
-  test("details drawer: the dialog takes focus, words live here, focus is trapped, Escape returns focus", async ({ page }) => {
+  test("details drawer: the dialog takes focus, words live here, focus is trapped, Escape returns focus", async ({ page, browserName }) => {
     await page.goto("/#b20,payments,speed");
     const details = page.getByRole("button", { name: "Details" });
     await details.click();
@@ -334,7 +338,8 @@ test.describe("desktop", () => {
     }
     await page.keyboard.press("Escape");
     await expect(drawer).toBeHidden();
-    await expect(details).toBeFocused();
+    // (WebKit does not focus a clicked button, so there is no opener focus to restore.)
+    if (browserName !== "webkit") await expect(details).toBeFocused();
   });
 
   test("full at 4: a fifth brick swaps out the bottom one with a toast and Undo; no permanent sentence", async ({ page }) => {
@@ -416,6 +421,8 @@ test.describe("deep links", () => {
     await page.evaluate(() => (window.location.hash = "#unknown"));
     await expect(count(page)).toHaveAttribute("aria-label", "0 of 4 bricks");
     await expect(page.getByTestId("app-name")).toHaveText("Your app");
+    // Let the app finish cleaning the URL before the next link (WebKit applies it a frame later).
+    await expect.poll(() => page.evaluate(() => window.location.hash)).toBe("");
     await page.evaluate(() => (window.location.hash = "#b20,payments"));
     await expect(count(page)).toHaveAttribute("aria-label", "2 of 4 bricks");
     // Back: to the cleaned (empty) entry the unknown link left, then to the recipe.
@@ -423,6 +430,7 @@ test.describe("deep links", () => {
     await expect.poll(() => page.evaluate(() => window.location.hash)).toBe("");
     await expect(count(page)).toHaveAttribute("aria-label", "0 of 4 bricks");
     await page.goBack();
+    await expect.poll(() => page.evaluate(() => window.location.hash)).toBe("#recipe=neobroker");
     await expect(page.getByTestId("app-name")).toHaveText("Neobroker");
     await expect(count(page)).toHaveAttribute("aria-label", "4 of 4 bricks");
   });
@@ -660,7 +668,7 @@ test.describe("v6: Replay, inspect from the board, Present mode, the name", () =
     expect(await surprise.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe("rgba(0, 0, 0, 0)");
   });
 
-  test("Build by keyboard moves focus to Copy prompt and announces; Replay keeps the slot and the focus", async ({ page }) => {
+  test("Build by keyboard moves focus to Copy prompt and announces; Replay keeps the slot and the focus", async ({ page, browserName }) => {
     await brick(page, "b20").click();
     await brick(page, "payments").click();
     const slot = (await build(page).boundingBox())!;
@@ -674,9 +682,10 @@ test.describe("v6: Replay, inspect from the board, Present mode, the name", () =
     expect(Math.abs(again.y - slot.y)).toBeLessThan(1);
     // Replay by mouse: the boot plays again, focus stays on the button (never drops to <body>).
     await build(page).click();
-    await expect(build(page)).toBeFocused();
+    // (WebKit never focuses a clicked button, Safari's platform rule; Chromium must keep it there.)
+    if (browserName !== "webkit") await expect(build(page)).toBeFocused();
     await expect(phone(page)).toHaveAttribute("data-phase", "live");
-    expect(await page.evaluate(() => document.activeElement === document.body)).toBe(false);
+    if (browserName !== "webkit") expect(await page.evaluate(() => document.activeElement === document.body)).toBe(false);
   });
 
   test("the app name: typed on Build, crossfade on edits, no invisible trailing letters; a shared link shows it at once", async ({ page }) => {

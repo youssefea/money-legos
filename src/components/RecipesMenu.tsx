@@ -83,7 +83,8 @@ export default function RecipesMenu({ active, onPick, placement = "up", classNam
         </svg>
       </button>
       {open && (
-        <div ref={popRef} id={id} role="dialog" aria-label="Recipes" className={styles.pop} data-placement={placement} onKeyDown={onKeyDown}>
+        // onMouseDown: Safari does not focus a clicked button, so keep focus inside (the blur would close the menu before the click lands).
+        <div ref={popRef} id={id} role="dialog" aria-label="Recipes" className={styles.pop} data-placement={placement} onKeyDown={onKeyDown} onMouseDown={(e) => e.preventDefault()}>
           <ul className={styles.list}>
             {RECIPES.map((r) => (
               <li key={r.id}>

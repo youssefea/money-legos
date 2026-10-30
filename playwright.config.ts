@@ -16,6 +16,11 @@ export default defineConfig({
     ...devices["Desktop Chrome"],
     viewport: { width: 1440, height: 900 },
   },
+  // Chromium always; WebKit too with E2E_WEBKIT=1 (needs `npx playwright install webkit`).
+  projects: [
+    { name: "chromium" },
+    ...(process.env.E2E_WEBKIT ? [{ name: "webkit", use: { ...devices["Desktop Safari"], viewport: { width: 1440, height: 900 } } }] : []),
+  ],
   webServer: {
     // Serve a private copy so another build writing to out/ cannot change the app mid-run.
     command: process.env.E2E_SKIP_BUILD
