@@ -125,9 +125,9 @@
   --page-max: 1760px;
   --page-pad-y: 24px;
   --page-pad-x: 32px;
-  --col-tray: 408px;
-  --col-board-min: 440px;
-  --col-result: 420px;
+  --col-tray: 500px;
+  --col-board-min: 400px;
+  --col-result: 340px;
   --col-gap: 24px;
   --tray-art-max: 192px;
   --hit-target: 44px;
@@ -169,8 +169,8 @@
   :root {
     --page-pad-y: 32px;
     --page-pad-x: 48px;
-    --col-tray: 496px;
-    --col-result: 480px;
+    --col-tray: 640px;
+    --col-result: 440px;
     --col-gap: 32px;
     --text-label: 14px;
     --text-small: 16px;

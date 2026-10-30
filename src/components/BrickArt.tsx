@@ -1,7 +1,7 @@
 /**
  * Small SVG bricks in true proportions (stud pitch 8, brick 9.6, stud 4.8 x 1.7, in mm),
- * drawn in a fixed oblique view. Used for the "why" glyphs, the drag ghost, the board poster
- * (shown until the live 3D board is ready) and the closed set-box line drawing.
+ * drawn in a fixed oblique view. Used for the Details glyphs, tray stand-ins, the drag ghost and the
+ * board poster (shown until the live 3D board is ready).
  * The front face is always the exact brand hex; top and side are shaded only as lighting.
  */
 import type { ReactNode } from "react";
@@ -105,29 +105,6 @@ export function BrickGlyph({ color, studs = [4, 2], className, title }: BrickGly
   return (
     <svg className={className} viewBox={vb} role={title ? "img" : undefined} aria-label={title} aria-hidden={title ? undefined : true} focusable="false">
       <Box studs={studs} x={0} y={0} z={0} color={color} />
-    </svg>
-  );
-}
-
-/** A small stack (bottom first), no baseplate: the build-step "booklet" pictures. */
-export function MiniStack({ bricks, className }: { bricks: { color: string; studs: [number, number] }[]; className?: string }) {
-  const maxW = Math.max(...bricks.map((b) => b.studs[0])) * PITCH;
-  const maxD = Math.max(...bricks.map((b) => b.studs[1])) * PITCH;
-  const H = bricks.length * BRICK_H;
-  const [, topY] = P(0, H + STUD_H, maxD);
-  return (
-    <svg className={className} viewBox={viewBoxFor(0, topY, maxW + KX * maxD, 0)} aria-hidden="true" focusable="false">
-      {bricks.map((b, i) => {
-        const W = b.studs[0] * PITCH;
-        const D = b.studs[1] * PITCH;
-        const x = Math.round((maxW - W) / 2 / PITCH) * PITCH;
-        const z = Math.round((maxD - D) / 2 / PITCH) * PITCH;
-        return (
-          <g key={i}>
-            <Box studs={b.studs} x={x} y={i * BRICK_H} z={z} color={b.color} studsOn={i === bricks.length - 1} />
-          </g>
-        );
-      })}
     </svg>
   );
 }
@@ -244,45 +221,6 @@ export function BoardPoster({ bricks, next, dark, dropId, settle = 0, className,
       <Box studs={plate} x={0} y={0} z={0} color={plateColor} height={PLATE_H} />
       {placed}
       {ghostEl}
-    </svg>
-  );
-}
-
-const LID_STUDS: readonly [number, number][] = [1, 0].flatMap((z) => [0, 1, 2, 3].map((x) => [x, z] as [number, number]));
-
-/** Line drawing of a closed set box, for the empty right column. */
-export function ClosedBoxArt({ className }: { className?: string }) {
-  const W = 72;
-  const D = 48;
-  const H = 22;
-  const lid = 5;
-  const box = (x: number, y: number, z: number, w: number, h: number, d: number) => [
-    [P(x, y, z), P(x + w, y, z), P(x + w, y + h, z), P(x, y + h, z)],
-    [P(x, y + h, z), P(x + w, y + h, z), P(x + w, y + h, z + d), P(x, y + h, z + d)],
-    [P(x + w, y, z), P(x + w, y + h, z), P(x + w, y + h, z + d), P(x + w, y, z + d)],
-  ];
-  const faces = [...box(0, 0, 0, W, H - lid, D), ...box(-0.8, H - lid, -0.8, W + 1.6, lid, D + 1.6)];
-  const [, topY] = P(0, H, D + 1.6);
-  return (
-    <svg className={className} viewBox={viewBoxFor(-1, topY, W + 1 + KX * (D + 1.6), 0, 2)} aria-hidden="true" focusable="false">
-      {faces.map((f, i) => (
-        <polygon key={i} points={pts(f)} fill="var(--box-fill, none)" stroke="currentColor" strokeWidth={1} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
-      ))}
-      {/* 2x4 stud relief on the lid: a brick footprint and eight raised studs. */}
-      <polygon points={pts([P(W / 2 - 16, H, D / 2 - 8), P(W / 2 + 16, H, D / 2 - 8), P(W / 2 + 16, H, D / 2 + 8), P(W / 2 - 16, H, D / 2 + 8)])} fill="none" stroke="currentColor" strokeWidth={1.5} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
-      {LID_STUDS.map(([sx, sz], i) => {
-        const cx = W / 2 - 12 + sx * 8;
-        const cz = D / 2 - 4 + sz * 8;
-        const ring = (y: number) => pts(Array.from({ length: 16 }, (_, k) => P(cx + 2.4 * Math.cos((k / 16) * Math.PI * 2), y, cz + 2.4 * Math.sin((k / 16) * Math.PI * 2))));
-        return (
-          <g key={i}>
-            <polygon points={ring(H)} fill="var(--box-fill, none)" stroke="currentColor" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
-            <polygon points={ring(H + 1.7)} fill="var(--box-stud-fill, var(--color-panel))" stroke="currentColor" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
-          </g>
-        );
-      })}
-      {/* Thumb notch on the lid. */}
-      <polyline points={pts([P(W / 2 - 6, H - lid, -0.8), P(W / 2, H - lid - 3, -0.8), P(W / 2 + 6, H - lid, -0.8)])} fill="none" stroke="currentColor" strokeWidth={1} vectorEffect="non-scaling-stroke" />
     </svg>
   );
 }

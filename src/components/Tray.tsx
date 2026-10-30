@@ -1,168 +1,265 @@
 "use client";
 
-import { useId, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 import BrickSprite from "@/components/bricks/BrickSprite";
-import { SPRITE_META } from "@/components/bricks/spriteMeta";
-import { HERO_LEGOS, MAX_LEGOS, MORE_LEGOS, type Lego, type LegoId } from "@/lib";
-import LegoDetail from "./LegoDetail";
+import { SPRITE_DPR, SPRITE_META } from "@/components/bricks/spriteMeta";
+import { CATEGORIES, DENIM_SHORT, HERO_LEGOS, MORE_LEGOS, type Category, type Lego, type LegoId } from "@/lib";
+import { BrickGlyph } from "./BrickArt";
+import { statusChip } from "./statusChip";
 import styles from "./Tray.module.css";
 
 export type TrayProps = {
   ids: readonly LegoId[];
-  fullHint: boolean;
   onToggle: (id: LegoId) => void;
   onPointerDown: (e: ReactPointerEvent<HTMLElement>, id: LegoId) => void;
   wasDrag: () => boolean;
   dragging: LegoId | null;
 };
 
-type Open = { id: LegoId; pos: { top: number; left: number; width: number }; anchor: HTMLButtonElement } | null;
+type Filter = "All" | Category;
+type Tip = { id: LegoId; x: number; top: number; bottom: number };
+
+const TIP_ID = "lego-tip";
+/** CSS px per stud in a baked sprite (a hero 2x4 is 192 px wide at 1x). */
+const BAKED_STUD = 48;
+const HOVER_DELAY = 320;
+const LONG_PRESS = 450;
 
 const Check = () => (
-  <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
-    <path d="M2.5 6.5l2.2 2.2 4.8-5.2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+  <svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true">
+    <path d="M2.5 6.4l2.2 2.2 4.8-5.2" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
+/** Sprite width in studs (a hero 2x4 is 4): sets the brick's size on the tray's shared stud scale. */
+function spriteStuds(lego: Lego): number {
+  const meta = SPRITE_META[lego.id];
+  return meta ? meta.width / SPRITE_DPR / BAKED_STUD : lego.size[0] + 0.55 * lego.size[1];
+}
+
+/** The brick picture: the baked sprite, or a drawn brick with its verb until the sprite exists. */
+function BrickArtFor({ lego }: { lego: Lego }) {
+  if (SPRITE_META[lego.id]) {
+    return <BrickSprite id={lego.id} color={lego.brick.hex} size={lego.size} className={styles.sprite} />;
+  }
+  // Front face of the drawn brick (BrickArt's oblique view, in mm), for the printed verb.
+  const [w, d] = lego.size;
+  const fw = (8 * w) / (8 * w + 0.55 * 8 * d);
+  const fh = 9.6 / (9.6 + 1.7 + 0.42 * 8 * d);
+  const vars = { "--label": lego.brick.label, "--fw": fw.toFixed(3), "--fh": fh.toFixed(3), "--w": w, "--chars": lego.verb.length } as CSSProperties;
+  return (
+    <span className={styles.drawn} style={vars} data-sprite={lego.id} data-drawn aria-hidden="true">
+      <BrickGlyph color={lego.brick.hex} studs={lego.size} className={styles.glyph} />
+      <span className={styles.print}>{lego.verb}</span>
+    </span>
+  );
+}
+
 /**
- * The Lego picker: 5 hero rows (sprite + verb · name + one-line tag + info), then 8 more behind a
- * disclosure. Every brick is a real button; a placed brick shows an ON BOARD pill and Remove in its
- * text column (never on the sprite) and removes on press.
+ * The Lego bin: category chips, the 5 hero bricks pinned on top, then a calm grid of the rest. Bricks
+ * are buttons (arrow keys move, Enter adds); name, tag and status show in a tooltip on hover,
+ * keyboard focus or a long press. A placed brick fades with a check and removes on press.
  */
-export default function Tray({ ids, fullHint, onToggle, onPointerDown, wasDrag, dragging }: TrayProps) {
-  const [more, setMore] = useState(false);
-  const [open, setOpen] = useState<Open>(null);
-  const moreId = useId();
-  const full = ids.length >= MAX_LEGOS;
+export default function Tray({ ids, onToggle, onPointerDown, wasDrag, dragging }: TrayProps) {
+  const [filter, setFilter] = useState<Filter>("All");
+  const [tip, setTip] = useState<Tip | null>(null);
+  const [focusId, setFocusId] = useState<LegoId | null>(null);
+  const rootRef = useRef<HTMLElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const hoverTimer = useRef<number | undefined>(undefined);
+  const pressTimer = useRef<number | undefined>(undefined);
+  const longPressed = useRef(false);
 
-  const openDetail = (lego: Lego, btn: HTMLButtonElement) => {
-    if (open?.id === lego.id) {
-      setOpen(null);
+  const match = (l: Lego) => filter === "All" || l.category === filter;
+  const heroes = HERO_LEGOS.filter(match);
+  const more = MORE_LEGOS.filter(match);
+  const visible = [...heroes, ...more];
+  const tabId = focusId && visible.some((l) => l.id === focusId) ? focusId : visible[0]?.id;
+
+  const clearTimers = () => {
+    window.clearTimeout(hoverTimer.current);
+    window.clearTimeout(pressTimer.current);
+  };
+  useEffect(() => clearTimers, []);
+
+  const showTip = useCallback((id: LegoId, el: HTMLElement) => {
+    const r = el.getBoundingClientRect();
+    setTip({ id, x: r.left + r.width / 2, top: r.top, bottom: r.bottom });
+  }, []);
+  const hideTip = useCallback(() => {
+    window.clearTimeout(hoverTimer.current);
+    setTip(null);
+  }, []);
+
+  // A scroll or resize moves the brick away from its tooltip: hide it. Escape closes it from anywhere.
+  useEffect(() => {
+    if (!tip) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") hideTip();
+    };
+    const sc = scrollRef.current;
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("resize", hideTip);
+    sc?.addEventListener("scroll", hideTip, { passive: true });
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", hideTip);
+      sc?.removeEventListener("scroll", hideTip);
+    };
+  }, [tip, hideTip]);
+
+  const buttons = () => Array.from(rootRef.current?.querySelectorAll<HTMLButtonElement>("button[data-lego]") ?? []);
+
+  const onKeyDown = (e: ReactKeyboardEvent<HTMLButtonElement>) => {
+    const all = buttons();
+    const i = all.indexOf(e.currentTarget);
+    let next: HTMLButtonElement | undefined;
+    if (e.key === "ArrowRight") next = all[i + 1];
+    else if (e.key === "ArrowLeft") next = all[i - 1];
+    else if (e.key === "Home") next = all[0];
+    else if (e.key === "End") next = all[all.length - 1];
+    else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      const down = e.key === "ArrowDown";
+      const cur = e.currentTarget.getBoundingClientRect();
+      const cx = cur.left + cur.width / 2;
+      let best: { el: HTMLButtonElement; dy: number; dx: number } | null = null;
+      for (const el of all) {
+        const r = el.getBoundingClientRect();
+        const dy = down ? r.top - cur.bottom : cur.top - r.bottom;
+        if (dy < -2) continue;
+        const dx = Math.abs(r.left + r.width / 2 - cx);
+        if (!best || dy < best.dy - 4 || (Math.abs(dy - best.dy) <= 4 && dx < best.dx)) best = { el, dy, dx };
+      }
+      next = best?.el;
+    } else if (e.key === "Escape" && tip) {
+      e.stopPropagation();
+      hideTip();
       return;
+    } else return;
+    e.preventDefault();
+    if (next) {
+      next.focus();
+      next.scrollIntoView({ block: "nearest" });
     }
-    const r = btn.getBoundingClientRect();
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const mobile = vw < 768;
-    const width = mobile ? vw - 32 : 340;
-    const left = mobile ? 16 : Math.min(r.right + 12, vw - width - 16);
-    const top = mobile ? Math.max(16, Math.min(r.bottom + 8, vh - 420)) : Math.max(16, Math.min(r.top - 24, vh - 440));
-    setOpen({ id: lego.id, pos: { top, left, width }, anchor: btn });
   };
 
-  const closeDetail = (returnFocus: boolean) => {
-    const anchor = open?.anchor;
-    setOpen(null);
-    if (returnFocus) anchor?.focus();
-  };
-
-  const item = (lego: Lego, index: number) => {
+  const item = (lego: Lego) => {
     const placed = ids.includes(lego.id);
     const hero = lego.tier === "hero";
-    const slot = ids.indexOf(lego.id) + 1;
-    const tagId = `${moreId}-${lego.id}-tag`;
-    const start = hero && index === 0 && ids.length === 0;
-    const label = `${lego.kicker} ${lego.title}${placed ? `, on board, slot ${slot}. Press to remove.` : ""}`;
+    const span = !hero && lego.size[0] >= 3 ? 2 : 1;
     return (
-      <li key={lego.id} className={hero ? styles.item : `${styles.item} ${styles.small}`} data-placed={placed || undefined}>
+      <li key={lego.id} className={styles.cell} data-span={span > 1 ? span : undefined}>
         <button
           type="button"
           className={styles.brick}
           aria-pressed={placed}
-          aria-label={label}
-          aria-describedby={placed ? undefined : [tagId, full ? `${moreId}-full` : ""].filter(Boolean).join(" ")}
+          aria-label={`${lego.verb}, ${lego.name}${placed ? ", on board" : ""}`}
+          aria-describedby={tip?.id === lego.id ? TIP_ID : undefined}
+          tabIndex={lego.id === tabId ? 0 : -1}
           data-lego={lego.id}
+          data-placed={placed || undefined}
           data-dragging={dragging === lego.id || undefined}
-          onPointerDown={(e) => onPointerDown(e, lego.id)}
+          style={{ "--sw": spriteStuds(lego).toFixed(3) } as CSSProperties}
+          onKeyDown={onKeyDown}
+          onFocus={(e) => {
+            setFocusId(lego.id);
+            if (e.currentTarget.matches(":focus-visible")) showTip(lego.id, e.currentTarget);
+          }}
+          onBlur={hideTip}
+          onMouseEnter={(e) => {
+            const el = e.currentTarget;
+            window.clearTimeout(hoverTimer.current);
+            hoverTimer.current = window.setTimeout(() => showTip(lego.id, el), tip ? 0 : HOVER_DELAY);
+          }}
+          onMouseLeave={hideTip}
+          onPointerDown={(e) => {
+            hideTip();
+            longPressed.current = false;
+            if (e.pointerType === "touch") {
+              const el = e.currentTarget;
+              window.clearTimeout(pressTimer.current);
+              pressTimer.current = window.setTimeout(() => {
+                longPressed.current = true;
+                showTip(lego.id, el);
+              }, LONG_PRESS);
+            }
+            onPointerDown(e, lego.id);
+          }}
+          onPointerUp={() => window.clearTimeout(pressTimer.current)}
+          onPointerCancel={() => window.clearTimeout(pressTimer.current)}
+          onContextMenu={(e) => {
+            if (longPressed.current) e.preventDefault();
+          }}
           onClick={() => {
             if (wasDrag()) return;
+            if (longPressed.current) {
+              longPressed.current = false;
+              return;
+            }
+            hideTip();
             onToggle(lego.id);
           }}
-          style={{ "--brick-label": lego.brick.label, "--sprite-aspect": String(SPRITE_META[lego.id]?.aspect ?? 1.54) } as CSSProperties}
         >
           <span className={styles.art}>
-            <BrickSprite id={lego.id} color={lego.brick.hex} size={lego.size} className={styles.sprite} />
+            <BrickArtFor lego={lego} />
           </span>
-          <span className={styles.text}>
-            <span className={styles.title}>
-              <span className={styles.verb}>{lego.kicker}</span>
-              {lego.statusKind === "testnet" && <span className={styles.chip}>Sepolia</span>}
-              <span className={styles.sep} aria-hidden="true">
-                {" · "}
-              </span>
-              <span className={styles.name}>{lego.title}</span>
+          {placed && (
+            <span className={styles.check} aria-hidden="true">
+              <Check />
             </span>
-            {placed ? (
-              <span className={styles.placed}>
-                <span className={styles.badge}>
-                  <Check />
-                  On board
-                </span>
-                <span className={styles.remove} aria-hidden="true">
-                  <svg viewBox="0 0 12 12" width="10" height="10">
-                    <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                  </svg>
-                  Remove
-                </span>
-              </span>
-            ) : (
-              <span id={tagId} className={styles.tag} data-start={start || undefined}>
-                {lego.tag}
-              </span>
-            )}
-            {start && (
-              <span className={styles.start} aria-hidden="true" data-testid="start-here">
-                <svg viewBox="0 0 16 16" width="14" height="14">
-                  <path d="M13 8H3M7 4L3 8l4 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                Start here
-              </span>
-            )}
-          </span>
-        </button>
-        <button
-          type="button"
-          className={styles.info}
-          aria-label={`About ${lego.kicker} (${lego.title})`}
-          aria-expanded={open?.id === lego.id}
-          aria-controls={open?.id === lego.id ? `detail-${lego.id}` : undefined}
-          onClick={(e) => openDetail(lego, e.currentTarget)}
-        >
-          <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true">
-            <circle cx="10" cy="10" r="8.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M10 9v5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-            <circle cx="10" cy="6.2" r="1.05" fill="currentColor" />
-          </svg>
+          )}
         </button>
       </li>
     );
   };
 
-  const openLego = open ? [...HERO_LEGOS, ...MORE_LEGOS].find((l) => l.id === open.id) : undefined;
+  const tipLego = tip ? visible.find((l) => l.id === tip.id) : undefined;
+  const above = tip ? tip.top > 120 : true;
 
   return (
-    <section className={styles.tray} aria-labelledby={`${moreId}-h`}>
-      <div className={styles.head}>
-        <h2 id={`${moreId}-h`} className={styles.label}>
-          Legos
-        </h2>
-        {full && (
-          <p id={`${moreId}-full`} className={styles.full} data-flash={fullHint || undefined}>
-            Max 4 Legos. Click a placed brick to swap.
-          </p>
-        )}
+    <section ref={rootRef} className={styles.tray} aria-labelledby="tray-h">
+      <h2 id="tray-h" className="visually-hidden">
+        Legos
+      </h2>
+      <div className={styles.chips} role="group" aria-label="Filter Legos">
+        {(["All", ...CATEGORIES] as Filter[]).map((c) => (
+          <button
+            key={c}
+            type="button"
+            className={styles.chip}
+            aria-pressed={filter === c}
+            onClick={() => {
+              setFilter(c);
+              hideTip();
+              scrollRef.current?.scrollTo({ top: 0 });
+            }}
+          >
+            {c}
+          </button>
+        ))}
       </div>
-      <div className={styles.scroll}>
-        <ul className={styles.hero}>{HERO_LEGOS.map(item)}</ul>
-        <div id={moreId} hidden={!more}>
-          <ul className={styles.more}>{MORE_LEGOS.map(item)}</ul>
+      <div ref={scrollRef} className={styles.scroll} data-testid="tray-scroll">
+        {heroes.length > 0 && <ul className={styles.hero}>{heroes.map(item)}</ul>}
+        {heroes.length > 0 && more.length > 0 && <hr className={styles.rule} />}
+        {more.length > 0 && <ul className={styles.grid}>{more.map(item)}</ul>}
+      </div>
+      {tip && tipLego && (
+        <div
+          id={TIP_ID}
+          role="tooltip"
+          className={styles.tip}
+          data-side={above ? "top" : "bottom"}
+          style={{ left: tip.x, top: above ? tip.top : tip.bottom } as CSSProperties}
+        >
+          <span className={styles.tipHead}>
+            <span className={styles.tipName}>{tipLego.name}</span>
+            <span className={styles.tipChip} data-kind={tipLego.statusKind}>
+              {statusChip(tipLego)}
+            </span>
+          </span>
+          <span className={styles.tipTag}>{tipLego.tag}</span>
+          {tipLego.id === "speed" && <span className={styles.tipNote}>{DENIM_SHORT}</span>}
         </div>
-      </div>
-      <button type="button" className={styles.disclosure} aria-expanded={more} aria-controls={moreId} onClick={() => setMore((m) => !m)}>
-        {more ? "Show fewer Legos" : `+ ${MORE_LEGOS.length} more Legos`}
-      </button>
-      {open && openLego && (
-        <LegoDetail lego={openLego} pos={open.pos} onClose={closeDetail} anchor={open.anchor} />
       )}
     </section>
   );

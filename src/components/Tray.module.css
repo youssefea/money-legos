@@ -1,541 +1,343 @@
+/*
+ * The Lego bin. One stud scale for every brick (--stud, px per stud), set so the 5 hero 2x4s fill
+ * the hero row; the small bricks share it, so a 2x2 is half a hero, like real bricks.
+ */
+
 .tray {
+  --hero-cols: 5;
+  --gap: 8px;
+  height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  min-height: 0;
-  height: 100%;
-  gap: var(--space-2);
 }
 
-.head {
+/* ---------------------------------------------------------------- category chips */
+.chips {
+  flex: none;
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
-  min-height: 20px;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: 2px 2px var(--space-3);
 }
 
-.label {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-weight: var(--weight-medium);
-  font-size: var(--text-label);
-  line-height: var(--text-label-lh);
-  letter-spacing: var(--text-label-tracking);
-  text-transform: uppercase;
-  color: var(--color-fg-label);
-}
-
-.full {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.3;
+.chip {
+  position: relative;
+  height: 32px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
   color: var(--color-fg);
-  text-align: right;
+  font: inherit;
+  font-size: var(--text-small);
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-hover),
+    border-color var(--dur-fast) var(--ease-hover);
 }
-.full[data-flash] {
-  animation: flash 600ms var(--ease-out);
+/* 44px hit area around the 32px chip. */
+.chip::after {
+  content: "";
+  position: absolute;
+  inset: -6px -2px;
 }
-@keyframes flash {
-  0%,
-  100% {
-    transform: none;
-  }
-  25% {
-    transform: translateX(-3px);
-  }
-  50% {
-    transform: translateX(3px);
-  }
+.chip[aria-pressed="true"] {
+  border-color: var(--base-blue);
+  background: var(--base-blue);
+  color: var(--base-gray-0);
 }
 
+/* ---------------------------------------------------------------- scroll area */
 .scroll {
+  container-type: inline-size;
   flex: 1;
   min-height: 0;
-  overflow: auto;
-  container-type: size;
-  margin: 0 calc(var(--space-2) * -1);
-  /* 8px under the header + the tray gap = 16px of clear space above the first sprite. */
-  padding: var(--space-2) var(--space-2) 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 0 -4px;
+  padding: var(--space-2) 4px var(--space-6);
   scrollbar-width: thin;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--space-2), #000 calc(100% - var(--space-6)), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 var(--space-2), #000 calc(100% - var(--space-6)), transparent 100%);
 }
 
 .hero,
-.more {
+.grid {
+  --stud: calc((100cqw - (var(--hero-cols) - 1) * var(--gap)) / var(--hero-cols) / 4.3);
   margin: 0;
   padding: 0;
   list-style: none;
+  display: grid;
+  gap: var(--gap);
 }
-
 .hero {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  height: 100%;
-  min-height: 0;
+  grid-template-columns: repeat(var(--hero-cols), minmax(0, 1fr));
+  grid-auto-rows: calc(var(--stud) * 2.5 + 8px);
 }
-
-/*
- * Hero row: [sprite][verb / name / tag or status][(i)]. The sprite is sized by CSS width only;
- * BrickSprite keeps the baked aspect (--sprite-aspect, set per row from spriteMeta) so the box
- * height is exact. Five rows + four 8px gaps fit the column; rows never overlap.
- */
-.item {
-  --art-w: clamp(120px, calc((100cqh - 4 * var(--space-2)) / 5 * var(--sprite-aspect, 1.54)), var(--tray-art-max));
-  position: relative;
-  flex: 1 1 0;
-  min-height: 64px;
-  display: flex;
-  align-items: center;
+/* Small bricks read at 1.3x the hero scale, so their printed verbs stay legible (6-7 per row at 1440). */
+.grid {
+  --stud-s: calc(var(--stud) * 1.3);
+  grid-template-columns: repeat(auto-fill, minmax(calc(var(--stud-s) * 2.6), 1fr));
+  grid-auto-rows: calc(var(--stud-s) * 2.45 + 4px);
+  grid-auto-flow: row dense;
 }
-
-.brick {
-  flex: 1;
+.grid .sprite,
+.grid .drawn {
+  width: calc(var(--stud-s) * var(--sw));
+}
+.cell {
   min-width: 0;
-  align-self: stretch;
   display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-height: var(--hit-target-hero);
-  padding: 0 36px 0 0;
-  margin: 0;
+}
+.cell[data-span="2"] {
+  grid-column: span 2;
+}
+
+.rule {
+  margin: var(--space-3) 0;
   border: 0;
-  border-radius: var(--radius-md);
+  border-top: 1px solid var(--color-hairline);
+}
+
+/* ---------------------------------------------------------------- a brick */
+.brick {
+  position: relative;
+  flex: 1;
+  min-width: var(--hit-target);
+  min-height: var(--hit-target);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 0 6px;
+  border: 0;
+  border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--color-fg);
+  color: inherit;
   font: inherit;
-  text-align: left;
   cursor: pointer;
   touch-action: manipulation;
-  user-select: none;
+  -webkit-touch-callout: none;
   -webkit-user-select: none;
-  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+@media (hover: hover) {
+  .brick:hover {
+    background: var(--color-panel);
+  }
+  .brick:hover .art {
+    transform: translateY(-3px);
+    filter: drop-shadow(0 4px 3px rgb(10 11 13 / 0.12));
+  }
+  .chip:hover:not([aria-pressed="true"]) {
+    border-color: var(--color-border-strong);
+  }
+}
+.brick:focus-visible {
+  outline-offset: 0;
 }
 
 .art {
-  position: relative;
-  z-index: 0;
-  flex: none;
-  width: var(--art-w);
-  transition: transform var(--dur-fast) var(--ease-out), opacity var(--dur-base) var(--ease-hover);
-}
-.sprite {
   display: block;
-  width: 100%;
-}
-.sprite img {
-  pointer-events: none;
-}
-
-@media (hover: hover) {
-  .brick:hover .art {
-    transform: translateY(-3px);
-  }
+  line-height: 0;
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    opacity var(--dur-base) var(--ease-hover),
+    filter var(--dur-fast) var(--ease-hover);
 }
 .brick:active .art {
-  transform: translateY(0) scale(0.98);
+  transform: translateY(0) scale(0.97);
+  transition-duration: var(--dur-instant);
 }
-.brick[data-dragging] .art {
+.brick[data-placed] .art {
   opacity: 0.4;
 }
-
-.text {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.brick[data-dragging] .art {
+  opacity: 0.25;
 }
 
-/* Desktop: verb (+ status chip) on line 1, the Lego name on line 2. Phone: "Verb · name" on one line. */
-.title {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  min-width: 0;
-  font-size: 16px;
-  line-height: 20px;
-}
-.title > .name {
-  flex-basis: 100%;
-  margin-top: 2px;
-}
-.verb {
-  font-weight: var(--weight-bold);
-  letter-spacing: -0.01em;
-}
-.sep {
-  display: none;
-  white-space: pre;
-  color: var(--color-fg-muted);
-}
-.name {
+.sprite,
+.drawn {
+  width: calc(var(--stud) * var(--sw));
   max-width: 100%;
-  font-size: 14px;
-  font-weight: var(--weight-regular);
-  color: var(--color-fg);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.chip {
-  margin-left: var(--space-2);
-  align-self: center;
-  padding: 0 6px;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-xs);
-  font-family: var(--font-mono);
-  font-weight: var(--weight-medium);
-  font-size: 10px;
-  line-height: 16px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-fg);
 }
 
-.tag {
-  font-size: 13px;
-  line-height: 16px;
-  color: var(--color-fg-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* Stand-in brick (until its sprite is baked): the drawn brick with the verb printed on its front face. */
+.drawn {
+  --s: var(--stud);
+  position: relative;
+  display: block;
 }
-
-/* Placed: the brick fades to 55%; the text stays full strength with an opaque pill and Remove. */
-.item[data-placed] .art {
-  opacity: 0.55;
+.grid .drawn {
+  --s: var(--stud-s);
 }
-/* Status row in the text column: [✓ ON BOARD] [× Remove], 8px apart. Never on the sprite. */
-.placed {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px var(--space-2);
-  margin-top: 4px;
+.glyph {
+  display: block;
+  width: 100%;
+  height: auto;
 }
-.badge {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 24px;
-  padding: 0 8px;
-  border-radius: var(--radius-pill);
-  background: var(--base-gray-10);
-  border: 1px solid var(--base-gray-15);
-  color: var(--base-gray-100);
-  font-family: var(--font-mono);
-  font-weight: var(--weight-medium);
-  font-size: 12px;
-  line-height: 16px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-.remove {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 13px;
-  line-height: 16px;
-  color: var(--color-link);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.info {
+.print {
   position: absolute;
-  right: -6px;
-  top: 50%;
-  margin-top: -22px;
-  width: var(--hit-target);
-  height: var(--hit-target);
+  left: 0;
+  bottom: 0;
+  width: calc(var(--fw) * 100%);
+  height: calc(var(--fh) * 100%);
   display: grid;
   place-items: center;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-pill);
-  background: transparent;
-  color: var(--color-fg-muted);
-  cursor: pointer;
-}
-.info svg {
-  width: 24px;
-  height: 24px;
-}
-.info:hover,
-.info[aria-expanded="true"] {
-  color: var(--color-link);
-  background: var(--color-panel);
+  overflow: hidden;
+  color: var(--label);
+  font-size: min(calc(var(--s) * 0.56), calc(var(--s) * var(--w) * 1.5 / var(--chars)));
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.01em;
+  line-height: 1;
+  white-space: nowrap;
 }
 
-/* First-action cue: a pill in the first row's text column while nothing is placed. */
-.start {
-  align-self: flex-start;
-  margin-top: 4px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 24px;
-  padding: 0 10px 0 8px;
-  border-radius: var(--radius-pill);
+.check {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
   background: var(--base-blue);
   color: var(--base-gray-0);
-  font-size: 13px;
-  font-weight: var(--weight-medium);
-  white-space: nowrap;
-  pointer-events: none;
-  animation: nudge 2.4s var(--ease-in-out) infinite;
+  box-shadow: 0 0 0 2px var(--color-surface);
 }
-@keyframes nudge {
-  50% {
-    transform: translateX(-3px);
+
+/* ---------------------------------------------------------------- tooltip */
+.tip {
+  position: fixed;
+  z-index: 70;
+  max-width: 260px;
+  padding: var(--space-2) var(--space-3);
+  display: grid;
+  gap: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--base-gray-100);
+  color: var(--base-gray-0);
+  font-size: var(--text-small);
+  line-height: var(--text-small-lh);
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 6px));
+  animation: tip-in var(--dur-fast) var(--ease-out) both;
+  box-shadow: 0 8px 24px rgb(10 11 13 / 0.18);
+}
+.tip[data-side="bottom"] {
+  transform: translate(-50%, 6px);
+}
+@keyframes tip-in {
+  from {
+    opacity: 0;
   }
 }
-
-/* More Legos: 2x2 bricks in a two-column grid. */
-.more {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+.tipHead {
+  display: flex;
+  align-items: center;
   gap: var(--space-2);
-  padding: var(--space-3) 0 var(--space-2);
 }
-.small {
-  --art-w: 72px;
-  min-height: 0;
-  border: 1px solid var(--color-hairline);
-  border-radius: var(--radius-md);
-  padding: var(--space-2);
-}
-.small .art {
-  margin-block: 0;
-}
-.small .brick {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-1);
-  padding: 0;
-}
-.small .title {
-  font-size: 14px;
-  line-height: 18px;
-}
-.small .sep,
-.small .name {
-  display: none;
-}
-.small .info {
-  top: 0;
-  right: 0;
-  margin-top: 0;
-}
-
-.disclosure {
-  flex: none;
-  min-height: 44px;
-  width: 100%;
-  border: 1px solid var(--color-accent);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  color: var(--color-link);
-  font: inherit;
+.tipName {
   font-weight: var(--weight-medium);
-  cursor: pointer;
-  transition: background var(--dur-fast) var(--ease-hover);
 }
-.disclosure:hover {
-  background: var(--color-panel);
+.tipChip {
+  padding: 1px 6px;
+  border: 1px solid var(--base-gray-60);
+  border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--base-gray-30);
+  white-space: nowrap;
+}
+.tipChip[data-kind="live"] {
+  border-color: var(--base-green);
+  color: var(--base-lime);
+}
+.tipChip[data-kind="testnet"] {
+  border-color: var(--base-pink);
+  color: var(--base-pink);
+}
+.tipTag {
+  color: var(--base-gray-30);
+}
+.tipNote {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--base-gray-0);
 }
 
 @media (prefers-color-scheme: dark) {
-  .disclosure {
-    border-color: var(--base-cerulean);
-  }
-  .badge {
+  .tip {
     background: var(--base-gray-80);
-    border-color: var(--base-gray-80);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.5);
+  }
+  .chip[aria-pressed="true"] {
     color: var(--base-gray-0);
   }
 }
 
+/* ---------------------------------------------------------------- projector */
 @media (min-width: 1600px) {
-  .title {
-    font-size: 18px;
-    line-height: 24px;
-  }
-  .name,
-  .tag,
-  .remove {
-    font-size: 16px;
-    line-height: 22px;
-  }
-  .badge {
-    font-size: 14px;
-    line-height: 20px;
-    height: 28px;
-    padding: 0 10px;
-  }
   .chip {
-    font-size: 12px;
-  }
-  .start {
+    height: 36px;
     font-size: 16px;
-    height: 28px;
   }
-  .small .title {
-    font-size: 16px;
+  .chip::after {
+    inset: -4px -2px;
   }
 }
 
-/* Tablet: the tray scrolls with the page. */
-@media (max-width: 1279.98px) {
-  .scroll {
-    container-type: normal;
-    overflow: visible;
-  }
-  .hero {
+/* ---------------------------------------------------------------- compact (<1024): the page scrolls, not the tray */
+@media (max-width: 1023.98px) {
+  .tray {
     height: auto;
   }
-  .item {
-    --art-w: 136px;
-    flex: none;
-    min-height: 88px;
-  }
-  .item.small {
-    --art-w: 72px;
-    min-height: 0;
-  }
-  /* Long names ("Validity transactions") wrap to two lines instead of an ellipsis. */
-  .name {
-    white-space: normal;
-    overflow: visible;
-  }
-}
-
-/* Compact tablet (768-1023): the board is the sticky bar, so the hero rows go two across. */
-@media (min-width: 768px) and (max-width: 1023.98px) {
-  .hero {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--space-2) var(--space-4);
-  }
-  .item {
-    --art-w: 144px;
-    min-height: 104px;
-  }
-}
-
-/* Phone: 2-column cards, ~128px tall (sprite on top, text under it). */
-@media (max-width: 767.98px) {
-  .scroll {
-    padding-top: 0;
-  }
-  .hero {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--space-2);
-  }
-  /* Sprite height 60px (card 116 = 8 + 60 + 4 + 18 + 16 + 8 + border); width follows the aspect. */
-  .item {
-    --art-w: min(112px, calc(60px * var(--sprite-aspect, 1.54)));
-    min-height: 0;
-    height: 116px;
-    border: 1px solid var(--color-hairline);
-    border-radius: var(--radius-card);
-    padding: var(--space-2);
-    align-items: stretch;
-  }
-  .brick {
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 4px;
-    padding: 0;
-    min-height: 0;
-    text-align: center;
-  }
-  .text {
-    flex: none;
-    width: 100%;
-    align-items: center;
-    gap: 0;
-  }
-  .sep {
-    display: inline;
-  }
-  .title > .name {
-    flex-basis: auto;
-    min-width: 0;
-  }
-  .title {
-    justify-content: center;
-    font-size: 14px;
-    line-height: 18px;
+  .chips {
     flex-wrap: nowrap;
-    white-space: nowrap;
-    overflow: hidden;
-    max-width: 100%;
+    overflow-x: auto;
+    margin: 0 calc(var(--page-pad-x) * -1);
+    padding: 6px var(--page-pad-x) var(--space-3);
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
   }
-  .name {
-    overflow: hidden;
-    text-overflow: ellipsis;
+  .chips::-webkit-scrollbar {
+    display: none;
   }
   .chip {
-    display: none;
+    flex: none;
+    height: 36px;
+    font-size: 15px;
   }
-  .tag {
-    font-size: 12px;
-    line-height: 16px;
-    max-width: 100%;
+  .chip::after {
+    inset: -4px -2px;
   }
-  .name {
-    white-space: nowrap;
-    overflow: hidden;
+  .scroll {
+    overflow: visible;
+    -webkit-mask-image: none;
+    mask-image: none;
+    padding-bottom: var(--space-4);
   }
-  .placed {
-    justify-content: center;
-    margin-top: 0;
+}
+
+@media (max-width: 767.98px) {
+  .tray {
+    --hero-cols: 2;
+    --gap: 8px;
   }
-  .badge {
-    height: 16px;
-    font-size: 10px;
-    line-height: 16px;
-    padding: 0 6px;
+  .hero {
+    --stud: calc((100cqw - var(--gap)) / 2 / 5.4);
   }
-  /* The first card swaps its tag for the Start here caption under the brick. */
-  .tag[data-start] {
-    display: none;
+  .grid {
+    --stud-s: calc((100cqw - 2 * var(--gap)) / 3 / 2.9);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-  .remove {
-    display: none;
-  }
-  .info {
-    top: 0;
-    right: 0;
-    margin-top: 0;
-  }
-  .start {
-    align-self: center;
-    margin: 0;
-    height: 16px;
-    padding: 0 8px 0 6px;
-    font-size: 11px;
-    line-height: 16px;
-  }
-  .start svg {
-    width: 10px;
-    height: 10px;
-  }
-  .start svg {
-    transform: rotate(-90deg);
-  }
-  .more {
-    padding-top: var(--space-2);
-  }
-  .item.small {
-    height: auto;
-  }
-  .small .art {
-    margin-block: 0;
+  .grid .cell[data-span="2"] {
+    grid-column: span 2;
   }
 }

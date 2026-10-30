@@ -119,7 +119,7 @@ export function reducer(state: State, action: Action): State {
         copied: false,
         copiedOnce: false,
         fullHint: false,
-        announce: say(state, `Set opened: ${result.name}. ${result.steps.length} pieces.`),
+        announce: say(state, `${result.name} ready. Copy prompt to use it.`),
       };
     }
 

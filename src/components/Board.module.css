@@ -25,15 +25,16 @@
 .count {
   margin: 0;
   font-size: var(--text-small);
+  font-weight: var(--weight-medium);
   font-variant-numeric: tabular-nums;
-  color: var(--color-fg-muted);
+  color: var(--color-fg);
 }
 
 .drop {
   position: relative;
   flex: 1;
   min-height: 240px;
-  margin: 0 0 var(--space-4);
+  margin: var(--space-2) 0 var(--space-4);
   border-radius: var(--radius-md);
   outline: 2px dashed transparent;
   outline-offset: -2px;
@@ -46,56 +47,47 @@
   outline-color: var(--color-accent);
 }
 
-/* Quiet caption 16px above the stage; its 20px line is always reserved so the scene never jumps. */
-.quiet {
-  flex: none;
-  margin: var(--space-4) 0 var(--space-2);
+.caption {
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  right: 0;
+  top: 12%;
+  margin: 0;
   text-align: center;
   font-size: var(--text-small);
   line-height: 20px;
   color: var(--color-fg-muted);
-  white-space: nowrap;
-  pointer-events: none;
-}
-
-.dropHint {
-  position: absolute;
-  left: 50%;
-  top: 8%;
-  transform: translateX(-50%);
-  margin: 0;
-  padding: 8px 16px;
-  border-radius: var(--radius-pill);
-  background: var(--base-blue);
-  color: var(--base-gray-0);
-  font-size: 15px;
-  font-weight: var(--weight-medium);
-  white-space: nowrap;
   pointer-events: none;
 }
 
 .controls {
+  flex: none;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: var(--space-3);
-  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
 }
 
 .generateWrap {
-  display: contents;
+  position: relative;
+  display: flex;
 }
 
 .generate,
 .secondary,
 .text {
   min-height: 48px;
-  padding: 0 var(--space-6);
+  padding: 0 var(--space-5);
   border-radius: var(--radius-md);
   font: inherit;
   font-weight: var(--weight-medium);
+  white-space: nowrap;
   cursor: pointer;
-  transition: background var(--dur-fast) var(--ease-hover), border-color var(--dur-fast) var(--ease-hover), transform var(--dur-instant) var(--ease-out);
+  transition:
+    background-color var(--dur-fast) var(--ease-hover),
+    border-color var(--dur-fast) var(--ease-hover),
+    transform var(--dur-instant) var(--ease-out);
 }
 .generate:active,
 .secondary:active {
@@ -103,11 +95,13 @@
 }
 
 .generate {
-  min-width: 200px;
-  padding: 0 var(--space-5);
+  min-width: 144px;
   border: 1px solid var(--base-blue);
   background: var(--base-blue);
   color: var(--base-gray-0);
+}
+.generate:hover:not([aria-disabled="true"]) {
+  box-shadow: 0 4px 12px rgb(0 0 255 / 0.24);
 }
 .generate[aria-disabled="true"] {
   background: var(--color-panel);
@@ -119,22 +113,32 @@
   transform: none;
 }
 
+/* Tiny requirement under Generate; absolutely placed so nothing shifts when it goes. */
+.need {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--color-fg-muted);
+}
+
 .secondary {
-  min-width: 128px;
-  padding: 0 var(--space-5);
-  border: 1px solid var(--color-fg);
+  border: 1px solid var(--color-border-strong);
   background: var(--color-surface);
   color: var(--color-fg);
 }
 .secondary:hover {
-  background: var(--color-panel);
+  border-color: var(--color-fg);
 }
 
 .text {
+  padding: 0 var(--space-3);
   border: 0;
   background: transparent;
-  color: var(--color-fg-muted); /* #5B616E: 6.21:1 on white */
-  padding: 0 var(--space-4);
+  color: var(--color-fg-muted);
 }
 .text:hover:not(:disabled) {
   color: var(--color-fg);
@@ -142,25 +146,26 @@
 }
 .text:disabled {
   cursor: default;
-}
-
-.need {
-  margin: var(--space-2) 0 0;
-  text-align: center;
-  font-size: var(--text-small);
-  color: var(--color-fg-muted);
-  min-height: 1.4em;
+  opacity: 0.6;
 }
 
 .recipes {
-  margin-top: var(--space-2);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--color-hairline);
+  margin-left: auto;
+}
+
+@media (prefers-color-scheme: dark) {
+  .generate[aria-disabled="true"] {
+    background: var(--base-gray-80);
+    border-color: var(--base-gray-80);
+    color: var(--base-gray-30);
+  }
+  .text:hover:not(:disabled) {
+    background: var(--base-gray-80);
+  }
 }
 
 @media (min-width: 1600px) {
-  .count,
-  .need {
+  .count {
     font-size: var(--text-body);
   }
   .generate,
@@ -168,5 +173,11 @@
   .text {
     min-height: 56px;
     font-size: 18px;
+  }
+  .generate {
+    min-width: 176px;
+  }
+  .need {
+    font-size: 14px;
   }
 }

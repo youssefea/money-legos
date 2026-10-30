@@ -1,8 +1,8 @@
 /*
  * Page grid (DESIGN-SPEC v2):
  *  >=1280px  three columns, 100dvh, no page scroll
- *  1024-1279 tray | board, result full width below, page scrolls
- *  <1024     header, hero, sticky compact bar, recipes, 2-col tray; result is a bottom sheet
+ *  1024-1279 three columns, page may scroll
+ *  <1024     header, hero, sticky compact bar, tools, tray; the phone result is a bottom sheet
  */
 
 .page {
@@ -44,7 +44,8 @@
   min-height: 0;
   margin-top: var(--space-5);
   display: grid;
-  grid-template-columns: var(--col-tray) minmax(var(--col-board-min), 1fr) var(--col-result);
+  position: relative;
+  grid-template-columns: minmax(360px, var(--col-tray)) minmax(var(--col-board-min), 1fr) minmax(280px, var(--col-result));
   gap: var(--col-gap);
 }
 
@@ -67,14 +68,10 @@
     radial-gradient(120% 90% at 50% 45%, var(--base-gray-0) 40%, var(--base-gray-10) 100%);
 }
 
-.resultCol {
-  min-height: 0;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-.resultCol > * {
-  flex: 1;
+.phonePanel {
+  padding: var(--space-4) var(--space-4) var(--space-2);
+  border-color: transparent;
+  background: var(--color-panel);
 }
 
 .footer {
@@ -181,18 +178,17 @@
   .boardPanel {
     background: var(--base-gray-100);
   }
+  .phonePanel {
+    border-color: var(--base-gray-80);
+  }
 }
 
-/* ---------------------------------------------------------------- tablet */
+/* ---------------------------------------------------------------- small laptop (1024-1279): three columns, the page scrolls */
 @media (max-width: 1279.98px) {
   .main {
-    grid-template-columns: minmax(300px, 340px) minmax(0, 1fr);
-  }
-  .boardPanel {
-    min-height: 560px;
-  }
-  .resultCol {
-    grid-column: 1 / -1;
+    grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr) minmax(260px, 300px);
+    min-height: 600px;
+    height: calc(100dvh - 200px);
   }
 }
 
@@ -205,8 +201,9 @@
     display: contents;
   }
   .mobileTools {
-    min-width: 0;
-    max-width: 100%;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
     margin-top: var(--space-3);
   }
   .smallButton {
@@ -215,10 +212,15 @@
   }
   .main {
     display: block;
+    height: auto;
+    min-height: 0;
     margin-top: var(--space-3);
   }
-  .boardPanel,
-  .resultCol {
+  .trayPanel {
+    padding: 0;
+    border: 0;
+  }
+  .boardPanel {
     display: none;
   }
 }

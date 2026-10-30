@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import {
   BY_ID,
   MAX_LEGOS,
   MIN_LEGOS,
   RECIPES,
   RISK_FOOTER,
+  buildFakeApp,
   flowOrder,
   parseHash,
   recipeHash,
@@ -16,21 +17,25 @@ import {
   type Recipe,
 } from "@/lib";
 import { useBrickDrag } from "@/hooks/useBrickDrag";
+import { copyText, useCopiedReset } from "@/hooks/useCopy";
 import { useDark, useIsMobile, useReducedMotion } from "@/hooks/useMediaQuery";
 import { buzz, useSound } from "@/hooks/useSound";
 import { initialState, reducer, stepStates } from "@/state/store";
 import Board from "./Board";
 import { BrickGlyph } from "./BrickArt";
+import Connectors from "./Connectors";
+import DetailsDrawer from "./DetailsDrawer";
 import Header from "./Header";
 import MobileBar from "./MobileBar";
-import RecipeChips from "./RecipeChips";
-import { SetBlueprint, SetCard, useCopiedReset } from "./SetBox";
-import SetSheet from "./SetSheet";
+import RecipesMenu from "./RecipesMenu";
+import ResultPanel from "./ResultPanel";
+import ResultSheet from "./ResultSheet";
+import type { StageLayout } from "./StageView";
 import StepsRail from "./StepsRail";
 import Tray from "./Tray";
 import styles from "@/app/page.module.css";
 
-/** The whole playground: pick Legos, snap them on, open the set, copy the prompt. */
+/** The whole playground: pick Legos, snap them on, watch the app build, copy the prompt. */
 export default function MoneyLegosApp() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const dark = useDark();
@@ -38,16 +43,26 @@ export default function MoneyLegosApp() {
   const isMobile = useIsMobile();
   const sound = useSound();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [selectSignal, setSelectSignal] = useState(0);
+  const [layout, setLayout] = useState<StageLayout | null>(null);
   const dropRef = useRef<HTMLDivElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
   const generateRef = useRef<HTMLButtonElement>(null);
-  const cardTitleRef = useRef<HTMLHeadingElement>(null);
-  const revealRef = useRef(false);
+  const detailsReturn = useRef<HTMLElement | null>(null);
+  const tiles = useRef(new Map<string, HTMLElement>());
   const isMobileRef = useRef(isMobile);
   useEffect(() => {
     isMobileRef.current = isMobile;
   });
 
   const count = state.ids.length;
+  const app = useMemo(() => buildFakeApp(state.ids), [state.ids]);
+  const slots = Math.max(0, 3 - count);
+  const tileRef = useCallback((id: string, el: HTMLElement | null) => {
+    if (el) tiles.current.set(id, el);
+    else tiles.current.delete(id);
+  }, []);
 
   const place = useCallback(
     (id: LegoId, ids: readonly LegoId[]) => {
@@ -68,18 +83,7 @@ export default function MoneyLegosApp() {
   const opened = () => {
     sound.play("open");
     if (isMobileRef.current) setSheetOpen(true);
-    else revealRef.current = true;
   };
-
-  // Wide tablet (1024-1279): the set box sits below the stage, so bring it into view and focus its title.
-  useEffect(() => {
-    if (!revealRef.current) return;
-    revealRef.current = false;
-    const title = cardTitleRef.current;
-    if (!title || window.innerWidth >= 1280) return;
-    title.closest("section")?.scrollIntoView({ block: "start", behavior: reducedMotion ? "auto" : "smooth" });
-    title.focus({ preventScroll: true });
-  }, [state.generation, reducedMotion]);
 
   const load = (ids: readonly LegoId[], recipe: string | null, source: "recipe" | "surprise" | "link") => {
     dispatch({ type: "load", ids, recipe, generate: true, source });
@@ -91,10 +95,6 @@ export default function MoneyLegosApp() {
       dispatch({ type: "generate" }); // announces what is still needed
       return;
     }
-    if (isMobile && state.result) {
-      setSheetOpen(true);
-      return;
-    }
     dispatch({ type: "generate" });
     opened();
   };
@@ -104,11 +104,33 @@ export default function MoneyLegosApp() {
   const onClear = () => {
     dispatch({ type: "clear" });
     setSheetOpen(false);
+    setDetailsOpen(false);
+  };
+
+  const openDetails = () => {
+    detailsReturn.current = document.activeElement as HTMLElement | null;
+    setDetailsOpen(true);
+  };
+  const closeDetails = () => {
+    setDetailsOpen(false);
+    detailsReturn.current?.focus();
+  };
+
+  const onCopy = async () => {
+    const prompt = state.result?.prompt;
+    if (!prompt) return;
+    if (await copyText(prompt)) {
+      dispatch({ type: "copied" });
+      return;
+    }
+    // Clipboard blocked: open Details with the prompt selected, so Cmd/Ctrl+C works.
+    if (!detailsOpen) openDetails();
+    setSelectSignal((n) => n + 1);
   };
 
   useCopiedReset(state.copied, () => dispatch({ type: "copyReset" }));
 
-  // Deep links: #b20,payments,speed or #recipe=neobroker restore the board and open the set.
+  // Deep links: #b20,payments,speed or #recipe=neobroker restore the board and generate.
   useEffect(() => {
     const read = () => {
       const h = window.location.hash;
@@ -142,6 +164,7 @@ export default function MoneyLegosApp() {
   const steps = stepStates(state);
   const announce = state.announce.text + (state.announce.n % 2 ? "\u200b" : "");
   const dragLego = drag ? BY_ID[drag.id] : null;
+  const name = state.result?.name ?? null;
 
   return (
     <div className={styles.page} data-dragging={drag ? "true" : undefined}>
@@ -149,7 +172,7 @@ export default function MoneyLegosApp() {
 
       <div className={styles.hero}>
         <h1 className={styles.h1}>Snap together a money app.</h1>
-        <p className={styles.subline}>Pick 2 to 4 Base building blocks. Get an app idea and a prompt for your coding agent.</p>
+        <p className={styles.subline}>Pick Legos. Get an app and a prompt.</p>
         <div className={styles.rail}>
           <StepsRail states={steps} />
         </div>
@@ -168,32 +191,20 @@ export default function MoneyLegosApp() {
           onGenerate={onGenerate}
         />
         <div className={styles.mobileTools}>
-          <RecipeChips
-            active={state.recipe}
-            onPick={onRecipe}
-            idPrefix="mobile"
-            layout="scroll"
-            lead={[
-              <button key="surprise" type="button" className={styles.smallButton} onClick={onSurprise}>
-                Surprise me
-              </button>,
-              ...(count > 0
-                ? [
-                    <button key="clear" type="button" className={styles.smallButton} onClick={onClear}>
-                      Clear
-                    </button>,
-                  ]
-                : []),
-            ]}
-          />
+          <RecipesMenu active={state.recipe} onPick={onRecipe} placement="down" />
+          <button type="button" className={styles.smallButton} onClick={onSurprise}>
+            Surprise me
+          </button>
+          <button type="button" className={styles.smallButton} onClick={onClear} disabled={count === 0}>
+            Clear
+          </button>
         </div>
       </div>
 
-      <main className={styles.main}>
+      <main ref={mainRef} className={styles.main}>
         <div className={`${styles.panel} ${styles.trayPanel}`}>
           <Tray
             ids={state.ids}
-            fullHint={state.fullHint}
             onToggle={(id) => place(id, state.ids)}
             onPointerDown={onPointerDown}
             wasDrag={wasDrag}
@@ -217,15 +228,15 @@ export default function MoneyLegosApp() {
             onSurprise={onSurprise}
             onClear={onClear}
             onRecipe={onRecipe}
+            onLayout={setLayout}
           />
         </div>
-        <div className={styles.resultCol}>
-          {state.result && !isMobile ? (
-            <SetCard ref={cardTitleRef} key={state.generation} result={state.result} copied={state.copied} onCopied={() => dispatch({ type: "copied" })} />
-          ) : (
-            <SetBlueprint count={count} />
-          )}
-        </div>
+        {!isMobile && (
+          <div className={`${styles.panel} ${styles.phonePanel}`}>
+            <ResultPanel app={app} slots={slots} tileRef={tileRef} name={name} copied={state.copied} onCopy={() => void onCopy()} onDetails={openDetails} />
+          </div>
+        )}
+        {!isMobile && <Connectors hostRef={mainRef} ids={state.ids} layout={layout} tiles={tiles} dark={dark} />}
       </main>
 
       <footer className={styles.footer}>
@@ -233,13 +244,27 @@ export default function MoneyLegosApp() {
       </footer>
 
       {isMobile && state.result && (
-        <SetSheet
+        <ResultSheet
           key={state.generation}
           open={sheetOpen}
+          app={app}
+          name={state.result.name}
+          copied={state.copied}
+          onCopy={() => void onCopy()}
+          onDetails={openDetails}
+          onClose={closeSheet}
+        />
+      )}
+
+      {state.result && (
+        <DetailsDrawer
+          key={`d-${state.generation}`}
+          open={detailsOpen}
           result={state.result}
           copied={state.copied}
-          onCopied={() => dispatch({ type: "copied" })}
-          onClose={closeSheet}
+          onCopy={() => void onCopy()}
+          onClose={closeDetails}
+          selectSignal={selectSignal}
         />
       )}
 

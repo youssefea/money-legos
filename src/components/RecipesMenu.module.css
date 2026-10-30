@@ -1,0 +1,130 @@
+.root {
+  position: relative;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--hit-target);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-fg);
+  font: inherit;
+  font-size: var(--text-small);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.trigger:hover {
+  background: var(--color-panel);
+}
+.trigger svg {
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+.trigger svg[data-open] {
+  transform: rotate(180deg);
+}
+
+.pop {
+  position: absolute;
+  right: 0;
+  z-index: 60;
+  width: min(340px, calc(100vw - 32px));
+  max-height: min(420px, 60dvh);
+  overflow-y: auto;
+  padding: var(--space-2);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: 0 16px 40px rgb(10 11 13 / 0.14);
+  animation: pop-in var(--dur-base) var(--ease-out) both;
+}
+.pop[data-placement="up"] {
+  bottom: calc(100% + var(--space-2));
+  transform-origin: 100% 100%;
+}
+.pop[data-placement="down"] {
+  top: calc(100% + var(--space-2));
+  left: 0;
+  right: auto;
+  transform-origin: 0 0;
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98) translateY(4px);
+  }
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  width: 100%;
+  min-height: var(--hit-target);
+  display: grid;
+  gap: 1px;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.item:hover,
+.item:focus-visible {
+  background: var(--color-panel);
+}
+.item:focus-visible {
+  outline-offset: -2px;
+}
+.item[aria-current="true"] .name::after {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: var(--space-2);
+  vertical-align: middle;
+  border-radius: 50%;
+  background: var(--color-link);
+}
+.name {
+  font-size: var(--text-small);
+  font-weight: var(--weight-medium);
+}
+.idea {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--color-fg-muted);
+}
+
+@media (prefers-color-scheme: dark) {
+  .pop {
+    background: var(--base-gray-100);
+    border-color: var(--base-gray-80);
+    box-shadow: 0 16px 40px rgb(0 0 0 / 0.6);
+  }
+  .item:hover,
+  .item:focus-visible,
+  .trigger:hover {
+    background: var(--base-gray-80);
+  }
+}
+
+@media (min-width: 1600px) {
+  .trigger,
+  .name {
+    font-size: 16px;
+  }
+  .idea {
+    font-size: 14px;
+  }
+}

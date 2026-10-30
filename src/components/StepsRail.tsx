@@ -1,7 +1,7 @@
 import type { StepState } from "@/state/store";
 import styles from "./StepsRail.module.css";
 
-const STEPS = ["Pick Legos", "Snap them on", "Copy your prompt"] as const;
+const STEPS = ["Pick", "Snap", "Copy"] as const;
 
 /** Live three-step rail: steps check off as the builder goes. */
 export default function StepsRail({ states }: { states: readonly StepState[] }) {

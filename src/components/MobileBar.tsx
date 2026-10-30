@@ -2,7 +2,6 @@
 
 import type { CSSProperties, RefObject } from "react";
 import { MAX_LEGOS, MIN_LEGOS, type LegoId } from "@/lib";
-import { requirementText } from "@/state/store";
 import StageView from "./StageView";
 import styles from "./MobileBar.module.css";
 
@@ -24,7 +23,6 @@ export type MobileBarProps = {
 export default function MobileBar({ generateRef, stageSize = [144, 88], ...p }: MobileBarProps) {
   const count = p.ids.length;
   const ready = count >= MIN_LEGOS;
-  const need = requirementText(count);
   return (
     <div
       className={styles.bar}
@@ -45,19 +43,21 @@ export default function MobileBar({ generateRef, stageSize = [144, 88], ...p }: 
         <span className={styles.n}>
           {count}/{MAX_LEGOS}
         </span>
-        <span id="m-need" className={styles.need}>
-          {count === 0 ? "Pick 2+ Legos" : need || (p.hasResult ? "Idea ready" : "Ready")}
-        </span>
+        {!ready && (
+          <span id="m-need" className={styles.need}>
+            Pick 2+
+          </span>
+        )}
       </p>
       <button
         ref={generateRef}
         type="button"
         className={styles.generate}
         aria-disabled={!ready}
-        aria-describedby="m-need"
+        aria-describedby={ready ? undefined : "m-need"}
         onClick={p.onGenerate}
       >
-        {p.hasResult ? "Open set" : "Generate"}
+        {p.hasResult ? "Regenerate" : "Generate"}
       </button>
     </div>
   );

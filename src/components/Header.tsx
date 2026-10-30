@@ -14,6 +14,9 @@ export default function Header({ soundOn, onSound }: HeaderProps) {
       <span className={styles.divider} aria-hidden="true" />
       <span className={styles.name}>Money Legos</span>
       <nav className={styles.nav} aria-label="Links">
+        <a className={styles.docs} href={RES.docs} target="_blank" rel="noopener noreferrer">
+          Docs
+        </a>
         <button
           type="button"
           className={styles.sound}
@@ -31,9 +34,6 @@ export default function Header({ soundOn, onSound }: HeaderProps) {
           </svg>
           <span className="visually-hidden">Sound</span>
         </button>
-        <a className={styles.docs} href={RES.docs} target="_blank" rel="noopener noreferrer">
-          Docs
-        </a>
       </nav>
     </header>
   );
