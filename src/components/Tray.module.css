@@ -73,7 +73,8 @@
 }
 
 .item {
-  --art-w: clamp(132px, calc((100cqh / 5 - 14px) * 2), 216px);
+  /* Visible brick height is about 0.48 x --art-w: fit five rows in the tray height. */
+  --art-w: clamp(150px, calc((100cqh / 5 - 12px) / 0.5), 280px);
   position: relative;
   flex: 1 1 0;
   min-height: 72px;
@@ -108,19 +109,41 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/*
+ * The baked sprites carry transparent padding around the brick (hero 480x360, brick at
+ * x 8-91%, y 22-87%). .art is sized to the visible brick; the sprite overflows it by the
+ * padding, so the brick lines up with the text column. Percent margins are of .art's width.
+ */
 .art {
   position: relative;
   flex: none;
-  width: var(--art-w);
+  width: calc(var(--art-w) * 0.83);
   transition: transform var(--dur-fast) var(--ease-out), opacity var(--dur-base) var(--ease-hover);
 }
 
 .sprite {
   display: block;
-  width: 100%;
+  width: 120.5%;
+  max-width: none;
+  margin: -20.4% 0 -12% -10%;
 }
 .sprite img {
   pointer-events: none;
+}
+/* Secondary 2x2 sprites: 300x284, brick at x 13-83%, y 22-87%. */
+.small .sprite {
+  width: 142.9%;
+  margin: -29.5% 0 -18.1% -19%;
+}
+
+/* The sprite has the label printed on it; keep the text for screen readers only. */
+.art:has(> [data-state="loaded"]) > .print {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 @media (hover: hover) {
@@ -175,7 +198,7 @@
   flex: none;
   font-family: var(--font-mono);
   font-weight: var(--weight-medium);
-  font-size: 11px;
+  font-size: 10px;
   letter-spacing: var(--text-label-tracking);
   text-transform: uppercase;
   padding: 5px 10px;
@@ -223,7 +246,7 @@
   padding: var(--space-3) 0 var(--space-2);
 }
 .small {
-  --art-w: clamp(76px, 54%, 104px);
+  --art-w: 96px;
   min-height: 0;
   grid-template-columns: 1fr;
   grid-template-rows: auto;
@@ -237,8 +260,14 @@
   gap: var(--space-2);
   padding: 4px;
 }
-.small .print {
+.small .print,
+.small .art:has(> [data-state="loaded"]) > .print {
   position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
   color: var(--color-fg);
 }
 .small .verb {
@@ -295,7 +324,7 @@
     height: auto;
   }
   .item {
-    --art-w: 180px;
+    --art-w: 168px;
     flex: none;
     min-height: 92px;
   }
@@ -327,7 +356,7 @@
     gap: 0;
   }
   .item:not(.small) .art {
-    width: 86%;
+    width: 76%;
   }
   .verb {
     font-size: clamp(16px, 5vw, 22px);
@@ -352,7 +381,25 @@
     font-size: 11px;
   }
   .item.small {
-    --art-w: 64%;
     padding: var(--space-2);
   }
+  .item.small .art {
+    width: 56%;
+  }
+}
+
+/* 2x2 sprites print the verb; the caption keeps only the name visible. */
+.small .art:has(> [data-state="loaded"]) .verb {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+.small .art:has(> [data-state="loaded"]) .name {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-fg);
 }

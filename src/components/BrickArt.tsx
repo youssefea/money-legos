@@ -109,6 +109,29 @@ export function BrickGlyph({ color, studs = [4, 2], className, title }: BrickGly
   );
 }
 
+/** A small stack (bottom first), no baseplate: the build-step "booklet" pictures. */
+export function MiniStack({ bricks, className }: { bricks: { color: string; studs: [number, number] }[]; className?: string }) {
+  const maxW = Math.max(...bricks.map((b) => b.studs[0])) * PITCH;
+  const maxD = Math.max(...bricks.map((b) => b.studs[1])) * PITCH;
+  const H = bricks.length * BRICK_H;
+  const [, topY] = P(0, H + STUD_H, maxD);
+  return (
+    <svg className={className} viewBox={viewBoxFor(0, topY, maxW + KX * maxD, 0)} aria-hidden="true" focusable="false">
+      {bricks.map((b, i) => {
+        const W = b.studs[0] * PITCH;
+        const D = b.studs[1] * PITCH;
+        const x = Math.round((maxW - W) / 2 / PITCH) * PITCH;
+        const z = Math.round((maxD - D) / 2 / PITCH) * PITCH;
+        return (
+          <g key={i}>
+            <Box studs={b.studs} x={x} y={i * BRICK_H} z={z} color={b.color} studsOn={i === bricks.length - 1} />
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
 export type PosterBrick = { id: string; color: string; labelColor: string; studs: [number, number]; verb: string; name: string };
 
 export type BoardPosterProps = {

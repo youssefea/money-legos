@@ -3,7 +3,7 @@
 import { forwardRef, useEffect, useRef, useState } from "react";
 import { MAX_LEGOS, MIN_LEGOS, RES, type GenerateResult, type Lego } from "@/lib";
 import { setNumber } from "@/state/store";
-import { BrickGlyph, ClosedBoxArt } from "./BrickArt";
+import { BrickGlyph, ClosedBoxArt, MiniStack } from "./BrickArt";
 import styles from "./SetBox.module.css";
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -120,8 +120,12 @@ export const SetCard = forwardRef<HTMLHeadingElement, SetCardProps>(function Set
         <ol className={styles.steps} data-n={pieces}>
           {result.steps.map((s, i) => (
             <li key={s.lego.id}>
-              <span className={styles.stepN} aria-hidden="true">
-                {i + 1}
+              <span className={styles.stepHead} aria-hidden="true">
+                <span className={styles.stepN}>{i + 1}</span>
+                <MiniStack
+                  className={styles.stepArt}
+                  bricks={result.steps.slice(0, i + 1).map((t) => ({ color: t.lego.brick.hex, studs: t.lego.size }))}
+                />
               </span>
               <span className={styles.stepText}>{shortBuild(s.lego)}</span>
             </li>
