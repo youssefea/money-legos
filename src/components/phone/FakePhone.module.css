@@ -1,0 +1,636 @@
+/*
+ * The fake phone. Everything scales from --pw (the phone's width), which follows the slot:
+ * the phone is as large as the slot allows at a 9 : 18.6 aspect.
+ */
+
+.slot {
+  container-type: size;
+  position: relative;
+  min-height: 0;
+  min-width: 0;
+  display: grid;
+  place-items: center;
+}
+
+.device {
+  --pw: min(100cqw, calc(100cqh * 0.4839), 360px);
+  --u: calc(var(--pw) / 100); /* 1% of the phone width */
+  position: relative;
+  width: var(--pw);
+  aspect-ratio: 9 / 18.6;
+  padding: calc(var(--u) * 3.4);
+  border-radius: calc(var(--u) * 15);
+  background: var(--base-gray-100);
+  box-shadow:
+    0 0 0 1px var(--base-gray-80),
+    0 calc(var(--u) * 6) calc(var(--u) * 12) calc(var(--u) * -4) rgb(10 11 13 / 0.28);
+  font-family: var(--font-sans);
+  font-size: clamp(11px, calc(var(--u) * 5), 15px);
+  line-height: 1.3;
+  color: var(--base-gray-100);
+}
+
+/* Side buttons. */
+.device::before,
+.device::after {
+  content: "";
+  position: absolute;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--base-gray-80);
+}
+.device::before {
+  left: -3px;
+  top: 22%;
+  height: 12%;
+}
+.device::after {
+  right: -3px;
+  top: 28%;
+  height: 16%;
+}
+
+.screen {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border-radius: calc(var(--u) * 11.6);
+  background: var(--base-gray-10);
+}
+
+.island {
+  position: absolute;
+  top: calc(var(--u) * 3);
+  left: 50%;
+  width: calc(var(--u) * 30);
+  height: calc(var(--u) * 8.4);
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: var(--base-gray-100);
+}
+
+.status {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: calc(var(--u) * 14.4);
+  padding: 0 calc(var(--u) * 8) 0 calc(var(--u) * 10);
+  font-size: calc(var(--u) * 4.6);
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+.sbIcons {
+  width: calc(var(--u) * 15);
+  fill: currentColor;
+  color: var(--base-gray-100);
+}
+
+.appbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 2.6);
+  height: calc(var(--u) * 13);
+  padding: 0 calc(var(--u) * 5.4);
+}
+.logo,
+.skelCoin {
+  flex: none;
+  width: calc(var(--u) * 8);
+  height: calc(var(--u) * 8);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--base-blue);
+  color: var(--base-gray-0);
+  font-size: calc(var(--u) * 4.4);
+  font-weight: var(--weight-bold);
+}
+.brand {
+  font-size: calc(var(--u) * 5.6);
+  font-weight: var(--weight-medium);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.menu {
+  margin-left: auto;
+  display: grid;
+  gap: calc(var(--u) * 0.9);
+  width: calc(var(--u) * 5);
+}
+.menu i {
+  display: block;
+  height: max(1.5px, calc(var(--u) * 0.6));
+  border-radius: 1px;
+  background: currentColor;
+}
+.skelCoin {
+  background: var(--base-gray-15);
+}
+.skelBar {
+  width: 38%;
+  height: calc(var(--u) * 3.4);
+  border-radius: 999px;
+  background: var(--base-gray-15);
+}
+.appbar[data-empty] .menu {
+  color: var(--base-gray-15);
+}
+
+/* ---------------------------------------------------------------- tiles */
+.tiles {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: calc(var(--u) * 3) calc(var(--u) * 4) calc(var(--u) * 4);
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 4.4);
+}
+
+.tile,
+.placeholder {
+  position: relative;
+  min-height: 0;
+  border-radius: 16px;
+}
+/* Tiles grow a little with few bricks, size to content like app cards, and shrink when four share a small phone. */
+.tile {
+  flex: 1 1 auto;
+  min-height: calc(var(--u) * 22);
+  max-height: calc(var(--u) * 40);
+}
+.placeholder {
+  flex: 1 1 0;
+  max-height: calc(var(--u) * 34);
+}
+
+.tile {
+  --accent-line: var(--accent-line-light);
+  display: flex;
+  background: var(--base-gray-0);
+  border-left: calc(var(--u) * 1.4) solid var(--accent);
+  box-shadow:
+    0 0 0 1px var(--base-gray-15),
+    0 calc(var(--u) * 1) calc(var(--u) * 3) rgb(10 11 13 / 0.06);
+  animation: tile-in var(--dur-place) cubic-bezier(0.34, 1.36, 0.64, 1) both;
+}
+@keyframes tile-in {
+  0% {
+    opacity: 0;
+    transform: translateY(calc(var(--u) * -6)) scale(0.98);
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    transform: none;
+  }
+}
+
+/* Studs on the tile's top edge, in the brick colour. */
+.studs {
+  position: absolute;
+  left: calc(var(--u) * 4);
+  right: calc(var(--u) * 4);
+  top: calc(var(--u) * -2.2);
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+.studs i {
+  display: block;
+  width: calc(var(--u) * 5.2);
+  height: calc(var(--u) * 2.3);
+  border-radius: calc(var(--u) * 1.2) calc(var(--u) * 1.2) 1px 1px;
+  background: var(--accent);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.45),
+    inset 0 -1px 0 rgb(10 11 13 / 0.14),
+    0 0 0 0.5px var(--accent-line);
+}
+.tile .studs {
+  left: calc(var(--u) * 3);
+}
+/* Fewer studs (a 2-wide brick) sit to the left, like a narrow brick on a wide plate. */
+.tile .studs:has(i:nth-child(4):last-child) {
+  right: 46%;
+}
+.tile .studs:has(i:nth-child(6):last-child) {
+  right: 24%;
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: calc(var(--u) * 2.4);
+  padding: calc(var(--u) * 4) calc(var(--u) * 4.4);
+  overflow: hidden;
+}
+
+.row,
+.hrow {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 2.6);
+  min-width: 0;
+}
+.row {
+  justify-content: space-between;
+}
+.stackText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.titleText {
+  flex: 1;
+  min-width: 0;
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.row .titleText {
+  flex: 0 1 auto;
+}
+.label {
+  font-size: 0.86em;
+  color: var(--base-gray-60);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.big {
+  font-size: 1.5em;
+  line-height: 1.1;
+  font-weight: var(--weight-medium);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.num,
+.strong {
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.coin {
+  flex: none;
+  width: 2.4em;
+  height: 2.4em;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--base-blue);
+  color: var(--base-gray-0);
+  font-weight: var(--weight-bold);
+}
+
+.chip {
+  flex: none;
+  padding: 0.12em 0.6em;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: inset 0 0 0 1px var(--accent-line);
+  font-size: 0.82em;
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+
+.cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  height: 2.3em;
+  border-radius: calc(var(--u) * 2.6);
+  background: var(--base-blue);
+  color: var(--base-gray-0);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+.ctaQuiet {
+  background: var(--base-gray-10);
+  color: var(--base-gray-100);
+}
+.ctaIcon svg,
+.ok svg,
+.badgeIcon svg,
+.swapIcon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.ctaIcon {
+  width: 1.1em;
+  height: 1.1em;
+}
+.ctaSmall {
+  flex: none;
+  padding: 0.3em 0.8em;
+  border-radius: 999px;
+  background: var(--base-blue);
+  color: var(--base-gray-0);
+  font-size: 0.86em;
+  font-weight: var(--weight-medium);
+}
+
+.ok {
+  flex: none;
+  width: 1.6em;
+  height: 1.6em;
+  padding: 0.2em;
+  border-radius: 50%;
+  background: var(--base-green);
+  color: var(--base-gray-0);
+}
+
+.badgeIcon {
+  flex: none;
+  width: 2em;
+  height: 2em;
+  padding: 0.42em;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: inset 0 0 0 1px var(--accent-line);
+}
+
+.dot {
+  flex: none;
+  width: 0.6em;
+  height: 0.6em;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-line);
+}
+
+.field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  min-height: 2.1em;
+  padding: 0 0.7em;
+  border-radius: calc(var(--u) * 2.4);
+  background: var(--base-gray-10);
+  white-space: nowrap;
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+}
+.caret {
+  width: 1px;
+  height: 1.1em;
+  background: var(--base-blue);
+}
+
+.swap {
+  position: relative;
+  display: grid;
+  gap: calc(var(--u) * 1.2);
+}
+.swap .field {
+  justify-content: space-between;
+  overflow: visible;
+}
+.swapIcon {
+  position: absolute;
+  left: 50%;
+  bottom: -0.95em;
+  z-index: 1;
+  width: 1.5em;
+  height: 1.5em;
+  padding: 0.25em;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: var(--base-gray-0);
+  box-shadow: 0 0 0 1px var(--base-gray-15);
+  color: var(--base-gray-60);
+}
+
+.seg {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--base-gray-10);
+}
+.seg i {
+  width: 1.4em;
+  height: 0.8em;
+  border-radius: 999px;
+}
+.seg i[data-on] {
+  background: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent-line);
+}
+
+.spark {
+  display: block;
+  height: 1.3em;
+  color: var(--base-green);
+}
+.spark svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.bar {
+  display: flex;
+  gap: 2px;
+  height: 0.5em;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--base-gray-10);
+}
+.bar i {
+  display: block;
+  flex: 0 0 auto;
+  background: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent-line);
+}
+.bar i + i {
+  background: var(--base-gray-30);
+  box-shadow: none;
+}
+.legend {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.86em;
+  color: var(--base-gray-60);
+}
+.legend b {
+  color: var(--base-gray-100);
+  font-weight: var(--weight-medium);
+}
+
+.kv {
+  margin: 0;
+  display: grid;
+  gap: 0.25em;
+}
+.kv div {
+  display: flex;
+  justify-content: space-between;
+}
+.kv dt {
+  color: var(--base-gray-60);
+}
+.kv dd {
+  margin: 0;
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.3em;
+}
+.list li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.5em;
+}
+.avatar {
+  width: 1.1em;
+  height: 1.1em;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent-line);
+}
+
+.qr {
+  flex: none;
+  width: 3.4em;
+  height: 3.4em;
+  padding: 0.2em;
+  border-radius: 6px;
+  background: var(--base-gray-0);
+  box-shadow: inset 0 0 0 1px var(--base-gray-15);
+  fill: var(--base-gray-100);
+}
+
+/* ---------------------------------------------------------------- empty slots */
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: calc(var(--u) * 2.4);
+  padding: 0 calc(var(--u) * 5);
+  border: 1px dashed var(--base-gray-30);
+  background: transparent;
+}
+.placeholder .studs i {
+  background: var(--base-gray-10);
+  box-shadow: inset 0 0 0 1px var(--base-gray-30);
+}
+.skelLine {
+  display: block;
+  width: 56%;
+  height: calc(var(--u) * 2.8);
+  border-radius: 999px;
+  background: var(--base-gray-15);
+}
+.skelLine[data-short] {
+  width: 34%;
+}
+
+.home {
+  position: absolute;
+  bottom: calc(var(--u) * 1.6);
+  left: 50%;
+  width: 34%;
+  height: max(3px, calc(var(--u) * 1.2));
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: var(--base-gray-100);
+}
+
+/* ---------------------------------------------------------------- dark */
+@media (prefers-color-scheme: dark) {
+  .device {
+    color: var(--base-gray-0);
+    box-shadow:
+      0 0 0 1px var(--base-gray-60),
+      0 calc(var(--u) * 6) calc(var(--u) * 12) calc(var(--u) * -4) rgb(0 0 0 / 0.5);
+  }
+  .screen {
+    background: var(--base-gray-100);
+  }
+  .sbIcons {
+    color: var(--base-gray-0);
+  }
+  .island {
+    box-shadow: 0 0 0 1px var(--base-gray-80);
+  }
+  .tile {
+    --accent-line: var(--accent-line-dark);
+    background: var(--base-gray-80);
+    border-left-color: var(--accent-line);
+    box-shadow: none;
+  }
+  .label,
+  .kv dt,
+  .legend {
+    color: var(--base-gray-30);
+  }
+  .legend b {
+    color: var(--base-gray-0);
+  }
+  .field,
+  .seg,
+  .bar,
+  .ctaQuiet {
+    background: var(--base-gray-100);
+    color: var(--base-gray-0);
+  }
+  .caret {
+    background: var(--base-cerulean);
+  }
+  .swapIcon {
+    background: var(--base-gray-80);
+    box-shadow: 0 0 0 1px var(--base-gray-60);
+    color: var(--base-gray-30);
+  }
+  .placeholder {
+    border-color: var(--base-gray-60);
+  }
+  .placeholder .studs i {
+    box-shadow: inset 0 0 0 1px var(--base-gray-80);
+  }
+  .skelLine,
+  .skelBar,
+  .skelCoin {
+    background: var(--base-gray-80);
+  }
+  .appbar[data-empty] .menu {
+    color: var(--base-gray-80);
+  }
+  .home {
+    background: var(--base-gray-0);
+  }
+  .qr {
+    background: var(--base-gray-0);
+  }
+}
