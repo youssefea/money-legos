@@ -4,8 +4,12 @@ import { BASEPLATE_TOP, DIM } from "./dims";
 
 export type V3 = [number, number, number];
 
-/** Camera pitch (elevation above the table) and azimuth (turn towards the right side), degrees. */
-export const CAMERA = { pitch: 28, azimuth: 32 } as const;
+/**
+ * Camera pitch (elevation above the table) and azimuth (turn towards the right side), degrees.
+ * 25° up keeps the plate from reading as a steep parallelogram while the stud tops still show;
+ * 26° round shows a little of the right side without turning the printed face away.
+ */
+export const CAMERA = { pitch: 25, azimuth: 26 } as const;
 
 /**
  * Camera direction shared by the 3D board, the baked sprites and the SVG fallback,
@@ -15,11 +19,10 @@ export const CAMERA = { pitch: 28, azimuth: 32 } as const;
 export const VIEW: V3 = viewDir(CAMERA);
 
 /**
- * Tray sprites use a more front-on hero view than the board (24° up, 12° round): the printed label
- * slopes under 5° and reads at a glance in a small tile. The board keeps CAMERA (28°/32°) so the stack
- * shows its depth; the two angles differ on purpose, for legibility.
+ * Tray sprites: one step more front-on than the board (24° up, 20° round) so the print reads in a
+ * small tile, close enough to CAMERA that a sprite and the same brick on the board look like one object.
  */
-export const TRAY_CAMERA = { pitch: 24, azimuth: 12 } as const;
+export const TRAY_CAMERA = { pitch: 24, azimuth: 20 } as const;
 export const TRAY_VIEW: V3 = viewDir(TRAY_CAMERA);
 
 function viewDir({ pitch, azimuth }: { pitch: number; azimuth: number }): V3 {
@@ -34,7 +37,7 @@ export const FOV = 20;
 export const BASEPLATE: [number, number] = [8, 8];
 /** Most bricks a stack can hold (the board frames for this height so it never re-zooms). */
 export const MAX_STACK = 4;
-/** Footprint drawn for the ghost "next slot" (a hero 2x4). */
+/** Footprint drawn for the ghost "next slot" when the next brick is not known (a hero 2x4). */
 export const GHOST_SIZE: [number, number] = [4, 2];
 
 export const BOARD = {
@@ -44,17 +47,16 @@ export const BOARD = {
 } as const;
 
 /**
- * Board framing. The camera (and the SVG fallback's view box) scales so the baseplate spans
- * `plateFill` of the container width, keeping at least `side` px clear at each side (capped at
- * `sideMax` of the width, so a 144 px phone scene still gets a ~120 px plate), unless the full
- * 4-brick tower would then not fit: it is kept inside `maxH` of the height and `maxW` of the width,
- * so the board never re-zooms as bricks are added.
- * Then the visual mass (the plate plus the stack and its ghost slot, see `massBox`) is centred in the
- * container and lifted by `bias` of the container height, so an empty board does not sit low under
- * a blank band.
+ * Board framing. The camera (and the SVG fallback's view box) is fitted ONCE per container size: it
+ * scales so the baseplate spans `plateFill` of the container width, keeping at least `side` px clear at
+ * each side (capped at `sideMax` of the width, so a 144 px phone scene still gets a ~120 px plate),
+ * unless the full 4-brick tower would then not fit: it is kept inside `maxH` of the height and `maxW`
+ * of the width. The board box (plate + full tower, `frameBox`) is centred and lifted by `bias` of the
+ * height. Nothing depends on the stack, so the board never pans or re-zooms as bricks are added: the
+ * plate is the fixed desk, and the empty space above it is where the ghost and the tower go.
  */
 export type Framing = { plateFill: number; maxH: number; maxW: number; side: number; sideMax: number; bias: number };
-export const DEFAULT_FRAMING: Framing = { plateFill: 0.97, maxH: 0.96, maxW: 0.98, side: 24, sideMax: 0.083, bias: 0.08 };
+export const DEFAULT_FRAMING: Framing = { plateFill: 0.97, maxH: 0.97, maxW: 0.98, side: 24, sideMax: 0.083, bias: 0.02 };
 
 /** Fraction of the container width the plate may take, after `plateFill` and the side clearance. */
 export function plateFraction(f: Framing, width: number): number {
@@ -145,17 +147,35 @@ export function frameBox(): { min: V3; max: V3 } {
   return { min: [-hx, 0, -hz], max: [hx, top, hz] };
 }
 
-/**
- * The part of the board actually on show: the baseplate slab plus the stack up to its top, or up to
- * the ghost slot's top while there is one. Framing centres this box, not the full 4-brick tower.
- */
-export function massBox(bricks: readonly PlacedBrick[], nextLevel: number | null): { min: V3; max: V3 } {
-  const hx = (BASEPLATE[0] * DIM.pitch) / 2;
-  const hz = (BASEPLATE[1] * DIM.pitch) / 2;
+/** Height (mm) of the top of what is on show: the stack's studs, or the ghost slot's top while there is one. */
+export function stackTopY(bricks: readonly PlacedBrick[], nextLevel: number | null): number {
   let top = BASEPLATE_TOP + DIM.studH;
   for (const b of bricks) top = Math.max(top, levelY(b.level) + pieceHeight(b.kind) + DIM.studH);
   if (nextLevel !== null) top = Math.max(top, levelY(nextLevel) + pieceHeight("brick"));
-  return { min: [-hx, 0, -hz], max: [hx, top, hz] };
+  return top;
+}
+
+/** Brick-top rectangle [x0, z0, x1, z1] (mm, in the lower brick's own frame) covered by the brick above it. */
+export type Cover = [number, number, number, number];
+
+/**
+ * For each placed brick, the part of its top the next brick up sits on (null for the top brick), so
+ * the renderers can darken the joint: the stud-row shadow that keeps same-hue neighbours apart.
+ */
+export function coversFor(bricks: readonly PlacedBrick[]): Map<string, Cover | null> {
+  const sorted = byLevel(bricks);
+  const out = new Map<string, Cover | null>();
+  sorted.forEach((b, i) => {
+    const above = sorted.slice(i + 1).find((u) => u.level >= b.level + (b.kind === "plate" ? 1 : PLATES_PER_BRICK));
+    if (!above || above.level !== b.level + (b.kind === "plate" ? 1 : PLATES_PER_BRICK)) {
+      out.set(b.id, null);
+      return;
+    }
+    const p = poseFor(b), q = poseFor(above);
+    const W = (above.size[0] * DIM.pitch - DIM.gap) / 2, D = (above.size[1] * DIM.pitch - DIM.gap) / 2;
+    out.set(b.id, [q.x - p.x - W, q.z - p.z - D, q.x - p.x + W, q.z - p.z + D]);
+  });
+  return out;
 }
 
 /** The eight corners of a box. */
@@ -168,9 +188,9 @@ export function boxCorners({ min, max }: { min: V3; max: V3 }): V3[] {
 /** Accessible summary of the stack, bottom to top. */
 export function stackLabel(bricks: readonly PlacedBrick[], nextLevel: number | null): string {
   const sorted = [...bricks].sort((a, b) => a.level - b.level);
-  if (sorted.length === 0) return "Empty baseplate. Slot 1 is ready for the first Lego.";
+  if (sorted.length === 0) return "Empty baseplate. Slot 1 is ready for the first brick.";
   const names = sorted.map((b) => `${b.label.verb} (${b.label.name})`).join(", ");
-  const count = `${sorted.length} ${sorted.length === 1 ? "Lego" : "Legos"}`;
+  const count = `${sorted.length} ${sorted.length === 1 ? "brick" : "bricks"}`;
   const next = nextLevel === null ? " The stack is full." : ` Next: slot ${slotNumber(nextLevel)}.`;
   return `Stack of ${count} on the baseplate, bottom to top: ${names}.${next}`;
 }

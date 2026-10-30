@@ -54,9 +54,10 @@ export function extentOf(box: { min: V3; max: V3 }) {
 
 /**
  * Same framing rule as the 3D camera, for a container of cw x ch px: scale from the plate and the full
- * tower, then centre `mass` (the visible plate + stack + ghost) lifted by `framing.bias`.
+ * tower, then centre the board box (plate + full tower) lifted by `framing.bias`. It never depends on
+ * the stack, so the board never pans as bricks land.
  */
-export function svgViewBox(cw: number, ch: number, framing: Framing = DEFAULT_FRAMING, mass?: { min: V3; max: V3 }): ViewBox {
+export function svgViewBox(cw: number, ch: number, framing: Framing = DEFAULT_FRAMING): ViewBox {
   const { box, plate } = EXTENTS;
   const bw = box.x1 - box.x0, bh = box.y1 - box.y0;
   if (cw <= 0 || ch <= 0) {
@@ -65,10 +66,9 @@ export function svgViewBox(cw: number, ch: number, framing: Framing = DEFAULT_FR
   }
   const scale = Math.min((plateFraction(framing, cw) * cw) / (plate.x1 - plate.x0), (framing.maxH * ch) / bh, (framing.maxW * cw) / bw);
   const w = cw / scale, h = ch / scale;
-  const m = mass ? extentOf(mass) : box;
-  const cx = (m.x0 + m.x1) / 2;
-  // centre y in view units, lifted by bias * h, clamped so the mass stays 1.5% inside the frame
-  const want = (m.y0 + m.y1) / 2 + framing.bias * h;
-  const cy = Math.min(m.y0 - 0.015 * h + h / 2, Math.max(m.y1 + 0.015 * h - h / 2, want));
+  const cx = (box.x0 + box.x1) / 2;
+  // centre y in view units, lifted by bias * h, clamped so the box stays 0.75% inside the frame
+  const want = (box.y0 + box.y1) / 2 + framing.bias * h;
+  const cy = Math.min(box.y0 - 0.0075 * h + h / 2, Math.max(box.y1 + 0.0075 * h - h / 2, want));
   return { x: cx - w / 2, y: cy - h / 2, w, h, scale };
 }

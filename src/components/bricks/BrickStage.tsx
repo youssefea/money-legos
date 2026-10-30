@@ -17,11 +17,16 @@ export type BrickStageViewProps = BrickStageProps & {
   /**
    * Framing inside the container (it fills it: size the container, the board fits itself).
    * Default: baseplate up to 97% of the width with >= 24 px (max 8.3% of the width) clear at each
-   * side, the 4-brick tower kept inside 96% of the height, and the visible mass (plate + stack +
-   * ghost) centred and lifted by 8% of the height.
+   * side, the 4-brick tower kept inside 97% of the height, and the board box (plate + full tower)
+   * centred and lifted by 2% of the height. Fitted once per size: the board never pans on an add.
    */
   framing?: Partial<Framing>;
-  /** Called with the ghost slot's box in this element's CSS px whenever it moves (null = stack full). */
+  /** Footprint [w, d] in studs of the brick that lands next, when known (e.g. the hovered tray brick): sizes the ghost. Default 2x4. */
+  ghostSize?: [number, number];
+  /**
+   * Called with the ghost slot's box in this element's CSS px (and its footprint) whenever it changes
+   * (null = stack full). Also on the root as `data-ghost="x,y,width,height"` (px).
+   */
   onGhostRect?: (rect: GhostRect | null) => void;
   /**
    * Framing readout whenever the board moves: `stackTop` is the top of the stack (or of the ghost slot
@@ -38,7 +43,8 @@ const serverSnapshot = () => null;
 
 /**
  * The board: a live 3D baseplate with the stack of placed bricks (one react-three-fiber canvas that
- * renders only while something moves), and the dashed, numbered ghost where the next brick lands.
+ * renders only while something moves), and the ghost (a see-through, numbered brick volume) where the
+ * next brick lands. The camera is fitted once for a full 4-brick tower and never moves on an add.
  *
  * The SVG board doubles as the poster while three.js loads, and stays as the board when WebGL is
  * missing, software-rendered (SwiftShader) or measured below 20 fps. `?bricks=svg|webgl` forces one.
@@ -109,13 +115,18 @@ export default function BrickStage(props: BrickStageViewProps) {
   );
   // Each renderer reports its ghost; only the visible one's reaches the caller (re-sent on a switch).
   const rects = useRef<{ svg: GhostRect | null; gl: GhostRect | null }>({ svg: null, gl: null });
+  const sendGhost = (r: GhostRect | null) => {
+    if (r) root.current?.setAttribute("data-ghost", [r.x, r.y, r.width, r.height].map((n) => n.toFixed(1)).join(","));
+    else root.current?.removeAttribute("data-ghost");
+    live.current.onGhostRect?.(r);
+  };
   const svgGhost = useCallback((r: GhostRect | null) => {
     rects.current.svg = r;
-    if (!live.current.show3D) live.current.onGhostRect?.(r);
+    if (!live.current.show3D) sendGhost(r);
   }, []);
   const glGhost = useCallback((r: GhostRect | null) => {
     rects.current.gl = r;
-    if (live.current.show3D) live.current.onGhostRect?.(r);
+    if (live.current.show3D) sendGhost(r);
   }, []);
   const frames = useRef<{ svg: BoardFrame | null; gl: BoardFrame | null }>({ svg: null, gl: null });
   const sendFrame = (fr: BoardFrame | null) => {
@@ -132,7 +143,7 @@ export default function BrickStage(props: BrickStageViewProps) {
     if (live.current.show3D) sendFrame(fr);
   }, []);
   useEffect(() => {
-    live.current.onGhostRect?.(show3D ? rects.current.gl : rects.current.svg);
+    sendGhost(show3D ? rects.current.gl : rects.current.svg);
     sendFrame(show3D ? frames.current.gl : frames.current.svg);
     emitLayout();
   }, [show3D, emitLayout]);

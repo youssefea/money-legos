@@ -30,6 +30,11 @@ function fromUrl() {
     only: q.get("only"),
     /** ?box=567x520: draw the stage in a fixed-size panel (the UI's board panel size). */
     box: (/^(\d+)x(\d+)$/.exec(q.get("box") ?? "") ?? []).slice(1).map(Number) as number[],
+    /** ?ghost=2x2: size the ghost volume to that footprint (default 2x4). */
+    ghost: (() => {
+      const m = /^([1-4])x([1-4])$/.exec(q.get("ghost") ?? "");
+      return m ? ([Number(m[1]), Number(m[2])] as [number, number]) : undefined;
+    })(),
   };
 }
 
@@ -37,7 +42,7 @@ function fromUrl() {
  * Dev test page: the live board with add/remove controls, the SVG fallback beside it, and the 13
  * baked tray sprites. URL: ?n=0..4 | ?ids=b20,payments  &dark=1  &rm=1  &only=stage|svg|sprites
  * &mix=1 (mixed footprints)  &layoutbox=1 (onLayout boxes in red)
- * &bricks=svg|webgl (force a renderer)  &box=567x520 (stage/svg in a fixed-size panel; the ghost box is outlined in red with &ghostbox=1).
+ * &ghost=2x2 (ghost footprint)  &bricks=svg|webgl (force a renderer)  &box=567x520 (stage/svg in a fixed-size panel; the ghost box is outlined in red with &ghostbox=1).
  */
 export default function DevBricks() {
   const [init] = useState(fromUrl);
@@ -50,7 +55,7 @@ export default function DevBricks() {
   const bricks = useMemo(() => toPlacedBricks(ids), [ids]);
   const next = nextLevel(ids.length);
   const onSettled = (id: string) => setLog((l) => [`settled ${id}`, ...l].slice(0, 4));
-  const stageProps = { bricks, nextLevel: next, dark, reducedMotion: reduced, settledSignal: signal, onSettled, onLayout: setLayout };
+  const stageProps = { bricks, nextLevel: next, dark, reducedMotion: reduced, settledSignal: signal, onSettled, onLayout: setLayout, ghostSize: init.ghost };
   const add = () => {
     const id = ORDER.find((x) => !ids.includes(x));
     if (id && ids.length < 4) setIds([...ids, id]);

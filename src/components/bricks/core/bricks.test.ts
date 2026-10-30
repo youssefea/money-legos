@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { LEGOS } from "@/lib/legos";
-import { nextLevel, toPlacedBricks } from "@/lib/bricks";
+import { toPlacedBricks } from "@/lib/bricks";
 import { brickGeometry, frontFace } from "../three/geometry";
 import { EXTENTS, extentOf, project, svgViewBox } from "../svg/projector";
 import { DIM, studCenters } from "./dims";
 import { ghostGeom } from "./ghost";
 import { approxMeasure, layoutLabel, VERB_TRACKING } from "./label";
-import { CAMERA, DEFAULT_FRAMING, VIEW, massBox, poseFor } from "./layout";
+import { CAMERA, DEFAULT_FRAMING, TRAY_CAMERA, VIEW, coversFor, frameBox, levelY, poseFor } from "./layout";
 
 /** Stud tips: the lathe apex of every stud sits on its axis at the top of the brick. */
 function studTips(w: number, d: number) {
@@ -43,11 +43,18 @@ describe("brick geometry", () => {
 });
 
 describe("camera", () => {
-  it("looks down 28° from 32° to the right", () => {
-    expect(CAMERA).toEqual({ pitch: 28, azimuth: 32 });
+  it("looks down 25° from 26° to the right", () => {
+    expect(CAMERA).toEqual({ pitch: 25, azimuth: 26 });
     const [x, y, z] = VIEW;
-    expect((Math.asin(y / Math.hypot(x, y, z)) * 180) / Math.PI).toBeCloseTo(28, 5);
-    expect((Math.atan2(x, z) * 180) / Math.PI).toBeCloseTo(32, 5);
+    expect((Math.asin(y / Math.hypot(x, y, z)) * 180) / Math.PI).toBeCloseTo(25, 5);
+    expect((Math.atan2(x, z) * 180) / Math.PI).toBeCloseTo(26, 5);
+  });
+
+  it("bakes tray sprites from 24° up, at most 20° round, close to the board's angle", () => {
+    expect(TRAY_CAMERA.pitch).toBe(24);
+    expect(TRAY_CAMERA.azimuth).toBeLessThanOrEqual(20);
+    expect(Math.abs(TRAY_CAMERA.pitch - CAMERA.pitch)).toBeLessThanOrEqual(2);
+    expect(Math.abs(TRAY_CAMERA.azimuth - CAMERA.azimuth)).toBeLessThanOrEqual(8);
   });
 
   it("yaw jitter is deterministic and within ±0.4°", () => {
@@ -96,23 +103,60 @@ describe("board framing", () => {
     expect(plateW * vb.scale).toBeLessThanOrEqual(144 - 2 * 11.9);
   });
 
-  it("lifts the visible mass above centre and keeps it in frame", () => {
-    for (const n of [0, 1, 4]) {
-      const ids = (["b20", "payments", "validity", "speed"] as const).slice(0, n);
-      const bricks = toPlacedBricks([...ids]);
-      const next = nextLevel(n);
-      const mass = massBox(bricks, next);
-      const vb = svgViewBox(567, 600, DEFAULT_FRAMING, mass);
-      const e = extentOf(mass);
-      const mid = ((e.y0 + e.y1) / 2 - vb.y) / vb.h;
-      expect(mid).toBeLessThan(0.5);
-      expect(e.y0).toBeGreaterThanOrEqual(vb.y);
-      expect(e.y1).toBeLessThanOrEqual(vb.y + vb.h);
+  it("frames once: the view box never depends on the stack, and the full tower stays in frame", () => {
+    const vb = svgViewBox(567, 600);
+    expect(svgViewBox(567, 600)).toEqual(vb);
+    const e = extentOf(frameBox());
+    expect(e.y0).toBeGreaterThanOrEqual(vb.y);
+    expect(e.y1).toBeLessThanOrEqual(vb.y + vb.h);
+    // the plate sits in the lower part of the stage, leaving the tower's room above it
+    const plateMid = ((EXTENTS.plate.y0 + EXTENTS.plate.y1) / 2 - vb.y) / vb.h;
+    expect(plateMid).toBeGreaterThan(0.6);
+    expect(plateMid).toBeLessThan(0.85);
+  });
+});
+
+describe("stack joints", () => {
+  it("marks the top of every brick that has one above it, and only those", () => {
+    const bricks = toPlacedBricks(["b20", "payments", "validity"]);
+    const c = coversFor(bricks);
+    const [bottom, middle, top] = [...bricks].sort((a, b) => a.level - b.level);
+    expect(c.get(top!.id)).toBeNull();
+    for (const b of [bottom!, middle!]) {
+      const r = c.get(b.id)!;
+      expect(r).not.toBeNull();
+      // a 2x4 on a 2x4: the cover spans the whole top, give or take the sub-mm jitter
+      expect(r[2] - r[0]).toBeCloseTo(4 * DIM.pitch - DIM.gap, 5);
+      expect(r[3] - r[1]).toBeCloseTo(2 * DIM.pitch - DIM.gap, 5);
+      expect(Math.abs(r[0] + r[2]) / 2).toBeLessThan(0.5);
     }
+  });
+
+  it("covers a small brick fully when a bigger one sits on it (cantilever)", () => {
+    const bricks = toPlacedBricks(["verify", "b20"]);
+    const [small, big] = [...bricks].sort((a, b) => a.level - b.level);
+    expect(small!.size[0] * small!.size[1]).toBeLessThan(big!.size[0] * big!.size[1]);
+    const r = coversFor(bricks).get(small!.id)!;
+    const W = (small!.size[0] * DIM.pitch - DIM.gap) / 2;
+    expect(r[0]).toBeLessThan(-W);
+    expect(r[2]).toBeGreaterThan(W);
   });
 });
 
 describe("ghost slot", () => {
+  it("is a brick volume standing on the stack, sized to the next brick", () => {
+    const g = ghostGeom(6, project, [2, 2]);
+    expect(g.size).toEqual([2, 2]);
+    expect(g.top).toHaveLength(4);
+    expect(g.edges).toHaveLength(3);
+    const big = ghostGeom(6, project);
+    expect(big.size).toEqual([4, 2]);
+    expect(big.bounds.width).toBeGreaterThan(g.bounds.width);
+    // its bottom is the top of the stack below: the lowest silhouette point is the slot's front-bottom edge
+    const front = project([0, levelY(6), (2 * DIM.pitch - DIM.gap) / 2]);
+    expect(Math.max(...big.outline.map((p) => p[1]))).toBeGreaterThanOrEqual(front[1] - 1e-6);
+  });
+
   it("is one closed outer silhouette with the slot number", () => {
     const g = ghostGeom(6, project);
     expect(g.slot).toBe(3);

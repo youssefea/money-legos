@@ -1,5 +1,6 @@
 "use client";
 
+import "./quietClock";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import * as THREE from "three";
@@ -17,6 +18,8 @@ export type Stage3DProps = Omit<BrickStageProps, "className"> & {
   /** Screen-space AO on still frames (default on). */
   ao?: boolean;
   framing?: Framing;
+  /** Footprint [w, d] of the next brick, for the ghost volume (default a 2x4). */
+  ghostSize?: [number, number];
   /** Where the ghost slot is, in canvas px (null when the stack is full). */
   onGhostRect?: (rect: GhostRect | null) => void;
   /** The board's framing readout (stack/ghost top as a fraction of the height, plate width in px). */
@@ -34,13 +37,7 @@ export default function Stage3D({ ao = true, onReady, onSlow, onFps, onGhostRect
   });
   const setGhost = useCallback((g: GhostGeom | null) => {
     setGhostState(g);
-    rectCb.current?.(g && { slot: g.slot, ...g.bounds });
-  }, []);
-  // The ghost overlay follows a camera pan with a transform: no React render per frame.
-  const overlay = useRef<SVGSVGElement>(null);
-  const onPan = useCallback((dx: number, dy: number) => {
-    const el = overlay.current;
-    if (el) el.style.transform = dx === 0 && dy === 0 ? "" : `translate(${dx.toFixed(2)}px, ${dy.toFixed(2)}px)`;
+    rectCb.current?.(g && { slot: g.slot, size: g.size, ...g.bounds });
   }, []);
   const [fontsReady, setFontsReady] = useState(false);
   useEffect(() => {
@@ -63,10 +60,10 @@ export default function Stage3D({ ao = true, onReady, onSlow, onFps, onGhostRect
         camera={{ fov: FOV, position: [0, 80, 200] }}
         gl={{ antialias: true, alpha: true, toneMapping: THREE.NeutralToneMapping, toneMappingExposure: 1, powerPreference: "high-performance" }}
       >
-        <Scene {...props} fontsReady={fontsReady} ao={ao} framing={framing} onGhost={setGhost} onReady={onReady} onSlow={onSlow} onFps={onFps} onFrame={onFrame} onPan={onPan} onLayout={onLayout} />
+        <Scene {...props} fontsReady={fontsReady} ao={ao} framing={framing} onGhost={setGhost} onReady={onReady} onSlow={onSlow} onFps={onFps} onFrame={onFrame} onLayout={onLayout} />
       </Canvas>
       {ghost && (
-        <svg ref={overlay} style={{ ...fill, overflow: "visible", pointerEvents: "none" }}>
+        <svg style={{ ...fill, overflow: "visible", pointerEvents: "none" }}>
           <GhostMarker ghost={ghost} dark={props.dark} still={props.reducedMotion} />
         </svg>
       )}

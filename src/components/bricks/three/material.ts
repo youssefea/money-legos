@@ -9,7 +9,9 @@ export type PlasticFinish = "gloss" | "baseplate";
  *  - per-brick roughness offset from a seed, so two bricks never mirror light identically,
  *  - faint moulding wear on the outer fillets only (slightly rougher, a hint of stress whitening),
  *  - baked occlusion in the corner where each stud meets the top face (`top` = that face's height),
- *  - a dark recess line along the bottom 0.3 mm of the walls: the seam to the brick (or plate) below,
+ *  - a dark recess line along the bottom 0.5 mm of the walls: the seam to the brick (or plate) below,
+ *  - a stud-row shadow along the top ~0.6 mm of the walls wherever the brick above covers them
+ *    (`setCover`), so two same-hue neighbours still read as two bricks,
  *  - a restrained Fresnel rim on the bevels, the bright edge line of real moulded plastic.
  */
 
@@ -23,6 +25,8 @@ uniform float uSeam;
 uniform float uRim;
 uniform float uPeel;
 uniform vec2 uGrid;
+uniform vec4 uCover;
+uniform float uCovered;
 float mlHash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
 float mlNoise(vec3 x) {
   vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 - 2.0 * f);
@@ -42,6 +46,8 @@ function patch(m: THREE.MeshPhysicalMaterial, { seed, wear, top, seam, rim, peel
     shader.uniforms.uRim = { value: rim };
     shader.uniforms.uPeel = { value: peel };
     shader.uniforms.uGrid = { value: new THREE.Vector2(...grid) };
+    shader.uniforms.uCover = m.userData.uCover;
+    shader.uniforms.uCovered = m.userData.uCovered;
     shader.vertexShader = shader.vertexShader
       .replace("#include <common>", "#include <common>\nattribute float wear;\nvarying float vWear;\nvarying vec3 vObj;")
       .replace(
@@ -69,12 +75,20 @@ if (uTop > 0.0) {
   float mlH = vObj.y - uTop;
   if (mlH > -0.05 && mlH < 1.0) mlAO -= 0.36 * (1.0 - smoothstep(2.32, 3.7, mlR)) * (1.0 - smoothstep(0.0, 1.0, max(mlH, 0.0)));
 }
-float mlSeam = uSeam * (1.0 - smoothstep(0.02, 0.34, vObj.y));
+float mlSeam = uSeam * (1.0 - smoothstep(0.02, 0.5, vObj.y));
+// Under the next brick up: the top fillet and ~0.6 mm of wall below it sit in that brick's shadow.
+float mlCov = 0.0;
+if (uCovered > 0.5 && uTop > 0.0 && vObj.y > uTop - 1.0 && vObj.y < uTop + 0.05) {
+  vec2 mlC = vObj.xz;
+  float mlIn = step(uCover.x - 0.3, mlC.x) * step(mlC.x, uCover.z + 0.3) * step(uCover.y - 0.3, mlC.y) * step(mlC.y, uCover.w + 0.3);
+  mlCov = mlIn * smoothstep(uTop - 1.0, uTop - 0.25, vObj.y);
+}
+mlSeam = max(mlSeam, mlCov * 0.62);
 // Walls get a little less sky near their foot (the brick or plate below shades them): a soft
 // vertical gradient on every wall, brighter towards the top edge, like a studio photo.
 float mlWall = 1.0 - abs((vec4(normalize(vNormal), 0.0) * viewMatrix).y);
 float mlGrad = uTop > 0.0 ? mix(1.0, 0.86 + 0.2 * smoothstep(0.0, uTop, vObj.y), mlWall * step(vObj.y, uTop)) : 1.0;
-diffuseColor.rgb *= mlAO * mlGrad * (1.0 - 0.72 * mlSeam);`,
+diffuseColor.rgb *= mlAO * mlGrad * (1.0 - 0.85 * mlSeam);`,
       )
       .replace(
         "#include <clearcoat_normal_fragment_maps>",
@@ -115,7 +129,7 @@ outgoingLight += vec3(uRim * mlF * mlAO * (1.0 - mlSeam));
 #include <opaque_fragment>`,
       );
   };
-  m.customProgramCacheKey = () => "money-legos-abs-2";
+  m.customProgramCacheKey = () => "money-legos-abs-3";
 }
 
 /**
@@ -138,9 +152,22 @@ export function plasticMaterial(color: string, finish: PlasticFinish = "gloss", 
         }
       : { color: c, roughness: 0.4, metalness: 0, clearcoat: 0.12, clearcoatRoughness: 0.35, ior: 1.53, specularIntensity: 0.45 },
   );
+  m.userData.uCover = { value: new THREE.Vector4() };
+  m.userData.uCovered = { value: 0 };
   const gloss = finish === "gloss";
   // Dark mode: the plate's stud rims mirror the strip lights; a quarter less keeps them plastic, not metal.
   if (!gloss) m.envMapIntensity = dark ? 0.6 : 0.62;
   patch(m, { seed, wear: gloss ? 1 : 0.6, top, seam: gloss ? 1 : 0, rim: (gloss ? 0.1 : 0.05) * (dark ? 0.75 : 1), peel: gloss ? 0.022 : 0.03, grid: [(studs[0] % 2) * 4, (studs[1] % 2) * 4] });
   return m;
+}
+
+/**
+ * Marks the part of a brick's top [x0, z0, x1, z1] (mm, object space) the next brick up stands on, or
+ * null when nothing does. Uniform update only: no recompile.
+ */
+export function setCover(m: THREE.Material, cover: readonly [number, number, number, number] | null) {
+  const u = m.userData as { uCover?: { value: THREE.Vector4 }; uCovered?: { value: number } };
+  if (!u.uCover || !u.uCovered) return;
+  if (cover) u.uCover.value.set(...cover);
+  u.uCovered.value = cover ? 1 : 0;
 }

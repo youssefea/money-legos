@@ -37,13 +37,15 @@ export type SvgBrickProps = {
   label?: { verb: string; name: string; ink: string };
   /** Darken the stud tops less on a baseplate. */
   matte?: boolean;
+  /** Part of the top [x0, z0, x1, z1] (mm) the next brick up covers: the stud-row shadow on the walls. */
+  cover?: readonly [number, number, number, number] | null;
 };
 
 /**
  * A brick drawn as flat SVG in the same view as the 3D board. Origin (bottom centre) is at (0, 0);
  * place it with a transform. Shading: three face gradients, a fillet highlight and stud cylinders.
  */
-export function SvgBrick({ size: [w, d], kind = "brick", color, id, label, matte = false }: SvgBrickProps) {
+export function SvgBrick({ size: [w, d], kind = "brick", color, id, label, matte = false, cover = null }: SvgBrickProps) {
   const W = w * DIM.pitch - DIM.gap;
   const D = d * DIM.pitch - DIM.gap;
   const H = kind === "brick" ? DIM.plate * 3 : DIM.plate;
@@ -66,6 +68,20 @@ export function SvgBrick({ size: [w, d], kind = "brick", color, id, label, matte
     }
   }
   studs.sort((a, b) => depth(a.c) - depth(b.c));
+
+  // Stud-row shadow: the top ~0.6 mm of each visible wall the brick above covers.
+  const band: [number, number][][] = [];
+  if (cover) {
+    const B = 0.9;
+    if (cover[3] >= z1 - 0.3) {
+      const a = Math.max(x0, cover[0]), b = Math.min(x1, cover[2]);
+      if (b > a) band.push([P([a, H, z1]), P([b, H, z1]), P([b, H - B, z1]), P([a, H - B, z1])]);
+    }
+    if (cover[2] >= x1 - 0.3) {
+      const a = Math.max(z0, cover[1]), b = Math.min(z1, cover[3]);
+      if (b > a) band.push([P([x1, H, a]), P([x1, H, b]), P([x1, H - B, b]), P([x1, H - B, a])]);
+    }
+  }
 
   let print = null;
   if (label) {
@@ -112,6 +128,10 @@ export function SvgBrick({ size: [w, d], kind = "brick", color, id, label, matte
           <stop offset="0.55" stopColor={shade(color, -0.1)} />
           <stop offset="1" stopColor={shade(color, -0.32)} />
         </linearGradient>
+        <linearGradient id={`${id}-cov`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#0a0b0d" stopOpacity={0.5} />
+          <stop offset="1" stopColor="#0a0b0d" stopOpacity={0} />
+        </linearGradient>
       </defs>
       <polygon points={pts(front)} fill={`url(#${id}-f)`} />
       <polygon points={pts(side)} fill={`url(#${id}-s)`} />
@@ -120,7 +140,10 @@ export function SvgBrick({ size: [w, d], kind = "brick", color, id, label, matte
       <polyline points={pts([top[3]!, top[2]!, top[1]!])} fill="none" stroke="rgba(255,255,255,.6)" strokeWidth={0.32} strokeLinejoin="round" />
       <polyline points={pts([front[1]!, front[2]!])} fill="none" stroke="rgba(255,255,255,.35)" strokeWidth={0.28} />
       {/* recess seam at the bottom edge: reads as the joint to the brick below */}
-      <polyline points={pts([front[3]!, front[2]!, side[3]!])} fill="none" stroke="rgba(10,11,13,.55)" strokeWidth={0.32} strokeLinejoin="round" />
+      <polyline points={pts([front[3]!, front[2]!, side[3]!])} fill="none" stroke="rgba(10,11,13,.7)" strokeWidth={0.5} strokeLinejoin="round" />
+      {band.map((q, k) => (
+        <polygon key={k} points={pts(q)} fill={`url(#${id}-cov)`} />
+      ))}
       {print}
       {studs.map((s, k) => (
         <g key={k}>

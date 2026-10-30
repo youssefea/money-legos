@@ -5,10 +5,10 @@ import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import type { PlacedBrick } from "@/lib/contract";
 import { DIM } from "../core/dims";
-import { jitter, poseFor } from "../core/layout";
+import { jitter, poseFor, type Cover } from "../core/layout";
 import { brickGeometry, frontFace } from "./geometry";
 import { labelTexture } from "./labelTexture";
-import { plasticMaterial } from "./material";
+import { plasticMaterial, setCover } from "./material";
 import { useMotion } from "./motion";
 
 /* Timings in ms. Drop: ~14 mm fall, impact, 6% squash with a tiny rebound, about 300 ms in all. */
@@ -47,18 +47,26 @@ export type StackBrickProps = {
   bounceSignal: number;
   /** Stack index (0 = bottom), staggers the hop by 60 ms. */
   index: number;
+  /** Part of this brick's top the next brick up covers (stud-row shadow), null if none. */
+  cover?: Cover | null;
   fontsReady: boolean;
   onSettled?: (id: string) => void;
   onLeft?: (id: string) => void;
 };
 
-export function StackBrick({ brick, drop, leaving, reducedMotion, bounceSignal, index, fontsReady, onSettled, onLeft }: StackBrickProps) {
+export function StackBrick({ brick, drop, leaving, reducedMotion, bounceSignal, index, cover = null, fontsReady, onSettled, onLeft }: StackBrickProps) {
   const [w, d] = brick.size;
   const plates = brick.kind === "plate" ? 1 : 3;
   const geometry = useMemo(() => brickGeometry({ w, d, plates }), [w, d, plates]);
   const seed = jitter(brick.id, 9);
   const material = useMemo(() => plasticMaterial(brick.color, "gloss", seed, plates * DIM.plate, false, [w, d]), [brick.color, seed, plates, w, d]);
   useEffect(() => () => material.dispose(), [material]);
+  const coverKey = cover ? cover.map((n) => n.toFixed(2)).join(",") : "";
+  const invalidateNow = useThree((s) => s.invalidate);
+  useEffect(() => {
+    setCover(material, coverKey ? (coverKey.split(",").map(Number) as unknown as Cover) : null);
+    invalidateNow();
+  }, [material, coverKey, invalidateNow]);
 
   const face = frontFace(w, plates);
   const D = d * DIM.pitch - DIM.gap;

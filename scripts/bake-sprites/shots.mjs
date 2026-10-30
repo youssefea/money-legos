@@ -1,4 +1,4 @@
-// QA screenshots of the brick layer -> ../design/bricks-shots-v3/ (or OUT=dir). Real GPU, bundled Chromium.
+// QA screenshots of the brick layer -> ../design/bricks-shots-v5/ (or OUT=dir). Real GPU, bundled Chromium.
 // node scripts/bake-sprites/shots.mjs   [ONLY=substring]
 // Stages are drawn in fixed-size panels: desktop board panel 567x520 and the phone scene region 144x130.
 import { chromium } from "playwright";
@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { serve, GPU_ARGS } from "./serve.mjs";
 
 const repo = fileURLToPath(new URL("../..", import.meta.url));
-const out = process.env.OUT ?? path.join(repo, "../design/bricks-shots-v3");
+const out = process.env.OUT ?? path.join(repo, "../design/bricks-shots-v5");
 fs.mkdirSync(out, { recursive: true });
 const STACKS = { 0: "", 1: "b20", 3: "b20,payments,validity", 4: "b20,payments,validity,speed" };
 // [panel, viewport w, h, dpr]
@@ -25,10 +25,12 @@ for (const [v, [box, w, h, dpr]] of Object.entries(VIEWS)) {
 }
 for (const theme of ["light", "dark"]) jobs.push([`sprites-${theme}`, `?only=sprites${theme === "dark" ? "&dark=1" : ""}`, [1440, 900, 2], true]);
 jobs.push(["sprites-light-phone", "?only=sprites", [390, 844, 3], true]);
+jobs.push(["stage-light-desktop-ghost2x2", "?only=stage&box=567x520&ids=b20&ghost=2x2", [640, 580, 2]]);
 jobs.push(["layout-boxes-light-desktop-mixed", "?only=stage&box=567x520&mix=1&n=3&layoutbox=1", [640, 580, 2]]);
 jobs.push(["layout-boxes-svg-light-desktop-mixed", "?only=svg&box=567x520&mix=1&n=3&layoutbox=1", [640, 580, 2]]);
 
 const only = process.env.ONLY;
+const cams = {};
 const s = await serve();
 const browser = await chromium.launch({ args: GPU_ARGS });
 try {
@@ -43,8 +45,15 @@ try {
     const info = await page.evaluate(() => {
       const st = document.querySelector("[data-testid=brick-stage]");
       const c = document.querySelector("canvas");
-      return st ? `${st.getAttribute("data-renderer")} plate=${c?.dataset.platePx ?? "-"}px top=${st.getAttribute("data-stack-top")}` : "";
+      return st ? `${st.getAttribute("data-renderer")} plate=${c?.dataset.platePx ?? "-"}px top=${st.getAttribute("data-stack-top")} ghost=${st.getAttribute("data-ghost") ?? "-"} cam=${c?.dataset.camera ?? "-"}` : "";
     });
+    // The board is framed once per panel size: the camera must not move between stacks.
+    const cam = /cam=(\S+)/.exec(info)?.[1];
+    if (cam && cam !== "-" && name.startsWith("stage-")) {
+      const key = /box=([\dx]+)/.exec(q)?.[1] + (q.includes("dark=1") ? "d" : "");
+      if (cams[key] && cams[key] !== cam) throw new Error(`camera moved for ${name}: ${cam} vs ${cams[key]}`);
+      cams[key] = cam;
+    }
     const panel = page.getByTestId("box-panel");
     if (await panel.count()) await panel.screenshot({ path: path.join(out, `${name}.png`) });
     else await page.screenshot({ path: path.join(out, `${name}.png`), fullPage: Boolean(fullPage) });

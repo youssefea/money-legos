@@ -2,24 +2,47 @@
   animation: ghost-in 240ms cubic-bezier(0.23, 1, 0.32, 1) 280ms both;
 }
 
-.bob {
-  animation: ghost-bob 2.4s ease-in-out infinite;
+/* Breathing: a slow 2% swell around the volume's own centre. */
+.breathe {
+  transform-box: fill-box;
+  transform-origin: 50% 60%;
+  animation: ghost-breathe 1.6s ease-in-out infinite;
 }
 
-.outline {
+.body {
+  fill: var(--ghost-color);
+  fill-opacity: 0.08;
+  stroke: none;
+}
+
+.lid {
+  fill: var(--ghost-color);
+  fill-opacity: 0.06;
+  stroke: none;
+}
+
+.edge {
   fill: none;
   stroke: var(--ghost-color);
-  stroke-width: 2px;
-  stroke-dasharray: 6 5;
+  stroke-opacity: 0.85;
+  stroke-width: 1.5px;
+  stroke-dasharray: 5 4;
   stroke-linecap: round;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
 }
 
-/* Upright numeral with a halo in the page colour, so it stays legible over studs. */
+/* Thumbnail board: hairline edges, tighter dashes. */
+.small .edge {
+  stroke-width: 1px;
+  stroke-dasharray: 3 3;
+}
+
+/* Upright numeral with a halo in the page colour, so it stays legible over the studs behind. */
 .numeral {
   fill: var(--ghost-color);
   stroke: var(--ghost-halo);
+  stroke-opacity: 0.7;
   stroke-linejoin: round;
   paint-order: stroke;
   font-family: var(--font-mono);
@@ -43,13 +66,13 @@
   }
 }
 
-@keyframes ghost-bob {
+@keyframes ghost-breathe {
   0%,
   100% {
-    transform: translateY(0);
+    transform: scale(1);
   }
   50% {
-    transform: translateY(var(--ghost-bob, -3px));
+    transform: scale(1.02);
   }
 }
 
