@@ -12,7 +12,7 @@ export function buildPrompt(r: Omit<GenerateResult, "prompt">): string {
   lines.push(`Build a first working version of "${r.name}" on Base.`);
   lines.push(r.pitch);
   lines.push("");
-  lines.push("Money Legos to use, in flow order:");
+  lines.push("Bricks to use, in flow order:");
   r.steps.forEach((s, i) => {
     lines.push(`${i + 1}. ${s.lego.name}: ${s.lego.build}`);
     for (const d of s.docs) lines.push(`   Docs: ${d.url}`);
@@ -20,7 +20,7 @@ export function buildPrompt(r: Omit<GenerateResult, "prompt">): string {
   lines.push("");
   lines.push("Flow: " + r.steps.map((s) => s.lego.name).join(" → "));
   lines.push("");
-  lines.push("Where each Lego stands today:");
+  lines.push("Where each brick stands today:");
   for (const s of r.steps) {
     if (DENIM_IDS.includes(s.lego.id)) continue;
     lines.push(`- ${s.lego.name}: ${s.lego.status.label}.`);
@@ -40,7 +40,7 @@ export function buildPrompt(r: Omit<GenerateResult, "prompt">): string {
     `- Test on Base Sepolia only. Use the Vibenet hub (${RES.vibenet}) and faucet (${RES.faucet}) for test funds.`,
   );
   if (r.steps.some((s) => s.lego.status.kind === "announced")) {
-    lines.push("- Some Legos here are announced but not released. Build a fallback that works today and keep the new path behind a flag.");
+    lines.push("- Some of these bricks are announced but not released. Build a fallback that works today and keep the new path behind a flag.");
   }
   if (has("financing")) lines.push("- Show in the UI that yield is variable, not guaranteed.");
   if (has("borrow")) lines.push("- Show that borrow rates are variable, and show the loan’s health and liquidation risk before the user confirms.");

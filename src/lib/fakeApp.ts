@@ -1,6 +1,6 @@
 import { flowOrder } from "./generate";
 import { BY_ID, resolveId } from "./legos";
-import type { FakeApp, FakeTile, LegoId } from "./types";
+import type { FakeApp, FakeTile, LegoId, UiTemplate } from "./types";
 
 /** Invented brand used on every fake-app screen. Never a real company. */
 export const FAKE_BRAND = "Acme";
@@ -53,4 +53,41 @@ export function tileStrings(t: Pick<FakeTile, "title" | "value" | "cta" | "chip"
   return [t.title, t.value, t.cta, t.chip, ...(t.rows ?? []).map((r) => `${r[0]} ${r[1]}`)].filter(
     (s): s is string => typeof s === "string" && s.length > 0,
   );
+}
+
+/**
+ * How a tile sits in the fake app. One dominant `hero` module (the first balance, checkout, earn,
+ * order or swap tile, by that priority; else the first non-status tile), confirmations and notices as
+ * slim `status` rows, everything else as compact `row` modules.
+ */
+export type TileRole = "hero" | "row" | "status";
+
+const HERO_PRIORITY: readonly UiTemplate[] = ["balance", "checkout", "earn", "order", "swap"];
+const STATUS_TEMPLATES: readonly UiTemplate[] = ["toast", "pill"];
+
+/** One role per tile, in tile order. */
+export function tileRoles(tiles: readonly Pick<FakeTile, "template">[]): TileRole[] {
+  let hero = -1;
+  for (const t of HERO_PRIORITY) {
+    hero = tiles.findIndex((x) => x.template === t);
+    if (hero >= 0) break;
+  }
+  if (hero < 0) hero = tiles.findIndex((x) => !STATUS_TEMPLATES.includes(x.template));
+  return tiles.map((t, i) => (i === hero ? "hero" : STATUS_TEMPLATES.includes(t.template) ? "status" : "row"));
+}
+
+const WIRE_LABEL: Partial<Record<UiTemplate, string>> = {
+  balance: "Balance",
+  checkout: "Checkout",
+  toast: "Confirmation",
+  earn: "Earn",
+  order: "Limit order",
+  swap: "Swap",
+  signin: "Sign in",
+  qr: "Pay by QR",
+};
+
+/** Short module title for the wireframe shown before Build app ("Checkout", "Balance"...). */
+export function wireLabel(tile: Pick<FakeTile, "template" | "title">): string {
+  return WIRE_LABEL[tile.template] ?? tile.title;
 }

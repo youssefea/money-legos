@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { baseSans, baseSansMono } from "./fonts";
 import "../styles/globals.css";
 
-const description = "Pick 2 to 4 Base building blocks. Get an app idea and a prompt for your coding agent.";
+const description = "Snap Base bricks together. Preview a money app. Copy the prompt for your coding agent.";
 
 export const metadata: Metadata = {
   title: "Money Legos | Base",

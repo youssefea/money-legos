@@ -467,8 +467,8 @@ describe("fake app", () => {
 
   it("matches the spec examples for the hero tiles", () => {
     expect(BY_ID.b20.ui).toMatchObject({ template: "balance", title: "ACME USD", value: "$1,240.00" });
-    expect(BY_ID.payments.ui).toMatchObject({ template: "checkout", cta: "Pay 12.00" });
-    expect(BY_ID.speed.ui).toMatchObject({ template: "toast", title: "Confirmed in 0.2s", chip: "200ms" });
+    expect(BY_ID.payments.ui).toMatchObject({ template: "checkout", cta: "Pay $12.00" });
+    expect(BY_ID.speed.ui).toMatchObject({ template: "toast", title: "Confirmed on Sepolia", chip: "200ms" });
     expect(BY_ID.financing.ui).toMatchObject({ template: "earn", value: "Variable APY" });
     expect(BY_ID.validity.ui).toMatchObject({ template: "order", cta: "Place order" });
     expect(BY_ID["sponsored-gas"].ui.title).toBe("No gas fee");

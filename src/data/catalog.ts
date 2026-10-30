@@ -124,7 +124,7 @@ export const CATALOG: readonly CatalogEntry[] = [
     flow: 31,
     brand: "Pay",
     uiModule: "checkout sheet",
-    ui: { template: "checkout", title: "Order #1042", value: "12.00", cta: "Pay 12.00" },
+    ui: { template: "checkout", title: "Order #1042", value: "$12.00", cta: "Pay $12.00" },
   },
   {
     id: "financing",
@@ -172,7 +172,7 @@ export const CATALOG: readonly CatalogEntry[] = [
     flow: 50,
     brand: "Trade",
     uiModule: "limit order form",
-    ui: { template: "order", title: "Limit order", value: "Buy at 0.98", cta: "Place order" },
+    ui: { template: "order", title: "Limit order", value: "Buy at $0.98", cta: "Place order" },
   },
   {
     id: "speed",
@@ -197,7 +197,7 @@ export const CATALOG: readonly CatalogEntry[] = [
     flow: 72,
     brand: "Now",
     uiModule: "confirmed in 0.2s toast",
-    ui: { template: "toast", title: "Confirmed in 0.2s", chip: "200ms" },
+    ui: { template: "toast", title: "Confirmed on Sepolia", chip: "200ms" },
   },
   {
     id: "base-pay",
@@ -220,7 +220,7 @@ export const CATALOG: readonly CatalogEntry[] = [
     flow: 30,
     brand: "Pay",
     uiModule: "pay with USDC button",
-    ui: { template: "qr", title: "Scan to pay", value: "10.50" },
+    ui: { template: "qr", title: "Scan to pay", value: "$10.50" },
   },
   {
     id: "escrow",
@@ -244,7 +244,7 @@ export const CATALOG: readonly CatalogEntry[] = [
     flow: 33,
     brand: "Market",
     uiModule: "payment on hold badge",
-    ui: { template: "badge", title: "Payment on hold", value: "12.00", chip: "Held" },
+    ui: { template: "badge", title: "Payment on hold", value: "$12.00", chip: "Held" },
   },
   {
     id: "subscriptions",
@@ -268,7 +268,7 @@ export const CATALOG: readonly CatalogEntry[] = [
     flow: 32,
     brand: "Plus",
     uiModule: "plan card with renew date",
-    ui: { template: "rows", title: "Pro plan", rows: [["Monthly", "5.00"], ["Renews", "Jun 1"]] },
+    ui: { template: "rows", title: "Pro plan", rows: [["Monthly", "$5.00"], ["Renews", "Jun 1"]] },
   },
   {
     id: "refunds",
@@ -292,7 +292,7 @@ export const CATALOG: readonly CatalogEntry[] = [
     flow: 43,
     brand: "Store",
     uiModule: "refund button with receipt",
-    ui: { template: "checkout", title: "Receipt #1042", value: "12.00", cta: "Refund" },
+    ui: { template: "checkout", title: "Receipt #1042", value: "$12.00", cta: "Refund" },
   },
   {
     id: "payouts",
@@ -315,7 +315,7 @@ export const CATALOG: readonly CatalogEntry[] = [
     flow: 42,
     brand: "Payouts",
     uiModule: "payout list with totals",
-    ui: { template: "list", title: "Payouts", cta: "Send all", rows: [["12 people", "1,200.00"]] },
+    ui: { template: "list", title: "Payouts", cta: "Send all", rows: [["12 people", "$1,200.00"]] },
   },
   {
     id: "splits",
@@ -571,7 +571,7 @@ export const CATALOG: readonly CatalogEntry[] = [
     flow: 20,
     brand: "Stocks",
     uiModule: "stock list with tickers",
-    ui: { template: "list", title: "Stocks", rows: [["ACME", "12.40"], ["DEMO", "8.10"]] },
+    ui: { template: "list", title: "Stocks", rows: [["ACME", "$12.40"], ["DEMO", "$8.10"]] },
   },
   {
     id: "verify",
@@ -586,7 +586,7 @@ export const CATALOG: readonly CatalogEntry[] = [
     example: "A claim page checks Base Verify so each real person can claim only once.",
     docs: ["verify", "verifySocialAccounts"],
     size: [2, 2],
-    color: "speed",
+    color: "tan",
     fragments: { adj: "verified", noun: "member portal", does: "gates steps to verified users" },
     step: "Gate a step with Verify",
     role: "Lets only verified people reach a key step, with Base Verify.",
@@ -610,7 +610,7 @@ export const CATALOG: readonly CatalogEntry[] = [
     example: "An airdrop contract lets each verified person claim once, with no server in the loop.",
     docs: ["verifyUsersOnchain"],
     size: [2, 1],
-    color: "speed",
+    color: "lime",
     fragments: { adj: "fair", noun: "claim page", does: "enforces one claim per person" },
     step: "Check identity onchain",
     build: "Check a short-lived Base Verify signature in the contract so each person counts once.",
@@ -850,7 +850,7 @@ export const CATALOG: readonly CatalogEntry[] = [
     flow: 34,
     brand: "API",
     uiModule: "price per call tag",
-    ui: { template: "stat", title: "Price per call", value: "0.01" },
+    ui: { template: "stat", title: "Price per call", value: "$0.01" },
   },
   {
     id: "usage-billing",
@@ -873,7 +873,7 @@ export const CATALOG: readonly CatalogEntry[] = [
     flow: 35,
     brand: "Meter",
     uiModule: "usage meter",
-    ui: { template: "meter", title: "Usage", value: "3.20 of 5.00" },
+    ui: { template: "meter", title: "Usage", value: "$3.20 of $5.00" },
   },
   {
     id: "agent-spend",
@@ -896,7 +896,7 @@ export const CATALOG: readonly CatalogEntry[] = [
     flow: 36,
     brand: "Agent",
     uiModule: "spend limit slider",
-    ui: { template: "meter", title: "Agent allowance", value: "1.00 per session" },
+    ui: { template: "meter", title: "Agent allowance", value: "$1.00 a session" },
   },
   {
     id: "agent-codes",
