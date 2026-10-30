@@ -1,10 +1,10 @@
-/* Phone sticky bar: a boxed 116px card. [mini stack 136x76] | n/4 + need | Generate */
+/* Compact sticky bar: a boxed 116px card. [mini stack 144x88] | n/4 + need | Generate 96x48 */
 .bar {
   position: sticky;
   top: 8px;
   z-index: 20;
   display: grid;
-  grid-template-columns: var(--mini-w, 136px) 1fr auto;
+  grid-template-columns: var(--mini-w, 144px) 1fr auto;
   align-items: center;
   height: var(--mobile-bar-height);
   margin: var(--space-4) 0 0;
@@ -15,8 +15,8 @@
 }
 
 .stage {
-  width: var(--mini-w, 136px);
-  height: var(--mini-h, 76px);
+  width: var(--mini-w, 144px);
+  height: var(--mini-h, 88px);
 }
 
 .count {
@@ -47,8 +47,8 @@
 }
 
 .generate {
-  min-height: 48px;
-  min-width: 88px;
+  height: 48px;
+  min-width: 96px;
   padding: 0 var(--space-3);
   border: 1px solid var(--base-blue);
   border-radius: var(--radius-md);

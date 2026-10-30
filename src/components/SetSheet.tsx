@@ -15,7 +15,7 @@ export type SetSheetProps = {
 };
 
 /**
- * Phone only: the set box as a modal bottom sheet (native <dialog>: focus is trapped and
+ * Compact layouts (<1024px): the set box as a modal bottom sheet (native <dialog>: focus is trapped and
  * Escape closes). Focus goes to the app name; the caller returns focus on close.
  */
 export default function SetSheet({ open, result, copied, onCopied, onClose }: SetSheetProps) {

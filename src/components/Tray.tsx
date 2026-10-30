@@ -2,6 +2,7 @@
 
 import { useId, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import BrickSprite from "@/components/bricks/BrickSprite";
+import { SPRITE_META } from "@/components/bricks/spriteMeta";
 import { HERO_LEGOS, MAX_LEGOS, MORE_LEGOS, type Lego, type LegoId } from "@/lib";
 import LegoDetail from "./LegoDetail";
 import styles from "./Tray.module.css";
@@ -25,7 +26,8 @@ const Check = () => (
 
 /**
  * The Lego picker: 5 hero rows (sprite + verb · name + one-line tag + info), then 8 more behind a
- * disclosure. Every brick is a real button; a placed brick shows ON BOARD and removes on press.
+ * disclosure. Every brick is a real button; a placed brick shows an ON BOARD pill and Remove in its
+ * text column (never on the sprite) and removes on press.
  */
 export default function Tray({ ids, fullHint, onToggle, onPointerDown, wasDrag, dragging }: TrayProps) {
   const [more, setMore] = useState(false);
@@ -76,16 +78,10 @@ export default function Tray({ ids, fullHint, onToggle, onPointerDown, wasDrag, 
             if (wasDrag()) return;
             onToggle(lego.id);
           }}
-          style={{ "--brick-label": lego.brick.label } as CSSProperties}
+          style={{ "--brick-label": lego.brick.label, "--sprite-aspect": String(SPRITE_META[lego.id]?.aspect ?? 1.54) } as CSSProperties}
         >
           <span className={styles.art}>
             <BrickSprite id={lego.id} color={lego.brick.hex} size={lego.size} className={styles.sprite} />
-            {placed && (
-              <span className={styles.badge}>
-                <Check />
-                On board
-              </span>
-            )}
           </span>
           <span className={styles.text}>
             <span className={styles.title}>
@@ -98,6 +94,10 @@ export default function Tray({ ids, fullHint, onToggle, onPointerDown, wasDrag, 
             </span>
             {placed ? (
               <span className={styles.placed}>
+                <span className={styles.badge}>
+                  <Check />
+                  On board
+                </span>
                 <span className={styles.remove} aria-hidden="true">
                   <svg viewBox="0 0 12 12" width="10" height="10">
                     <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -106,7 +106,7 @@ export default function Tray({ ids, fullHint, onToggle, onPointerDown, wasDrag, 
                 </span>
               </span>
             ) : (
-              <span id={tagId} className={styles.tag}>
+              <span id={tagId} className={styles.tag} data-start={start || undefined}>
                 {lego.tag}
               </span>
             )}

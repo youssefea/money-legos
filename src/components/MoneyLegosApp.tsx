@@ -71,7 +71,7 @@ export default function MoneyLegosApp() {
     else revealRef.current = true;
   };
 
-  // Tablet (768-1279): the set box sits below the stage, so bring it into view and focus its title.
+  // Wide tablet (1024-1279): the set box sits below the stage, so bring it into view and focus its title.
   useEffect(() => {
     if (!revealRef.current) return;
     revealRef.current = false;
@@ -172,6 +172,7 @@ export default function MoneyLegosApp() {
             active={state.recipe}
             onPick={onRecipe}
             idPrefix="mobile"
+            layout="scroll"
             lead={[
               <button key="surprise" type="button" className={styles.smallButton} onClick={onSurprise}>
                 Surprise me

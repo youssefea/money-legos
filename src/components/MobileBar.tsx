@@ -16,12 +16,12 @@ export type MobileBarProps = {
   live: boolean;
   generateRef: RefObject<HTMLButtonElement | null>;
   onGenerate: () => void;
-  /** Mini stack container size in CSS px (the live board auto-fits inside it). Default 136x76. */
+  /** Mini stack container size in CSS px (the live board auto-fits inside it). Default 144x88. */
   stageSize?: [number, number];
 };
 
-/** Phone only: sticky bar with the live mini stack, "n/4" and Generate. */
-export default function MobileBar({ generateRef, stageSize = [136, 76], ...p }: MobileBarProps) {
+/** Compact layouts (<1024px): sticky bar with the live mini stack, "n/4" and Generate. */
+export default function MobileBar({ generateRef, stageSize = [144, 88], ...p }: MobileBarProps) {
   const count = p.ids.length;
   const ready = count >= MIN_LEGOS;
   const need = requirementText(count);

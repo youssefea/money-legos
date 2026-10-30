@@ -608,3 +608,49 @@
     --box-stud-fill: var(--base-gray-80);
   }
 }
+
+/* ---------------------------------------------------------- bottom sheet (phone + tablet <1024)
+ * band | scrolling details + prompt | 72px pinned action area: [Back to Legos] [Copy prompt]. */
+.sheetCard {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.sheetScroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.sheetCard .band {
+  border-radius: var(--radius-card);
+}
+.actions {
+  flex: none;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-4);
+  border-top: 1px solid var(--color-hairline);
+  background: var(--color-surface);
+}
+.actions .copy {
+  flex: 1;
+  min-height: 48px;
+}
+.back {
+  flex: none;
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-fg);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-fg);
+  font: inherit;
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}

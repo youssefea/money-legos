@@ -25,9 +25,9 @@ export const COMBOS: readonly Combo[] = [
     ids: ["stocks", "swaps", "validity", "speed"],
     name: "Neobroker",
     pitch:
-      "Browse tokenized stocks, swap in-app, and place conditional orders that are included only while your terms hold.",
+      "Browse tokenized stocks, swap in-app, and place orders that go through only when your terms are met.",
     why: {
-      validity: "Turns a signed order into a limit order with no keeper bot — included only while its conditions hold.",
+      validity: "Turns a signed order into a limit order with no keeper bot: it goes through only when its conditions are met.",
     },
   },
   {
@@ -73,7 +73,7 @@ export const COMBOS: readonly Combo[] = [
   {
     ids: ["b20", "validity"],
     name: "Tokenized asset limit orders",
-    pitch: "Issue a tokenized asset with B20 and let holders sign limit orders that are included only while their terms hold.",
+    pitch: "Issue a tokenized asset with B20 and let holders sign limit orders that go through only when their terms are met.",
   },
   {
     ids: ["b20", "speed"],
@@ -89,7 +89,7 @@ export const COMBOS: readonly Combo[] = [
   {
     ids: ["payments", "validity"],
     name: "Conditional payments",
-    pitch: "Sign a payment now that is included only while your conditions hold — say, a minimum balance or a block deadline.",
+    pitch: "Sign a payment now that goes through only when your conditions are met — say, a minimum balance or a block deadline.",
   },
   {
     ids: ["payments", "speed"],
@@ -99,7 +99,7 @@ export const COMBOS: readonly Combo[] = [
   {
     ids: ["financing", "validity"],
     name: "Conditional lending manager",
-    pitch: "Sign a repay or withdraw now, included only while the onchain conditions you set still hold.",
+    pitch: "Sign a repay or withdraw now; it goes through only when the onchain conditions you set are met.",
   },
   {
     ids: ["financing", "speed"],
@@ -109,7 +109,7 @@ export const COMBOS: readonly Combo[] = [
   {
     ids: ["validity", "speed"],
     name: "Keeperless limit orders",
-    pitch: "Limit orders signed once and included only while their conditions hold, on 200ms blocks — no keeper bot.",
+    pitch: "Limit orders you sign once that go through only when their conditions are met, on 200ms blocks — no keeper bot.",
   },
 
   // Featured triples
@@ -127,18 +127,18 @@ export const COMBOS: readonly Combo[] = [
   {
     ids: ["b20", "validity", "speed"],
     name: "Tokenized asset trading desk",
-    pitch: "Issue tokenized assets with B20 and let holders sign conditional orders, included on 200ms blocks.",
+    pitch: "Issue tokenized assets with B20 and let holders sign conditional orders that settle in 200ms blocks.",
   },
   {
     ids: ["b20", "payments", "validity"],
     name: "Conditional invoicing",
     pitch:
-      "Invoice in your own B20 stablecoin and let payers sign a payment that is included only while their conditions hold.",
+      "Create an invoice in your own B20 stablecoin that customers can pay when its conditions are met.",
   },
   {
     ids: ["payments", "validity", "speed"],
     name: "Instant conditional payments",
-    pitch: "Payments signed upfront, included only while their conditions hold, and confirmed in a 200ms block.",
+    pitch: "Payments signed upfront that go through only when their conditions are met, confirmed in a 200ms block.",
   },
   {
     ids: ["payments", "financing", "speed"],
@@ -149,7 +149,7 @@ export const COMBOS: readonly Combo[] = [
   {
     ids: ["financing", "validity", "speed"],
     name: "Hands-off lending manager",
-    pitch: "Lending and borrowing moves signed ahead of time, included only while your conditions hold, on 200ms blocks.",
+    pitch: "Lending and borrowing moves signed ahead of time that go through only when your conditions are met, on 200ms blocks.",
   },
   {
     ids: ["b20", "financing", "validity"],
@@ -172,7 +172,7 @@ export const COMBOS: readonly Combo[] = [
   {
     ids: ["swaps", "validity"],
     name: "Keeperless swap orders",
-    pitch: "Swap via the 0x Swap API with orders signed once and included only while their conditions hold.",
+    pitch: "Swap via the 0x Swap API with orders you sign once that go through only when their conditions are met.",
   },
   {
     ids: ["stocks", "swaps"],
@@ -182,7 +182,7 @@ export const COMBOS: readonly Combo[] = [
   {
     ids: ["stocks", "validity"],
     name: "Conditional stock orders",
-    pitch: "Show tokenized stocks and let people sign orders that are included only while their conditions hold.",
+    pitch: "Show tokenized stocks and let people sign orders that go through only when their conditions are met.",
   },
   {
     ids: ["b20", "stocks"],

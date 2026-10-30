@@ -1,8 +1,8 @@
 /*
  * Page grid (DESIGN-SPEC v2):
  *  >=1280px  three columns, 100dvh, no page scroll
- *  768-1279  tray | board, result full width below, page scrolls
- *  <768      header, hero, sticky compact bar, recipes, 2-col tray; result is a bottom sheet
+ *  1024-1279 tray | board, result full width below, page scrolls
+ *  <1024     header, hero, sticky compact bar, recipes, 2-col tray; result is a bottom sheet
  */
 
 .page {
@@ -196,19 +196,8 @@
   }
 }
 
-/* ---------------------------------------------------------------- phone */
-@media (max-width: 767.98px) {
-  .page {
-    --page-pad-x: 16px;
-    padding-top: var(--space-3);
-    overflow-x: clip;
-  }
-  .hero {
-    margin-top: var(--space-3);
-  }
-  .h1 {
-    font-size: clamp(32px, 9vw, 40px);
-  }
+/* ---------------------------------------------------------------- compact (phone + tablet <1024) */
+@media (max-width: 1023.98px) {
   .rail {
     display: none;
   }
@@ -228,6 +217,25 @@
     display: block;
     margin-top: var(--space-3);
   }
+  .boardPanel,
+  .resultCol {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------- phone */
+@media (max-width: 767.98px) {
+  .page {
+    --page-pad-x: 16px;
+    padding-top: var(--space-3);
+    overflow-x: clip;
+  }
+  .hero {
+    margin-top: var(--space-3);
+  }
+  .h1 {
+    font-size: clamp(32px, 9vw, 40px);
+  }
   .subline {
     font-size: 15px;
     line-height: 20px;
@@ -236,9 +244,5 @@
   .trayPanel {
     padding: 0;
     border: 0;
-  }
-  .boardPanel,
-  .resultCol {
-    display: none;
   }
 }

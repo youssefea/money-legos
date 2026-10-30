@@ -54,7 +54,8 @@
   overflow: auto;
   container-type: size;
   margin: 0 calc(var(--space-2) * -1);
-  padding: 0 var(--space-2);
+  /* 8px under the header + the tray gap = 16px of clear space above the first sprite. */
+  padding: var(--space-2) var(--space-2) 0;
   scrollbar-width: thin;
 }
 
@@ -68,18 +69,18 @@
 .hero {
   display: flex;
   flex-direction: column;
+  gap: var(--space-2);
   height: 100%;
   min-height: 0;
 }
 
 /*
- * Hero row: [sprite][verb · name / tag][(i)]. The sprite is sized by width only (BrickSprite keeps
- * its aspect); --sprite-ratio is the visible brick's width / height so five rows fit the column.
- * Sprites overflow their row by 4px top and bottom: a -8px cascade between rows.
+ * Hero row: [sprite][verb / name / tag or status][(i)]. The sprite is sized by CSS width only;
+ * BrickSprite keeps the baked aspect (--sprite-aspect, set per row from spriteMeta) so the box
+ * height is exact. Five rows + four 8px gaps fit the column; rows never overlap.
  */
 .item {
-  --sprite-ratio: 2.08;
-  --art-w: clamp(132px, calc((100cqh / 5 + 8px) * var(--sprite-ratio)), var(--tray-art-max));
+  --art-w: clamp(120px, calc((100cqh - 4 * var(--space-2)) / 5 * var(--sprite-aspect, 1.54)), var(--tray-art-max));
   position: relative;
   flex: 1 1 0;
   min-height: 64px;
@@ -115,7 +116,6 @@
   z-index: 0;
   flex: none;
   width: var(--art-w);
-  margin-block: -4px;
   transition: transform var(--dur-fast) var(--ease-out), opacity var(--dur-base) var(--ease-hover);
 }
 .sprite {
@@ -157,6 +157,7 @@
 }
 .title > .name {
   flex-basis: 100%;
+  margin-top: 2px;
 }
 .verb {
   font-weight: var(--weight-bold);
@@ -204,17 +205,16 @@
 .item[data-placed] .art {
   opacity: 0.55;
 }
+/* Status row in the text column: [✓ ON BOARD] [× Remove], 8px apart. Never on the sprite. */
 .placed {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  gap: 4px var(--space-2);
+  margin-top: 4px;
 }
-/* The ON BOARD pill sits on the faded brick, fully opaque. */
 .badge {
-  position: absolute;
-  z-index: 1;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
+  flex: none;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -226,7 +226,8 @@
   color: var(--base-gray-100);
   font-family: var(--font-mono);
   font-weight: var(--weight-medium);
-  font-size: 11px;
+  font-size: 12px;
+  line-height: 16px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -268,10 +269,10 @@
   background: var(--color-panel);
 }
 
-/* First-action cue, anchored to the first brick while nothing is placed. */
+/* First-action cue: a pill in the first row's text column while nothing is placed. */
 .start {
   align-self: flex-start;
-  margin-top: 2px;
+  margin-top: 4px;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -362,14 +363,17 @@
     font-size: 18px;
     line-height: 24px;
   }
+  .name,
   .tag,
   .remove {
     font-size: 16px;
-    line-height: 20px;
+    line-height: 22px;
   }
   .badge {
-    font-size: 13px;
+    font-size: 14px;
+    line-height: 20px;
     height: 28px;
+    padding: 0 10px;
   }
   .chip {
     font-size: 12px;
@@ -395,23 +399,45 @@
   .item {
     --art-w: 136px;
     flex: none;
-    min-height: 80px;
+    min-height: 88px;
   }
   .item.small {
     --art-w: 72px;
     min-height: 0;
   }
+  /* Long names ("Validity transactions") wrap to two lines instead of an ellipsis. */
+  .name {
+    white-space: normal;
+    overflow: visible;
+  }
+}
+
+/* Compact tablet (768-1023): the board is the sticky bar, so the hero rows go two across. */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  .hero {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-2) var(--space-4);
+  }
+  .item {
+    --art-w: 144px;
+    min-height: 104px;
+  }
 }
 
 /* Phone: 2-column cards, ~128px tall (sprite on top, text under it). */
 @media (max-width: 767.98px) {
+  .scroll {
+    padding-top: 0;
+  }
   .hero {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: var(--space-2);
   }
+  /* Sprite height 60px (card 116 = 8 + 60 + 4 + 18 + 16 + 8 + border); width follows the aspect. */
   .item {
-    --art-w: 112px;
+    --art-w: min(112px, calc(60px * var(--sprite-aspect, 1.54)));
     min-height: 0;
     height: 116px;
     border: 1px solid var(--color-hairline);
@@ -427,9 +453,6 @@
     padding: 0;
     min-height: 0;
     text-align: center;
-  }
-  .art {
-    margin-block: -12px -4px;
   }
   .text {
     flex: none;
@@ -465,13 +488,23 @@
     line-height: 16px;
     max-width: 100%;
   }
+  .name {
+    white-space: nowrap;
+    overflow: hidden;
+  }
   .placed {
     justify-content: center;
+    margin-top: 0;
   }
   .badge {
     height: 16px;
     font-size: 10px;
+    line-height: 16px;
     padding: 0 6px;
+  }
+  /* The first card swaps its tag for the Start here caption under the brick. */
+  .tag[data-start] {
+    display: none;
   }
   .remove {
     display: none;
@@ -482,12 +515,16 @@
     margin-top: 0;
   }
   .start {
-    position: absolute;
-    z-index: 1;
-    left: var(--space-2);
-    top: var(--space-2);
+    align-self: center;
     margin: 0;
-    height: 24px;
+    height: 16px;
+    padding: 0 8px 0 6px;
+    font-size: 11px;
+    line-height: 16px;
+  }
+  .start svg {
+    width: 10px;
+    height: 10px;
   }
   .start svg {
     transform: rotate(-90deg);

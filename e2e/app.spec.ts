@@ -1,9 +1,15 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 const brick = (page: Page, verb: string, name: string) =>
   page.getByRole("button", { name: new RegExp(`^${verb} ${name}`) });
 const status = (page: Page) => page.getByRole("status").filter({ hasText: /./ }).last();
 const live = (page: Page) => page.locator('p[aria-live="polite"]');
+/** Two elements' boxes do not overlap. */
+async function expectApart(a: Locator, b: Locator) {
+  const [ra, rb] = [(await a.boundingBox())!, (await b.boundingBox())!];
+  const overlap = ra.x < rb.x + rb.width && rb.x < ra.x + ra.width && ra.y < rb.y + rb.height && rb.y < ra.y + ra.height;
+  expect(overlap, "boxes overlap").toBe(false);
+}
 
 test.describe("desktop", () => {
   test.beforeEach(async ({ page }) => {
@@ -17,9 +23,10 @@ test.describe("desktop", () => {
     await expect(gen).toHaveAttribute("aria-disabled", "true");
     await expect(page.locator("#generate-need")).toHaveText("Pick 2 or more Legos");
     await expect(page.getByText(/Set #00 · 0 of 4 pieces/i)).toBeVisible();
-    // The first-action cue sits on the first tray brick; the board only says where the stack goes.
+    // The first-action cue sits in the first tray row's text column; the board has a quiet caption.
     await expect(page.getByTestId("start-here")).toBeVisible();
-    await expect(page.getByText("Your stack builds here")).toBeVisible();
+    await expect(page.getByTestId("board-caption")).toHaveText("Tap a Lego to start");
+    await expectApart(page.getByTestId("start-here"), page.locator('[data-lego="b20"] [data-sprite]'));
     // Every hero row shows plain text beside its sprite; the Denim line lives in the Speed popover.
     await expect(page.locator('[data-lego="b20"]')).toContainText("Your own dollar");
     await expect(page.locator('[data-lego="speed"]')).toContainText("Sepolia");
@@ -35,6 +42,9 @@ test.describe("desktop", () => {
     await expect(page.locator("#generate-need")).toHaveText("1 more Lego needed");
     await expect(issue).toContainText("On board");
     await expect(issue).toContainText("Remove");
+    // The status pill lives in the text column, never on the brick's printed label.
+    await expectApart(issue.getByText("On board"), issue.locator("[data-sprite]"));
+    await expect(page.getByTestId("board-caption")).toHaveText("Add up to 4 Legos");
     await expect(page.getByTestId("start-here")).toHaveCount(0);
     await issue.click();
     await expect(issue).toHaveAttribute("aria-pressed", "false");
@@ -203,7 +213,7 @@ test.describe("result card fits", () => {
   test("a longer prompt says it scrolls and can be expanded", async ({ page }) => {
     await page.goto("/#recipe=neobroker");
     await expect(page.getByText("Scroll", { exact: true })).toBeVisible();
-    const toggle = page.getByRole("button", { name: "Show all" });
+    const toggle = page.getByRole("button", { name: "View full prompt" });
     await toggle.click();
     await expect(page.getByRole("button", { name: "Show less" })).toHaveAttribute("aria-expanded", "true");
   });
@@ -247,9 +257,9 @@ test.describe("accessibility", () => {
     expect(at("Regenerate idea")).toBeGreaterThan(at("lego:speed"));
     expect(at("Surprise me")).toBeGreaterThan(at("Regenerate idea"));
     expect(at("Neobank")).toBeGreaterThan(at("Surprise me"));
-    // Then the set box: docs links, Show all, the prompt and Copy prompt.
-    expect(at("Show all")).toBeGreaterThan(at("Neobank"));
-    expect(at("Copy prompt")).toBeGreaterThan(at("Show all"));
+    // Then the set box: docs links, View full prompt, the prompt and Copy prompt.
+    expect(at("View full prompt")).toBeGreaterThan(at("Neobank"));
+    expect(at("Copy prompt")).toBeGreaterThan(at("View full prompt"));
     expect(at("Test on Vibenet")).toBeGreaterThan(at("Copy prompt"));
   });
 
@@ -268,8 +278,21 @@ test.describe("accessibility", () => {
   });
 });
 
+test.describe("recipes", () => {
+  test("desktop: every recipe pill is fully visible inside the board", async ({ page }) => {
+    await page.goto("/");
+    const board = (await page.locator("#board-recipes").locator("xpath=..").boundingBox())!;
+    for (const name of ["Neobank", "Neobroker", "Agent-paid API", "Streaming payroll", "Stablecoin checkout"]) {
+      const b = (await page.getByRole("button", { name, exact: true }).boundingBox())!;
+      expect(b.height).toBe(32);
+      expect(b.x).toBeGreaterThanOrEqual(board.x);
+      expect(b.x + b.width).toBeLessThanOrEqual(board.x + board.width + 0.5);
+    }
+  });
+});
+
 test.describe("tablet", () => {
-  test.use({ viewport: { width: 768, height: 1024 } });
+  test.use({ viewport: { width: 1100, height: 900 } });
 
   test("Generate brings the set box into view and focuses its title", async ({ page }) => {
     await page.goto("/");
@@ -294,6 +317,38 @@ test("hash recipe restores", async ({ page }) => {
   await page.goto("/#recipe=agent-paid-api");
   await expect(page.getByTestId("set-card").getByRole("heading", { level: 2 })).toHaveText("Agent-paid API");
   await expect(page.getByRole("button", { name: "Agent-paid API" })).toHaveAttribute("aria-pressed", "true");
+});
+
+test.describe("compact tablet", () => {
+  test.use({ viewport: { width: 768, height: 1024 }, reducedMotion: "reduce" });
+
+  test("Generate opens the sheet with Copy prompt pinned and a way back", async ({ page }) => {
+    await page.goto("/");
+    const bar = page.getByTestId("mobile-bar");
+    await expect(bar).toBeVisible();
+    await brick(page, "Issue", "B20").click();
+    await brick(page, "Trade", "Validity transactions").click();
+    await bar.getByRole("button", { name: "Generate" }).click();
+    const sheet = page.getByRole("dialog");
+    await expect(sheet.getByRole("heading", { level: 2 })).toBeFocused();
+    const copy = sheet.getByRole("button", { name: "Copy prompt" });
+    await expect(copy).toBeInViewport({ ratio: 1 });
+    const close = (await sheet.getByRole("button", { name: "Close set" }).boundingBox())!;
+    expect(close.width).toBeGreaterThanOrEqual(44);
+    expect(close.height).toBeGreaterThanOrEqual(44);
+    const back = sheet.getByRole("button", { name: "Back to Legos" });
+    expect((await back.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await back.click();
+    await expect(sheet).toBeHidden();
+    await expect(bar.getByRole("button", { name: "Open set" })).toBeFocused();
+  });
+
+  test("long names wrap instead of an ellipsis", async ({ page }) => {
+    await page.goto("/");
+    const name = page.locator('[data-lego="validity"]').getByText("Validity transactions", { exact: true });
+    const clipped = await name.evaluate((el) => el.scrollWidth > el.clientWidth + 1);
+    expect(clipped).toBe(false);
+  });
 });
 
 test.describe("phone", () => {
@@ -331,6 +386,18 @@ test.describe("phone", () => {
     const bar = await page.getByTestId("mobile-bar").boundingBox();
     expect(bar!.height).toBeLessThanOrEqual(116);
     await expect(page.getByTestId("mobile-bar").getByRole("button", { name: "Generate" })).toBeVisible();
+  });
+
+  test("recipe row scrolls with a chevron and never fades its pills", async ({ page }) => {
+    await page.goto("/");
+    const list = page.locator("#mobile-recipes").locator("xpath=following-sibling::*[1]//ul");
+    const next = page.getByTestId("recipes-next");
+    await expect(next).toBeVisible();
+    expect((await next.boundingBox())!.height).toBe(32);
+    const before = await list.evaluate((el) => el.scrollLeft);
+    await next.tap();
+    await expect.poll(() => list.evaluate((el) => el.scrollLeft)).toBeGreaterThan(before);
+    expect(await list.evaluate((el) => getComputedStyle(el).maskImage)).toBe("none");
   });
 
   test("recipe pill opens the sheet", async ({ page }) => {

@@ -33,7 +33,7 @@
   position: relative;
   flex: 1;
   min-height: 240px;
-  margin: var(--space-4) 0 var(--space-4);
+  margin: 0 0 var(--space-4);
   border-radius: var(--radius-md);
   outline: 2px dashed transparent;
   outline-offset: -2px;
@@ -46,17 +46,13 @@
   outline-color: var(--color-accent);
 }
 
+/* Quiet caption 16px above the stage; its 20px line is always reserved so the scene never jumps. */
 .quiet {
-  position: absolute;
-  left: 50%;
-  top: var(--space-2);
-  transform: translateX(-50%);
-  margin: 0;
-  font-family: var(--font-mono);
-  font-weight: var(--weight-medium);
-  font-size: var(--text-label);
-  letter-spacing: var(--text-label-tracking);
-  text-transform: uppercase;
+  flex: none;
+  margin: var(--space-4) 0 var(--space-2);
+  text-align: center;
+  font-size: var(--text-small);
+  line-height: 20px;
   color: var(--color-fg-muted);
   white-space: nowrap;
   pointer-events: none;

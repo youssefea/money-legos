@@ -41,6 +41,9 @@ export default function Board({ dropRef, ...p }: BoardProps) {
         </p>
       </div>
 
+      <p className={styles.quiet} aria-hidden="true" data-testid="board-caption">
+        {p.hasResult ? "\u00a0" : count === 0 ? "Tap a Lego to start" : count < MAX_LEGOS ? "Add up to 4 Legos" : "\u00a0"}
+      </p>
       <div ref={dropRef} className={styles.drop} data-drag={p.dragging || undefined} data-over={p.dragOver || undefined}>
         <StageView
           ids={p.ids}
@@ -50,11 +53,6 @@ export default function Board({ dropRef, ...p }: BoardProps) {
           lastAdded={p.lastAdded}
           live={p.live}
         />
-        {count === 0 && !p.dragging && (
-          <p className={styles.quiet} aria-hidden="true">
-            Your stack builds here
-          </p>
-        )}
         {p.dragging && (
           <p className={styles.dropHint} aria-hidden="true">
             {count >= MAX_LEGOS ? "Board is full" : "Drop to snap it on"}
@@ -86,7 +84,7 @@ export default function Board({ dropRef, ...p }: BoardProps) {
         {need || "\u00a0"}
       </p>
 
-      <RecipeChips className={styles.recipes} active={p.recipe} onPick={p.onRecipe} idPrefix="board" />
+      <RecipeChips className={styles.recipes} active={p.recipe} onPick={p.onRecipe} idPrefix="board" layout="wrap" />
     </section>
   );
 }

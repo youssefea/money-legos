@@ -99,10 +99,98 @@ export const SetCard = forwardRef<HTMLHeadingElement, SetCardProps>(function Set
   const bodyRef = useRef<HTMLDivElement>(null);
   const more = useMoreBelow(bodyRef, result);
   const docs = docRow(result);
+  const sheet = !!onClose;
+  const copier = useCopy(result.prompt, onCopied);
   // Each jargon term gets its gloss once, where it first appears.
   const seen = new Set<string>();
+
+  const body = (
+    <div ref={bodyRef} className={styles.body} data-more={more || undefined} tabIndex={more ? 0 : undefined} aria-label={more ? "Set details, scrollable" : undefined}>
+      <p className={styles.pitch}>{result.pitch}</p>
+
+      <ol className={styles.flow} aria-label="Flow">
+        {result.steps.map((s, i) => (
+          <li key={s.lego.id} className={styles.flowItem}>
+            {i > 0 && (
+              <svg className={styles.arrow} viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                <path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
+            <span
+              className={styles.flowChip}
+              data-light={s.lego.brick.hex === "#FFFFFF" || undefined}
+              style={{ background: s.lego.brick.hex, color: s.lego.brick.label }}
+            >
+              {s.lego.kicker}
+            </span>
+          </li>
+        ))}
+      </ol>
+
+      <section className={styles.section} aria-labelledby={`${headingId}-why`}>
+        <h3 id={`${headingId}-why`} className={styles.label}>
+          Why each Lego matters
+        </h3>
+        <ul className={styles.why}>
+          {result.steps.map((s) => (
+            <li key={s.lego.id} title={s.why}>
+              <BrickGlyph color={s.lego.brick.hex} studs={s.lego.size} className={styles.glyph} />
+              <p>
+                <strong>{s.lego.kicker}:</strong> <Glossed text={s.lego.short} seen={seen} />
+                {s.lego.note && <span className={styles.note}> {s.lego.note}.</span>}
+              </p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* Docs links wrap with 8px gaps; no separator dots, so a wrapped line never starts with one. */}
+      <p className={styles.docs}>
+        <span className={styles.label}>Docs</span>
+        {docs.map((d) => (
+          <a key={d.url} className={styles.docItem} href={d.url} target="_blank" rel="noopener noreferrer" title={d.label} aria-label={`${d.label} (docs)`}>
+            {d.short}
+          </a>
+        ))}
+      </p>
+
+      <section className={styles.section} aria-labelledby={`${headingId}-steps`}>
+        <h3 id={`${headingId}-steps`} className={styles.label}>
+          Build steps
+        </h3>
+        <ol className={styles.steps} data-n={pieces}>
+          {result.steps.map((s, i) => (
+            <li key={s.lego.id}>
+              <span className={styles.stepN} aria-hidden="true">
+                {i + 1}
+              </span>
+              <span className={styles.stepText}>{s.lego.step}</span>
+            </li>
+          ))}
+        </ol>
+      </section>
+    </div>
+  );
+
+  const foot = (
+    <div className={styles.foot}>
+      <PromptBlock prompt={result.prompt} copied={copied} copier={copier} headingId={headingId} pinned={sheet} />
+      <p className={styles.links}>
+        <a href={RES.vibenet} target="_blank" rel="noopener noreferrer">
+          Test on Vibenet
+        </a>
+        <span className={styles.dot} aria-hidden="true">
+          ·
+        </span>
+        <a href={RES.mcp} target="_blank" rel="noopener noreferrer">
+          Docs MCP for your agent
+        </a>
+      </p>
+    </div>
+  );
+
   return (
-    <section className={styles.card} aria-labelledby={headingId} data-testid="set-card">
+    <section className={[styles.card, sheet ? styles.sheetCard : ""].filter(Boolean).join(" ")} aria-labelledby={headingId} data-testid="set-card">
       <header className={styles.band}>
         <div className={styles.bandText}>
           <p className={styles.bandLabel}>{n ? `Set #${pad2(n)}` : "Custom set"} · App idea</p>
@@ -123,104 +211,36 @@ export const SetCard = forwardRef<HTMLHeadingElement, SetCardProps>(function Set
         )}
       </header>
 
-      <div ref={bodyRef} className={styles.body} data-more={more || undefined} tabIndex={more ? 0 : undefined} aria-label={more ? "Set details, scrollable" : undefined}>
-        <p className={styles.pitch}>{result.pitch}</p>
-
-        <ol className={styles.flow} aria-label="Flow">
-          {result.steps.map((s, i) => (
-            <li key={s.lego.id} className={styles.flowItem}>
-              {i > 0 && (
-                <svg className={styles.arrow} viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
-                  <path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              )}
-              <span
-                className={styles.flowChip}
-                data-light={s.lego.brick.hex === "#FFFFFF" || undefined}
-                style={{ background: s.lego.brick.hex, color: s.lego.brick.label }}
-              >
-                {s.lego.kicker}
-              </span>
-            </li>
-          ))}
-        </ol>
-
-        <section className={styles.section} aria-labelledby={`${headingId}-why`}>
-          <h3 id={`${headingId}-why`} className={styles.label}>
-            Why each Lego matters
-          </h3>
-          <ul className={styles.why}>
-            {result.steps.map((s) => (
-              <li key={s.lego.id} title={s.why}>
-                <BrickGlyph color={s.lego.brick.hex} studs={s.lego.size} className={styles.glyph} />
-                <p>
-                  <strong>{s.lego.kicker}:</strong> <Glossed text={s.lego.short} seen={seen} />
-                  {s.lego.note && <span className={styles.note}> {s.lego.note}.</span>}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <p className={styles.docs}>
-          <span className={styles.label}>Docs</span>
-          {docs.map((d, i) => (
-            <span key={d.url} className={styles.docItem}>
-              {i > 0 && (
-                <span className={styles.dot} aria-hidden="true">
-                  ·
-                </span>
-              )}
-              <a href={d.url} target="_blank" rel="noopener noreferrer" title={d.label} aria-label={`${d.label} (docs)`}>
-                {d.short}
-              </a>
-            </span>
-          ))}
-        </p>
-
-        <section className={styles.section} aria-labelledby={`${headingId}-steps`}>
-          <h3 id={`${headingId}-steps`} className={styles.label}>
-            Build steps
-          </h3>
-          <ol className={styles.steps} data-n={pieces}>
-            {result.steps.map((s, i) => (
-              <li key={s.lego.id}>
-                <span className={styles.stepN} aria-hidden="true">
-                  {i + 1}
-                </span>
-                <span className={styles.stepText}>{s.lego.step}</span>
-              </li>
-            ))}
-          </ol>
-        </section>
-      </div>
-
-      <div className={styles.foot}>
-        <PromptBlock prompt={result.prompt} copied={copied} onCopied={onCopied} headingId={headingId} />
-        <p className={styles.links}>
-          <a href={RES.vibenet} target="_blank" rel="noopener noreferrer">
-            Test on Vibenet
-          </a>
-          <span className={styles.dot} aria-hidden="true">
-            ·
-          </span>
-          <a href={RES.mcp} target="_blank" rel="noopener noreferrer">
-            Docs MCP for your agent
-          </a>
-        </p>
-      </div>
+      {sheet ? (
+        <>
+          <div className={styles.sheetScroll}>
+            {body}
+            {foot}
+          </div>
+          {/* Sheet: Copy prompt pinned in a 72px action area, with a thumb-reach way back. */}
+          <div className={styles.actions}>
+            <button type="button" className={styles.back} onClick={onClose}>
+              Back to Legos
+            </button>
+            <CopyButton copied={copied} onClick={copier.copy} />
+          </div>
+        </>
+      ) : (
+        <>
+          {body}
+          {foot}
+        </>
+      )}
     </section>
   );
 });
 
-/** The prompt in a short mono block (fade + Show all toggle when it is longer), plus the big Copy prompt button. */
-function PromptBlock({ prompt, copied, onCopied, headingId }: { prompt: string; copied: boolean; onCopied: () => void; headingId: string }) {
+type Copier = { copy: () => void; manual: boolean; preRef: RefObject<HTMLPreElement | null> };
+
+/** Copies the prompt; when the clipboard is blocked it selects the prompt text so Cmd/Ctrl+C works. */
+function useCopy(prompt: string, onCopied: () => void): Copier {
   const preRef = useRef<HTMLPreElement>(null);
   const [manual, setManual] = useState(false);
-  const [expanded, setExpanded] = useState(false);
-  const more = useMoreBelow(preRef, expanded);
-  const labelId = `${headingId}-prompt`;
-  const preId = `${headingId}-pre`;
 
   const selectAll = () => {
     const el = preRef.current;
@@ -240,11 +260,21 @@ function PromptBlock({ prompt, copied, onCopied, headingId }: { prompt: string; 
       setManual(false);
       onCopied();
     } catch {
-      // Clipboard blocked (http, old browser, permissions): select the text so Cmd/Ctrl+C works.
       selectAll();
       setManual(true);
     }
   };
+
+  return { copy: () => void copy(), manual, preRef };
+}
+
+/** The prompt in a short mono block (fade + View full prompt toggle when it is longer), plus Copy prompt unless it is pinned. */
+function PromptBlock({ prompt, copied, copier, headingId, pinned }: { prompt: string; copied: boolean; copier: Copier; headingId: string; pinned: boolean }) {
+  const { preRef, manual } = copier;
+  const [expanded, setExpanded] = useState(false);
+  const more = useMoreBelow(preRef, expanded);
+  const labelId = `${headingId}-prompt`;
+  const preId = `${headingId}-pre`;
 
   return (
     <div className={styles.prompt}>
@@ -253,7 +283,7 @@ function PromptBlock({ prompt, copied, onCopied, headingId }: { prompt: string; 
           Prompt to copy
         </h3>
         <button type="button" className={styles.expand} aria-expanded={expanded} aria-controls={preId} onClick={() => setExpanded((e) => !e)}>
-          {expanded ? "Show less" : "Show all"}
+          {expanded ? "Show less" : "View full prompt"}
           <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true" data-up={expanded || undefined}>
             <path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
@@ -272,7 +302,7 @@ function PromptBlock({ prompt, copied, onCopied, headingId }: { prompt: string; 
           </span>
         )}
       </div>
-      <CopyButton copied={copied} onClick={copy} />
+      {!pinned && <CopyButton copied={copied} onClick={copier.copy} />}
       <p className={styles.hint}>Paste it into your coding agent.</p>
       <p className={styles.copyNote} role="status">
         {manual ? "Copy is blocked here. The prompt is selected: press Cmd+C or Ctrl+C." : ""}

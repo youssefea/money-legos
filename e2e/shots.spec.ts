@@ -4,9 +4,9 @@ import { join } from "node:path";
 /**
  * Design QA screenshots (not a test). Run with:
  *   SHOTS=1 npx playwright test shots
- * Writes PNGs to SHOTS_DIR (default ../design/ui-shots-v2).
+ * Writes PNGs to SHOTS_DIR (default ../design/ui-shots-v3).
  */
-const DIR = process.env.SHOTS_DIR ?? join(process.cwd(), "..", "design", "ui-shots-v2");
+const DIR = process.env.SHOTS_DIR ?? join(process.cwd(), "..", "design", "ui-shots-v3");
 const SIZES = [
   [390, 844],
   [768, 1024],
@@ -23,6 +23,7 @@ for (const [w, h] of SIZES) {
     for (const state of STATES) {
       test(`${w}x${h} ${scheme} ${state}`, async ({ browser }) => {
         const phone = w < 768;
+        const compact = w < 1024;
         const context = await browser.newContext({
           viewport: { width: w, height: h },
           colorScheme: scheme,
@@ -35,7 +36,7 @@ for (const [w, h] of SIZES) {
         await page.goto(state === "result" ? "/#b20,payments,validity" : "/");
         await page.waitForTimeout(600);
         if (state === "one") await page.locator('[data-lego="b20"]').click();
-        if (state === "result" && phone) await page.getByTestId("mobile-bar").getByRole("button", { name: "Open set" }).click();
+        if (state === "result" && compact) await page.getByTestId("mobile-bar").getByRole("button", { name: "Open set" }).click();
         await page.waitForTimeout(900);
         await page.screenshot({ path: join(DIR, `${w}x${h}-${scheme}-${state}.png`) });
         await context.close();

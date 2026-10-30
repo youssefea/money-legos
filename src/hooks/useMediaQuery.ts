@@ -17,5 +17,5 @@ export function useMediaQuery(query: string, serverValue = false): boolean {
 
 export const useReducedMotion = () => useMediaQuery("(prefers-reduced-motion: reduce)");
 export const useDark = () => useMediaQuery("(prefers-color-scheme: dark)");
-/** Phone layout: sticky compact bar and the set box as a bottom sheet. */
-export const useIsMobile = () => useMediaQuery("(max-width: 767.98px)");
+/** Compact layout (phone and tablet up to 1023px): sticky compact bar and the set box as a bottom sheet. */
+export const useIsMobile = () => useMediaQuery("(max-width: 1023.98px)");
