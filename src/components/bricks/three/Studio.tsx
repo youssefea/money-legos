@@ -32,9 +32,9 @@ const T_LOW: [number, number, number] = [0, 6, 0];
  *  - near-field softboxes (rect area lights) for the soft gradients across flat glossy faces;
  *  - a raised ambient fill so side faces stay colourful instead of muddy;
  *  - one soft shadow-casting key, and a soft contact shadow under the baseplate.
- * `floorShadow` is off for sprite bakes that draw their own.
+ * `floorY` moves the contact shadow (sprite bakes put it under the lone brick instead of the plate).
  */
-export function Studio({ dark = false, floorShadow = true, shadowSize = 2048 }: { dark?: boolean; floorShadow?: boolean; shadowSize?: number }) {
+export function Studio({ dark = false, floorShadow = true, floorY = -PLATE_FOOT - 0.02, shadowSize = 2048 }: { dark?: boolean; floorShadow?: boolean; floorY?: number; shadowSize?: number }) {
   return (
     <>
       <Environment resolution={512} frames={1} background={false}>
@@ -78,7 +78,7 @@ export function Studio({ dark = false, floorShadow = true, shadowSize = 2048 }: 
         shadow-camera-far={260}
       />
       {floorShadow && (
-        <ContactShadows position={[0, -PLATE_FOOT - 0.02, 0]} scale={150} far={24} blur={3} opacity={dark ? 0.85 : 0.6} resolution={1024} frames={1} color="#0a0b0d" />
+        <ContactShadows position={[0, floorY, 0]} scale={150} far={24} blur={3} opacity={dark ? 0.85 : 0.6} resolution={1024} frames={1} color="#0a0b0d" />
       )}
     </>
   );

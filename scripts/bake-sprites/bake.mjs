@@ -78,16 +78,19 @@ async function render(id, glyph) {
     return ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : "unknown";
   });
   if (/swiftshader/i.test(renderer) && process.env.SWIFTSHADER !== "1") console.warn("warning: software renderer", renderer);
+  const front = await page.evaluate(() => window.__bakeFront);
   const png = await page.locator("canvas").screenshot({ omitBackground: true });
   const box = await alphaBox(png);
   if (box.touches) console.warn(`warning: ${id}${glyph ? " glyph" : ""} touches the render edge`, box);
-  return { png, box, renderer };
+  return { png, box, renderer, front: front.map((x) => x * RENDER_DPR) };
 }
 
 const webp = (img) => img.webp({ quality: 88, alphaQuality: 85, effort: 6, smartSubsample: true });
 
 // Same scale for every sprite: set by fitting the first hero 2x4 (brick + shadow) inside the canvas.
 let scale = null;
+/** CSS px per stud along the front face at 1x (from the reference hero 2x4). */
+let studPx = null;
 const meta = {};
 let total = 0;
 try {
@@ -95,7 +98,7 @@ try {
   const ref = (b) => (b.hero && b.size[0] === 4 && b.size[1] === 2 ? 2 : b.hero ? 1 : 0);
   const order = [...ids].sort((a, b) => ref(b) - ref(a));
   for (const { id, hero, size } of order) {
-    const { png, box, renderer } = await render(id, false);
+    const { png, box, renderer, front } = await render(id, false);
     if (scale === null) {
       if (!hero || size[0] !== 4 || size[1] !== 2) throw new Error("first bake must be a hero 2x4");
       scale = Math.min((CANVAS[0] - 2 * SIDE_PAD) / box.width, (CANVAS[1] - TOP_PAD - BOTTOM_PAD) / box.height);
@@ -104,7 +107,10 @@ try {
     const h = Math.min(CANVAS[1] - TOP_PAD - BOTTOM_PAD, Math.round(box.height * scale));
     const cw = size[0] === 4 && size[1] === 2 ? CANVAS[0] : w + 2 * SIDE_PAD;
     const ch = CANVAS[1];
-    meta[id] = { width: cw, height: ch, aspect: +(cw / ch).toFixed(4) };
+    // Front face in sprite px: (render x - crop left) * scale + where the crop lands in the canvas.
+    const fx = front.map((x) => +((x - box.left) * (w / box.width) + Math.round((cw - w) / 2)).toFixed(1));
+    if (studPx === null) studPx = +((fx[1] - fx[0]) / size[0] / DPR).toFixed(2);
+    meta[id] = { width: cw, height: ch, aspect: +(cw / ch).toFixed(4), front: fx };
     if (only && only !== id) continue;
     const file = path.join(outDir, `${id}.webp`);
     // Bottom-aligned above BOTTOM_PAD so every sprite shares one baseline; centred across.
@@ -147,21 +153,27 @@ export type SpriteMeta = {
   height: number;
   /** width / height */
   aspect: number;
+  /** Left and right x of the brick's front face in sprite px (the side face and shadow lie to its right). */
+  front: [number, number];
 };
 
 /** Device pixel ratio the sprites were baked at: CSS size = pixel size / SPRITE_DPR. */
 export const SPRITE_DPR = ${DPR};
 
+/** CSS px per stud along a sprite's front face at 1x: every sprite shares this one scale. */
+export const SPRITE_STUD_PX = ${studPx};
+
 /**
  * Tray sprites, per Lego id: heroes on one ${CANVAS[0]}x${CANVAS[1]} canvas (${CANVAS[0] / DPR}x${CANVAS[1] / DPR} CSS px, ${TOP_PAD / DPR} px clear above the
- * rear studs); 2x2s at the same scale and height. Seen from TRAY_CAMERA (more front-on than the board).
+ * rear studs); every other brick at the same scale and height. Seen from TRAY_CAMERA (24° up, 20° round),
+ * with the board's studio, the key light's cast shadow and a contact shadow.
  */
 export const SPRITE_META: Readonly<Record<string, SpriteMeta>> = {
-${ordered.map(([id, m]) => `  ${JSON.stringify(id)}: { width: ${m.width}, height: ${m.height}, aspect: ${m.aspect} },`).join("\n")}
+${ordered.map(([id, m]) => `  ${JSON.stringify(id)}: { width: ${m.width}, height: ${m.height}, aspect: ${m.aspect}, front: [${m.front.join(", ")}] },`).join("\n")}
 };
 
 /** Glyph sprites public/sprites/glyph-<legoId>.webp (the five heroes only): one shape, a 2x4 brick. */
-export const GLYPH_META: SpriteMeta = { width: ${GLYPH[0]}, height: ${GLYPH[1]}, aspect: ${+(GLYPH[0] / GLYPH[1]).toFixed(4)} };
+export const GLYPH_META: Omit<SpriteMeta, "front"> = { width: ${GLYPH[0]}, height: ${GLYPH[1]}, aspect: ${+(GLYPH[0] / GLYPH[1]).toFixed(4)} };
 `;
 fs.writeFileSync(path.join(repo, "src/components/bricks/spriteMeta.ts"), manifest);
 const all = fs.readdirSync(outDir).filter((f) => f.endsWith(".webp")).reduce((a, f) => a + fs.statSync(path.join(outDir, f)).size, 0);

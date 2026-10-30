@@ -5,57 +5,63 @@ export type SpriteMeta = {
   height: number;
   /** width / height */
   aspect: number;
+  /** Left and right x of the brick's front face in sprite px (the side face and shadow lie to its right). */
+  front: [number, number];
 };
 
 /** Device pixel ratio the sprites were baked at: CSS size = pixel size / SPRITE_DPR. */
 export const SPRITE_DPR = 2;
 
+/** CSS px per stud along a sprite's front face at 1x: every sprite shares this one scale. */
+export const SPRITE_STUD_PX = 31.25;
+
 /**
  * Tray sprites, per Lego id: heroes on one 384x208 canvas (192x104 CSS px, 16 px clear above the
- * rear studs); 2x2s at the same scale and height. Seen from TRAY_CAMERA (more front-on than the board).
+ * rear studs); every other brick at the same scale and height. Seen from TRAY_CAMERA (24° up, 20° round),
+ * with the board's studio, the key light's cast shadow and a contact shadow.
  */
 export const SPRITE_META: Readonly<Record<string, SpriteMeta>> = {
-  "b20": { width: 384, height: 208, aspect: 1.8462 },
-  "payments": { width: 384, height: 208, aspect: 1.8462 },
-  "financing": { width: 384, height: 208, aspect: 1.8462 },
-  "validity": { width: 384, height: 208, aspect: 1.8462 },
-  "speed": { width: 384, height: 208, aspect: 1.8462 },
-  "base-pay": { width: 188, height: 208, aspect: 0.9038 },
-  "escrow": { width: 261, height: 208, aspect: 1.2548 },
-  "subscriptions": { width: 190, height: 208, aspect: 0.9135 },
-  "refunds": { width: 180, height: 208, aspect: 0.8654 },
-  "payouts": { width: 330, height: 208, aspect: 1.5865 },
-  "splits": { width: 190, height: 208, aspect: 0.9135 },
-  "reconcile": { width: 260, height: 208, aspect: 1.25 },
-  "memos": { width: 180, height: 208, aspect: 0.8654 },
-  "private-ledgers": { width: 260, height: 208, aspect: 1.25 },
-  "allowlist": { width: 190, height: 208, aspect: 0.9135 },
-  "freeze": { width: 180, height: 208, aspect: 0.8654 },
-  "pause": { width: 180, height: 208, aspect: 0.8654 },
-  "multiplier": { width: 331, height: 208, aspect: 1.5913 },
-  "swaps": { width: 190, height: 208, aspect: 0.9135 },
-  "borrow": { width: 260, height: 208, aspect: 1.25 },
-  "stocks": { width: 261, height: 208, aspect: 1.2548 },
-  "verify": { width: 190, height: 208, aspect: 0.9135 },
-  "verify-onchain": { width: 180, height: 208, aspect: 0.8654 },
-  "basenames": { width: 190, height: 208, aspect: 0.9135 },
-  "connect-wallet": { width: 190, height: 208, aspect: 0.9135 },
-  "batch-calls": { width: 330, height: 208, aspect: 1.5865 },
-  "sponsored-gas": { width: 180, height: 208, aspect: 0.8654 },
-  "bridge": { width: 260, height: 208, aspect: 1.25 },
-  "flashblocks": { width: 180, height: 208, aspect: 0.8654 },
-  "basetime": { width: 180, height: 208, aspect: 0.8654 },
-  "builder": { width: 180, height: 208, aspect: 0.8654 },
-  "live-stream": { width: 330, height: 208, aspect: 1.5865 },
-  "x402-api": { width: 189, height: 208, aspect: 0.9087 },
-  "usage-billing": { width: 190, height: 208, aspect: 0.9135 },
-  "agent-spend": { width: 180, height: 208, aspect: 0.8654 },
-  "agent-codes": { width: 180, height: 208, aspect: 0.8654 },
-  "docs-mcp": { width: 180, height: 208, aspect: 0.8654 },
-  "skills": { width: 180, height: 208, aspect: 0.8654 },
-  "vibenet": { width: 190, height: 208, aspect: 0.9135 },
-  "local-devnet": { width: 180, height: 208, aspect: 0.8654 },
+  "b20": { width: 384, height: 208, aspect: 1.8462, front: [43.5, 293.5] },
+  "payments": { width: 384, height: 208, aspect: 1.8462, front: [43.2, 292.9] },
+  "financing": { width: 384, height: 208, aspect: 1.8462, front: [43.7, 293.2] },
+  "validity": { width: 384, height: 208, aspect: 1.8462, front: [43.5, 293.5] },
+  "speed": { width: 384, height: 208, aspect: 1.8462, front: [43.5, 293.8] },
+  "base-pay": { width: 214, height: 208, aspect: 1.0288, front: [17.4, 141] },
+  "escrow": { width: 274, height: 208, aspect: 1.3173, front: [16.3, 208.6] },
+  "subscriptions": { width: 214, height: 208, aspect: 1.0288, front: [16, 139.9] },
+  "refunds": { width: 200, height: 208, aspect: 0.9615, front: [16.5, 140.6] },
+  "payouts": { width: 322, height: 208, aspect: 1.5481, front: [17.5, 266.8] },
+  "splits": { width: 214, height: 208, aspect: 1.0288, front: [16.5, 140.4] },
+  "reconcile": { width: 274, height: 208, aspect: 1.3173, front: [17.4, 209.4] },
+  "memos": { width: 201, height: 208, aspect: 0.9663, front: [17.5, 141.6] },
+  "private-ledgers": { width: 273, height: 208, aspect: 1.3125, front: [16.1, 208] },
+  "allowlist": { width: 214, height: 208, aspect: 1.0288, front: [16.1, 140.1] },
+  "freeze": { width: 201, height: 208, aspect: 0.9663, front: [17, 141.2] },
+  "pause": { width: 200, height: 208, aspect: 0.9615, front: [17.1, 140.7] },
+  "multiplier": { width: 321, height: 208, aspect: 1.5433, front: [15.8, 266.2] },
+  "swaps": { width: 214, height: 208, aspect: 1.0288, front: [16.1, 140.3] },
+  "borrow": { width: 274, height: 208, aspect: 1.3173, front: [17.6, 209.3] },
+  "stocks": { width: 273, height: 208, aspect: 1.3125, front: [16, 207.8] },
+  "verify": { width: 214, height: 208, aspect: 1.0288, front: [16.5, 140.5] },
+  "verify-onchain": { width: 200, height: 208, aspect: 0.9615, front: [16.2, 140.4] },
+  "basenames": { width: 214, height: 208, aspect: 1.0288, front: [16.7, 140.4] },
+  "connect-wallet": { width: 214, height: 208, aspect: 1.0288, front: [16, 140] },
+  "batch-calls": { width: 323, height: 208, aspect: 1.5529, front: [17.7, 267.8] },
+  "sponsored-gas": { width: 200, height: 208, aspect: 0.9615, front: [16.4, 140.6] },
+  "bridge": { width: 274, height: 208, aspect: 1.3173, front: [17.3, 209.4] },
+  "flashblocks": { width: 201, height: 208, aspect: 0.9663, front: [17.2, 141.4] },
+  "basetime": { width: 199, height: 208, aspect: 0.9567, front: [16, 139.6] },
+  "builder": { width: 200, height: 208, aspect: 0.9615, front: [16.5, 140.7] },
+  "live-stream": { width: 322, height: 208, aspect: 1.5481, front: [17.7, 267.2] },
+  "x402-api": { width: 214, height: 208, aspect: 1.0288, front: [17.1, 140.7] },
+  "usage-billing": { width: 215, height: 208, aspect: 1.0337, front: [17.3, 141.4] },
+  "agent-spend": { width: 200, height: 208, aspect: 0.9615, front: [16.4, 140.4] },
+  "agent-codes": { width: 201, height: 208, aspect: 0.9663, front: [17.1, 141.4] },
+  "docs-mcp": { width: 200, height: 208, aspect: 0.9615, front: [17.2, 141] },
+  "skills": { width: 200, height: 208, aspect: 0.9615, front: [16.2, 140.3] },
+  "vibenet": { width: 214, height: 208, aspect: 1.0288, front: [16.7, 140.5] },
+  "local-devnet": { width: 201, height: 208, aspect: 0.9663, front: [17.2, 141.5] },
 };
 
 /** Glyph sprites public/sprites/glyph-<legoId>.webp (the five heroes only): one shape, a 2x4 brick. */
-export const GLYPH_META: SpriteMeta = { width: 128, height: 80, aspect: 1.6 };
+export const GLYPH_META: Omit<SpriteMeta, "front"> = { width: 128, height: 80, aspect: 1.6 };

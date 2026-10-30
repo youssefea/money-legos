@@ -1,5 +1,6 @@
 "use client";
 
+import "./quietClock";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { ContactShadows } from "@react-three/drei";
@@ -16,11 +17,13 @@ import { Studio } from "./Studio";
 declare global {
   interface Window {
     __bakeReady?: boolean;
+    /** Screen x (CSS px of the canvas) of the brick's front-bottom corners, left and right. */
+    __bakeFront?: [number, number];
   }
 }
 
 /**
- * The tray's hero view (TRAY_VIEW: more front-on than the board, so the print reads) through the
+ * The tray's hero view (TRAY_VIEW: a step more front-on than the board, so the print reads) through the
  * board's lens. The distance is fitted to a 2x4 brick and its floor
  * shadow and kept for every brick, so 2x2 sprites come out at the same mm-to-px scale as the 2x4s
  * (the baker then crops each one tight).
@@ -67,6 +70,10 @@ function FitBrick({ brick }: { brick: PlacedBrick }) {
       else hi = mid;
     }
     place(hi);
+    // Where the front face starts and ends on screen: the baker maps it into the sprite (spriteMeta `front`).
+    const Wf = brick.size[0] * DIM.pitch - DIM.gap, Df = brick.size[1] * DIM.pitch - DIM.gap;
+    const sx = (x: number) => ((new THREE.Vector3(pose.x + x, pose.y, pose.z + Df / 2).project(camera).x + 1) / 2) * size.width;
+    window.__bakeFront = [sx(-Wf / 2), sx(Wf / 2)];
     invalidate();
   }, [get, size, brick, invalidate]);
   return null;
@@ -116,10 +123,17 @@ export default function SpriteBake({ brick, glyph = false }: { brick: PlacedBric
     >
       <MotionContext.Provider value={motion}>
         <FitBrick brick={brick} />
-        <Studio floorShadow={false} />
+        {/* the board's studio and contact shadow, moved up under the lone brick */}
+        <Studio floorShadow floorY={pose.y - 0.02} />
         {/* a glyph is too small for print: never draw the label */}
         <StackBrick brick={brick} drop={false} leaving={false} reducedMotion bounceSignal={0} index={0} fontsReady={fontsReady && !glyph} />
-        <ContactShadows position={[0, pose.y - 0.02, 0]} scale={80} far={12} blur={2.4} opacity={0.72} resolution={1024} frames={1} color="#0a0b0d" />
+        {/* shadow catcher: the key light's soft cast shadow, as the plate receives it on the board */}
+        <mesh rotation-x={-Math.PI / 2} position={[0, pose.y - 0.01, 0]} receiveShadow>
+          <planeGeometry args={[120, 120]} />
+          <shadowMaterial transparent opacity={0.32} color="#0a0b0d" depthWrite={false} />
+        </mesh>
+        {/* tight contact blob: the dark line where the brick meets the table, so it sits instead of floating */}
+        <ContactShadows position={[0, pose.y - 0.03, 0]} scale={60} far={4} blur={1.6} opacity={0.35} resolution={1024} frames={1} color="#0a0b0d" />
         <AO />
         <ReadyFlag fontsReady={fontsReady} />
       </MotionContext.Provider>
