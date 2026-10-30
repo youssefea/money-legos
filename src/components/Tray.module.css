@@ -1,13 +1,14 @@
 /*
- * The brick bin. Top: the 5 heroes on a pinned 5-across shelf (a Gray 10 recess over a hairline).
- * Below: the other 35 on ONE stud scale (--stud, 16px) in a tight stud grid: a cell is 3 studs wide
- * (a 2x2 plus its side face), wider bricks span two cells, rows are as tall as the tallest sprite so
- * no two rows overlap, every brick sits on its row's baseline.
+ * The brick bin. Top: the 5 heroes on a pinned shelf (a Gray 10 recess over a hairline), 3 + 2 on desktop.
+ * Below: the other 35 on ONE stud scale (--stud, 24px; 26px on a projector) in a tight stud grid: a cell
+ * is 3 studs wide (a 2x2 plus its side face), wider bricks span two cells, rows are as tall as the tallest
+ * sprite so no two rows overlap, every brick sits on its row's baseline. At 24px a stud, every printed verb
+ * is >= 12 CSS px on a small face and ~21px on a hero (spriteMeta `verb`).
  */
 
 .tray {
   --gap: 6px;
-  --stud: 16px;
+  --stud: 24px;
   container-type: inline-size;
   height: 100%;
   min-height: 0;
@@ -79,34 +80,39 @@
   cursor: pointer;
 }
 
-/* ---------------------------------------------------------------- hero shelf: 5 across, pinned */
+/* ---------------------------------------------------------------- hero shelf: pinned, 3 + 2 on the bin's stud scale */
 .heroShelf {
-  /* The same stud scale as the bin (16px), smaller only when 5 fronts + the last side face won't fit. */
-  --hero-stud: min(var(--stud), calc((100cqw - 12px - 4 * 4px) / 21.44));
+  /* The bin's stud scale; smaller only when 3 fronts (+ padding and the last side face) won't fit. */
+  --hero-stud: min(var(--stud), calc((100cqw - 12px - 2 * var(--gap) - 3 * 6px) / 13.44));
   order: -1;
   flex: none;
   margin: 0 0 var(--space-3);
   padding: 6px 6px 4px;
   list-style: none;
-  display: flex;
-  gap: 4px;
-  align-items: flex-end;
+  display: grid;
+  grid-template-columns: repeat(3, max-content);
+  gap: 4px var(--gap);
+  align-items: end;
   border-radius: var(--radius-md);
   background: var(--base-gray-10);
   box-shadow: inset 0 -1px 0 var(--base-gray-15);
 }
 /*
- * Five 2x4 fronts side by side, like bricks in a row: each cell is its front face (4 studs); the
- * sprite's side face runs under the next brick (drawn on top), only the last one shows it whole.
+ * 2x4 fronts side by side, like bricks in a row: each cell is its front face (4 studs) plus a 6px
+ * inset so the selection ring never hugs the face; the sprite's side face runs under the next brick
+ * (drawn on top), the last in a row shows it whole.
  */
 .heroShelf .cell.cell {
   --stud: var(--hero-stud);
   flex: none;
-  width: calc(var(--stud) * 4);
+  width: calc(var(--stud) * 4 + 6px);
   height: calc(var(--stud) * var(--sh, 3.32));
 }
-.heroShelf .cell:last-child {
-  margin-right: calc(var(--stud) * 1.44);
+.heroShelf .cell[data-span] {
+  grid-column: auto;
+}
+.heroShelf .brick {
+  padding-left: 6px;
 }
 /* ---------------------------------------------------------------- scroll area (the other 35) */
 .scroll {
@@ -385,7 +391,7 @@
 /* ---------------------------------------------------------------- projector */
 @media (min-width: 1600px) {
   .tray {
-    --stud: 20px;
+    --stud: 26px;
   }
   .chip {
     font-size: 16px;
@@ -400,6 +406,22 @@
   .tray {
     height: auto;
     --stud: 18px;
+  }
+  /* Five across, the stud shrinking to fit (the page scrolls here, not the tray). */
+  .heroShelf {
+    --hero-stud: min(var(--stud), calc((100cqw - 12px - 4 * 4px) / 21.44));
+    display: flex;
+    gap: 4px;
+    align-items: flex-end;
+  }
+  .heroShelf .cell.cell {
+    width: calc(var(--stud) * 4);
+  }
+  .heroShelf .brick {
+    padding-left: 0;
+  }
+  .heroShelf .cell:last-child {
+    margin-right: calc(var(--stud) * 1.44);
   }
   /* One chip row that scrolls sideways, edge fades and a chevron while there is more. */
   .chipsWrap {

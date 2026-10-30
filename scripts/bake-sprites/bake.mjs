@@ -79,10 +79,11 @@ async function render(id, glyph) {
   });
   if (/swiftshader/i.test(renderer) && process.env.SWIFTSHADER !== "1") console.warn("warning: software renderer", renderer);
   const front = await page.evaluate(() => window.__bakeFront);
+  const print = glyph ? null : await page.evaluate(() => window.__bakePrint());
   const png = await page.locator("canvas").screenshot({ omitBackground: true });
   const box = await alphaBox(png);
   if (box.touches) console.warn(`warning: ${id}${glyph ? " glyph" : ""} touches the render edge`, box);
-  return { png, box, renderer, front: front.map((x) => x * RENDER_DPR) };
+  return { png, box, renderer, print, front: front.map((x) => x * RENDER_DPR) };
 }
 
 const webp = (img) => img.webp({ quality: 88, alphaQuality: 85, effort: 6, smartSubsample: true });
@@ -98,7 +99,7 @@ try {
   const ref = (b) => (b.hero && b.size[0] === 4 && b.size[1] === 2 ? 2 : b.hero ? 1 : 0);
   const order = [...ids].sort((a, b) => ref(b) - ref(a));
   for (const { id, hero, size } of order) {
-    const { png, box, renderer, front } = await render(id, false);
+    const { png, box, renderer, print, front } = await render(id, false);
     if (scale === null) {
       if (!hero || size[0] !== 4 || size[1] !== 2) throw new Error("first bake must be a hero 2x4");
       scale = Math.min((CANVAS[0] - 2 * SIDE_PAD) / box.width, (CANVAS[1] - TOP_PAD - BOTTOM_PAD) / box.height);
@@ -110,7 +111,9 @@ try {
     // Front face in sprite px: (render x - crop left) * scale + where the crop lands in the canvas.
     const fx = front.map((x) => +((x - box.left) * (w / box.width) + Math.round((cw - w) / 2)).toFixed(1));
     if (studPx === null) studPx = +((fx[1] - fx[0]) / size[0] / DPR).toFixed(2);
-    meta[id] = { width: cw, height: ch, aspect: +(cw / ch).toFixed(4), front: fx };
+    // The printed verb's font size in sprite px: mm on the face x the front face's px per mm.
+    const verb = +((print.verbMm * (fx[1] - fx[0])) / print.faceMm).toFixed(1);
+    meta[id] = { width: cw, height: ch, aspect: +(cw / ch).toFixed(4), front: fx, verb };
     if (only && only !== id) continue;
     const file = path.join(outDir, `${id}.webp`);
     // Bottom-aligned above BOTTOM_PAD so every sprite shares one baseline; centred across.
@@ -155,6 +158,8 @@ export type SpriteMeta = {
   aspect: number;
   /** Left and right x of the brick's front face in sprite px (the side face and shadow lie to its right). */
   front: [number, number];
+  /** Font size of the printed verb in sprite px (CSS font size on screen = verb / width x displayed width). */
+  verb: number;
 };
 
 /** Device pixel ratio the sprites were baked at: CSS size = pixel size / SPRITE_DPR. */
@@ -169,11 +174,11 @@ export const SPRITE_STUD_PX = ${studPx};
  * with the board's studio, the key light's cast shadow and a contact shadow.
  */
 export const SPRITE_META: Readonly<Record<string, SpriteMeta>> = {
-${ordered.map(([id, m]) => `  ${JSON.stringify(id)}: { width: ${m.width}, height: ${m.height}, aspect: ${m.aspect}, front: [${m.front.join(", ")}] },`).join("\n")}
+${ordered.map(([id, m]) => `  ${JSON.stringify(id)}: { width: ${m.width}, height: ${m.height}, aspect: ${m.aspect}, front: [${m.front.join(", ")}], verb: ${m.verb} },`).join("\n")}
 };
 
 /** Glyph sprites public/sprites/glyph-<legoId>.webp (the five heroes only): one shape, a 2x4 brick. */
-export const GLYPH_META: Omit<SpriteMeta, "front"> = { width: ${GLYPH[0]}, height: ${GLYPH[1]}, aspect: ${+(GLYPH[0] / GLYPH[1]).toFixed(4)} };
+export const GLYPH_META: Omit<SpriteMeta, "front" | "verb"> = { width: ${GLYPH[0]}, height: ${GLYPH[1]}, aspect: ${+(GLYPH[0] / GLYPH[1]).toFixed(4)} };
 `;
 fs.writeFileSync(path.join(repo, "src/components/bricks/spriteMeta.ts"), manifest);
 const all = fs.readdirSync(outDir).filter((f) => f.endsWith(".webp")).reduce((a, f) => a + fs.statSync(path.join(outDir, f)).size, 0);

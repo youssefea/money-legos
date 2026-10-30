@@ -265,6 +265,8 @@ export default function Tray({ ids, onToggle, onPointerDown, wasDrag, dragging, 
           data-dim={dim || undefined}
           data-inspect={(placed && inspect === lego.id) || undefined}
           data-dragging={dragging === lego.id || undefined}
+          // The printed verb's font size as a share of the sprite's width (e2e: verb CSS px = sprite width x this).
+          data-print={SPRITE_META[lego.id] ? (SPRITE_META[lego.id]!.verb / SPRITE_META[lego.id]!.width).toFixed(4) : undefined}
           style={{ "--sw": g.sw.toFixed(3), "--fl": g.fl.toFixed(3), "--fr": g.fr.toFixed(3) } as CSSProperties}
           onKeyDown={onKeyDown}
           onFocus={(e) => {
@@ -358,7 +360,8 @@ export default function Tray({ ids, onToggle, onPointerDown, wasDrag, dragging, 
           <ul className={styles.heroShelf} aria-label="Core bricks" data-testid="hero-shelf">
             {HERO_LEGOS.map(item)}
           </ul>
-          <div ref={scrollRef} className={styles.scroll} data-testid="tray-scroll">
+          {/* Not a Tab stop of its own (Chromium makes a scroller with no tabbable child one): the roving brick is. */}
+          <div ref={scrollRef} className={styles.scroll} data-testid="tray-scroll" tabIndex={-1}>
             <ul className={styles.grid} aria-label={filter ? `More ${filter} bricks` : "More bricks"}>
               {more.map(item)}
             </ul>

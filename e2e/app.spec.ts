@@ -101,17 +101,19 @@ test.describe("desktop", () => {
     await expect(phone(page).locator("[data-tile]")).toHaveCount(1);
   });
 
-  test("hero shelf: 5 across above the bin, the same stud scale (a 2x4 is about twice a 2x2), rows never overlap", async ({ page }) => {
+  test("hero shelf: 3 + 2 above the bin on the bin's stud scale (a 2x4 is twice a 2x2), rows never overlap", async ({ page }) => {
     const shelf = page.getByTestId("hero-shelf");
     const heroes = shelf.locator("button[data-lego]");
     await expect(heroes).toHaveCount(5);
     const boxes = await heroes.evaluateAll((els) => els.map((e) => e.getBoundingClientRect().toJSON() as DOMRect));
-    for (const b of boxes) expect(Math.abs(b.y - boxes[0]!.y)).toBeLessThan(2);
-    const hero = (await brick(page, "b20").locator("[data-sprite]").boundingBox())!;
-    const small = (await brick(page, "swaps").locator("[data-sprite]").boundingBox())!;
-    // The shelf may run its stud a little smaller than the bin's when 5 fronts would not fit.
-    expect(hero.width).toBeGreaterThan(small.width * 1.4);
-    expect(hero.height).toBeGreaterThan(small.height * 0.85);
+    for (const b of boxes.slice(1, 3)) expect(Math.abs(b.y - boxes[0]!.y)).toBeLessThan(2);
+    for (const b of boxes.slice(3)) expect(b.y).toBeGreaterThanOrEqual(boxes[0]!.y + boxes[0]!.height - 0.5);
+    // One stud scale: sprite width / baked width is the same for a hero and a 2x2.
+    const scale = (id: string) =>
+      brick(page, id)
+        .locator("img")
+        .evaluate((el) => (el as HTMLImageElement).getBoundingClientRect().width / (el as HTMLImageElement).naturalWidth);
+    expect(await scale("b20")).toBeCloseTo(await scale("swaps"), 3);
     // The bin under the shelf: row boxes never overlap vertically.
     const rows = await page.getByTestId("tray-scroll").locator("li").evaluateAll((els) => {
       const r = els.map((e) => e.getBoundingClientRect());
@@ -119,11 +121,37 @@ test.describe("desktop", () => {
       return tops.map((t) => Math.max(...r.filter((x) => Math.round(x.top) === t).map((x) => x.bottom)) - t).map((h, i) => [tops[i]!, h] as const);
     });
     for (let i = 1; i < rows.length; i++) expect(rows[i]![0]).toBeGreaterThanOrEqual(rows[i - 1]![0] + rows[i - 1]![1] - 0.5);
-    // Shelf over the hairline, above the bin.
+    // Shelf over the hairline, above the bin; every hero fully inside the shelf.
     const sb = (await shelf.boundingBox())!;
     const bin = (await page.getByTestId("tray-scroll").boundingBox())!;
     expect(sb.y + sb.height).toBeLessThanOrEqual(bin.y + 1);
+    for (const b of boxes) expect(b.x + b.width).toBeLessThanOrEqual(sb.x + sb.width + 0.5);
   });
+
+  for (const [w, h] of [
+    [1440, 900],
+    [1920, 1080],
+  ] as const) {
+    test(`tray print is legible at ${w}x${h}: verbs >= 12px on small bricks, >= 14px on heroes; the bin scrolls, not the page`, async ({ page }) => {
+      await page.setViewportSize({ width: w, height: h });
+      await page.getByTestId("tray-scroll").locator("img").first().waitFor();
+      const sizes = await page.locator("button[data-lego][data-print]").evaluateAll((els) =>
+        els.map((e) => ({
+          id: e.getAttribute("data-lego")!,
+          hero: !!e.closest('[data-testid="hero-shelf"]'),
+          px: e.querySelector("[data-sprite]")!.getBoundingClientRect().width * Number(e.getAttribute("data-print")),
+        })),
+      );
+      expect(sizes).toHaveLength(40);
+      for (const s of sizes) expect(s.px, s.id).toBeGreaterThanOrEqual(s.hero ? 14 : 12);
+      expect(await page.evaluate(() => document.documentElement.scrollHeight - innerHeight)).toBeLessThanOrEqual(0);
+      const sc = page.getByTestId("tray-scroll");
+      expect(await sc.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+      expect(await sc.evaluate((el) => getComputedStyle(el).maskImage)).toContain("linear-gradient");
+      await expect(page.getByTestId("hero-shelf")).toBeInViewport({ ratio: 1 });
+      for (const c of await page.getByRole("group", { name: "Filter bricks" }).getByRole("button").all()) await expect(c).toBeInViewport({ ratio: 1 });
+    });
+  }
 
   test("category chips: all 8 visible, 40px tall, nothing clipped", async ({ page }) => {
     const chips = page.getByRole("group", { name: "Filter bricks" }).getByRole("button");

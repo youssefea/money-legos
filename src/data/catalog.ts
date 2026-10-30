@@ -645,7 +645,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     id: "connect-wallet",
-    verb: "Connect",
+    verb: "Sign in",
     name: "Coinbase Wallet SDK",
     category: "Wallet",
     tier: "secondary",
@@ -691,7 +691,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     id: "sponsored-gas",
-    verb: "Sponsor",
+    verb: "Cover",
     name: "Sponsored gas",
     category: "Wallet",
     tier: "secondary",
@@ -737,7 +737,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     id: "flashblocks",
-    verb: "Preconfirm",
+    verb: "Alert",
     name: "Flashblocks",
     category: "Speed",
     tier: "secondary",
@@ -831,7 +831,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     id: "x402-api",
-    verb: "Charge",
+    verb: "Sell",
     name: "Charge for an API",
     category: "Agents",
     tier: "secondary",
@@ -900,7 +900,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     id: "agent-codes",
-    verb: "Register",
+    verb: "Enroll",
     name: "Agent Builder Codes",
     category: "Agents",
     tier: "secondary",
@@ -969,7 +969,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   },
   {
     id: "vibenet",
-    verb: "Preview",
+    verb: "Try",
     name: "Vibenet",
     category: "Apps",
     tier: "secondary",
