@@ -129,3 +129,14 @@
     gap: 14px;
   }
 }
+
+/* Smallest phones (320): a tighter lockup so "Money Legos" and Docs never touch. */
+@media (max-width: 359.98px) {
+  .header,
+  .brand {
+    gap: 12px;
+  }
+  .name {
+    font-size: 15px;
+  }
+}
