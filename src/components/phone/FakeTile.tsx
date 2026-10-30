@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
+import { useRef, type CSSProperties, type ReactNode } from "react";
 import { BRICK_COLORS, BY_ID, wireLabel, type FakeTile as Tile, type LegoId, type TileRole } from "@/lib";
 import styles from "./FakePhone.module.css";
 
@@ -345,6 +345,7 @@ export default function FakeTile({ tile, role, index, wire, inspected, onInspect
   const lego = BY_ID[tile.legoId];
   const studs = Math.max(4, Math.min(8, lego.size[0] * 2));
   const style = { ...accentVars(tile.accent), "--i": index } as CSSProperties;
+  const tap = useRef<{ was: boolean } | null>(null);
   return (
     <li
       ref={refCb}
@@ -387,9 +388,18 @@ export default function FakeTile({ tile, role, index, wire, inspected, onInspect
           type="button"
           className={styles.inspect}
           aria-label={`${wire ? wireLabel(tile) : tile.title}: made with the ${lego.verb} brick (${lego.name})`}
+          onPointerDown={(e) => {
+            // Read before the tap's focus inspects it: a second tap on the same tile turns it off.
+            tap.current = e.pointerType === "touch" ? { was: inspected } : null;
+          }}
           onFocus={() => onInspect(tile.legoId)}
           onBlur={() => onInspect(null)}
-          onClick={() => onInspect(tile.legoId)}
+          onClick={(e) => {
+            const t = tap.current;
+            tap.current = null;
+            const was = t ? t.was : e.detail === 0 && inspected;
+            onInspect(was ? null : tile.legoId);
+          }}
         />
       )}
     </li>

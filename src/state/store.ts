@@ -8,8 +8,10 @@ export type Announcement = { text: string; n: number };
 export type Swap = { added: LegoId; removed: LegoId; n: number };
 
 /**
- * A transient toast (2.8s) after a change the user may want to take back: a capacity swap
- * ("Full · swapped Issue for Hold") or a brick removed from the board. Undo restores `prev`.
+ * A transient toast (6s) after a change the user may want to take back: a capacity swap
+ * ("Full · swapped Issue for Hold") or a brick removed from the board. Undo restores `prev`, the
+ * board just before that one change. Any later edit (add, remove, clear, recipe, Surprise me, Build)
+ * drops the toast, so Undo never reverses work it did not name.
  */
 export type Toast = { text: string; prev: { ids: LegoId[]; built: boolean; recipe: string | null }; n: number };
 
@@ -126,14 +128,16 @@ export function reducer(state: State, action: Action): State {
         const toast = toastOf(state, `Full · swapped ${BY_ID[removed].kicker} for ${BY_ID[action.id].kicker}`);
         return changed({ ...base, ids, swap, toast }, `Board full: ${BY_ID[action.id].kicker} replaced ${BY_ID[removed].kicker}`);
       }
-      return changed({ ...base, ids: [...state.ids, action.id], swap: null }, `${BY_ID[action.id].kicker} added`);
+      return changed({ ...base, ids: [...state.ids, action.id], swap: null, toast: null }, `${BY_ID[action.id].kicker} added`);
     }
 
     case "remove": {
       if (!state.ids.includes(action.id)) return state;
       const ids = state.ids.filter((id) => id !== action.id);
-      const toast = action.toast ? toastOf(state, `${BY_ID[action.id].kicker} removed`) : state.toast;
-      return changed({ ...state, ids, recipe: null, copied: false, copiedOnce: false, lastAdded: null, swap: null, toast }, `${BY_ID[action.id].kicker} removed`);
+      const toast = action.toast ? toastOf(state, `${BY_ID[action.id].kicker} removed`) : null;
+      // Below 2 bricks the app is no longer built: the next second brick offers Build app again, not Replay.
+      const built = state.built && ids.length >= MIN_LEGOS;
+      return changed({ ...state, ids, built, recipe: null, copied: false, copiedOnce: false, lastAdded: null, swap: null, toast }, `${BY_ID[action.id].kicker} removed`);
     }
 
     case "clear":

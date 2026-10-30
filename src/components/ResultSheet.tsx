@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { FakeApp, LegoId } from "@/lib";
-import type { Typing } from "@/state/store";
 import FakePhone from "./phone/FakePhone";
 import { AppName, CopyButton, DemoLabel } from "./ResultPanel";
 import styles from "./ResultSheet.module.css";
@@ -11,8 +10,6 @@ export type ResultSheetProps = {
   open: boolean;
   app: FakeApp;
   name: string;
-  /** Set right after a Build that types the name in; null when reopening (the name shows at once). */
-  typing: Typing | null;
   copied: boolean;
   onCopy: () => void;
   onDetails: () => void;
@@ -26,7 +23,7 @@ export type ResultSheetProps = {
  * pinned in a 72px action bar with "Back to bricks". Tapping a tile shows "Made with <brick>".
  * Native modal <dialog>: focus trapped, Escape closes.
  */
-export default function ResultSheet({ open, app, name, typing, copied, onCopy, onDetails, onClose }: ResultSheetProps) {
+export default function ResultSheet({ open, app, name, copied, onCopy, onDetails, onClose }: ResultSheetProps) {
   const [inspect, setInspect] = useState<LegoId | null>(null);
   const ref = useRef<HTMLDialogElement>(null);
   const onCloseRef = useRef(onClose);
@@ -66,14 +63,21 @@ export default function ResultSheet({ open, app, name, typing, copied, onCopy, o
       <div className={styles.grip} aria-hidden="true" />
       <header className={styles.head}>
         <div className={styles.heading}>
-          <AppName id="sheet-h" name={name} typing={typing} className={styles.title} />
+          {/* The full name at once: the sheet never types it in (it opens over a finished app). */}
+          <AppName id="sheet-h" name={name} typing={null} className={styles.title} />
           <DemoLabel className={styles.demo} />
         </div>
         <button type="button" className={styles.details} onClick={onDetails} aria-haspopup="dialog">
           Details
         </button>
       </header>
-      <div className={styles.body}>
+      {/* A tap anywhere but a tile clears "Made with" (pointer only; keyboard focus leaving a tile does the same). */}
+      <div
+        className={styles.body}
+        onPointerDown={(e) => {
+          if (!(e.target instanceof Element) || !e.target.closest("[data-tile]")) setInspect(null);
+        }}
+      >
         <FakePhone className={styles.phone} app={app} phase="live" boot={0} slots={0} frameless inspect={inspect} onInspect={setInspect} />
       </div>
       <div className={styles.bar}>

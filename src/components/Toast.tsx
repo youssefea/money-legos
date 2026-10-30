@@ -4,18 +4,18 @@ import { useEffect, useRef, useState } from "react";
 import type { Toast as ToastData } from "@/state/store";
 import styles from "./Toast.module.css";
 
-export const TOAST_MS = 2800;
+export const TOAST_MS = 6000;
 
 export type ToastProps = {
   toast: ToastData | null;
   onUndo: () => void;
-  /** Called when the toast has been on screen for 2.8s (paused while hovered or focused). */
+  /** Called when the toast has been on screen for 6s (paused while hovered or focused). */
   onDone: (n: number) => void;
 };
 
 /**
  * Transient feedback with Undo: "Full · swapped Issue for Hold · Undo", "Issue removed · Undo".
- * 2.8s, paused while the pointer or focus is on it, so the Undo button can be reached.
+ * 6s, paused while the pointer or focus is on it; Ctrl/Cmd+Z does the same Undo from anywhere.
  */
 export default function Toast({ toast, onUndo, onDone }: ToastProps) {
   // Held (pointer or focus on it) for this toast only: a new toast, or Undo unmounting it, never stays held.
@@ -49,7 +49,7 @@ export default function Toast({ toast, onUndo, onDone }: ToastProps) {
           <span className={styles.sep} aria-hidden="true">
             ·
           </span>
-          <button type="button" className={styles.undo} onClick={onUndo} data-testid="toast-undo">
+          <button type="button" className={styles.undo} onClick={onUndo} data-testid="toast-undo" aria-keyshortcuts="Control+Z Meta+Z">
             Undo
           </button>
         </div>

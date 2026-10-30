@@ -389,11 +389,42 @@ test.describe("desktop", () => {
     await expect(brick(page, "b20")).toHaveAttribute("aria-pressed", "true");
     await expect(brick(page, "speed")).toHaveAttribute("aria-pressed", "false");
     expect(await tileIds(page)).toEqual(["validity", "financing", "payments", "b20"]);
-    // It goes away by itself after 2.8s.
+    // It goes away by itself after 6s.
     await brick(page, "speed").click();
     await expect(toast).toBeVisible();
     await page.mouse.move(5, 5);
-    await expect(toast).toHaveCount(0, { timeout: 4500 });
+    await expect(toast).toHaveCount(0, { timeout: 8000 });
+  });
+
+  test("Undo only takes back the swap it names: a later edit drops the toast; Ctrl/Cmd+Z undoes while it shows", async ({ page }) => {
+    for (const id of ["b20", "payments", "financing", "validity"]) await brick(page, id).click();
+    await brick(page, "speed").click();
+    const toast = page.getByTestId("toast");
+    await expect(toast).toContainText("Full · swapped Issue for Speed");
+    await expect(page.getByTestId("toast-undo")).toHaveAttribute("aria-keyshortcuts", /Control\+Z/);
+    expect((await page.getByTestId("toast-undo").boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    // swap -> remove Pay from the tray: the toast goes; Ctrl+Z does nothing (Pay stays off, Issue stays off).
+    await brick(page, "payments").click();
+    await expect(toast).toHaveCount(0);
+    await page.keyboard.press("Control+z");
+    await expect(brick(page, "payments")).toHaveAttribute("aria-pressed", "false");
+    await expect(brick(page, "b20")).toHaveAttribute("aria-pressed", "false");
+    // swap again -> Ctrl+Z right away reverses exactly that swap.
+    await brick(page, "b20").click();
+    await brick(page, "verify").click();
+    await expect(toast).toContainText(/Full · swapped/);
+    await page.keyboard.press("Control+z");
+    await expect(toast).toHaveCount(0);
+    await expect(brick(page, "verify")).toHaveAttribute("aria-pressed", "false");
+    await expect(count(page)).toHaveAttribute("aria-label", "4 of 4 bricks");
+  });
+
+  test("removing below 2 bricks after Build un-builds: a new second brick offers Build app, not Replay", async ({ page }) => {
+    await page.goto("/#b20,payments");
+    await expect(build(page)).toHaveAttribute("aria-label", "Replay the app build");
+    await brick(page, "payments").click();
+    await brick(page, "financing").click();
+    await expect(build(page)).toHaveText("Build app");
   });
 
   test("surprise me builds; clear resets", async ({ page }) => {
@@ -709,6 +740,24 @@ test.describe("phone", () => {
     // Tapping a tile names its brick.
     await sheet.locator('[data-tile="payments"] button').tap();
     await expect(sheet.locator('[data-tile="payments"]')).toContainText("Made with Pay");
+    await expect(sheet.locator('[data-tile="payments"]')).toHaveAttribute("data-inspect", "true");
+    // Tapping it again turns it off; tapping another tile moves it; tapping the screen clears it.
+    await sheet.locator('[data-tile="payments"] button').tap();
+    await expect(sheet.locator("[data-tile][data-inspect]")).toHaveCount(0);
+    await sheet.locator('[data-tile="speed"] button').tap();
+    await expect(sheet.locator('[data-tile="speed"]')).toHaveAttribute("data-inspect", "true");
+    await sheet.getByTestId("phone-brand").tap();
+    await expect(sheet.locator("[data-tile][data-inspect]")).toHaveCount(0);
+  });
+
+  test("the sheet shows the full app name at once (never typed in), on Build and on reopening", async ({ page }) => {
+    await page.goto("/");
+    for (const id of ["b20", "payments"]) await brick(page, id).tap();
+    await page.getByTestId("mobile-bar").getByRole("button", { name: "Build app" }).tap();
+    const sheet = page.getByTestId("result-sheet");
+    await expect(sheet).toBeVisible();
+    await expect(sheet.getByTestId("app-name")).not.toHaveAttribute("data-typing", "true");
+    expect(await sheet.getByTestId("app-name").locator("span span").count()).toBe(0);
   });
 
   test("result opens as a bottom sheet; Details opens over it; Escape steps back", async ({ page }) => {
@@ -848,6 +897,30 @@ test.describe("v6: Replay, inspect from the board, Present mode, the name", () =
     await expect(phone(page).locator('[data-tile="speed"]')).toHaveAttribute("data-inspect", "true");
     await page.keyboard.press("Enter");
     await expect(brick(page, "speed")).toHaveAttribute("aria-pressed", "false");
+  });
+
+  test("focus never drops to <body>: after a board removal (keyboard or click), after Undo", async ({ page }) => {
+    await page.goto("/#b20,payments,speed");
+    await expect(phone(page).locator("[data-tile]")).toHaveCount(3);
+    const focused = () => page.evaluate(() => {
+      const a = document.activeElement as HTMLElement;
+      return a.dataset.boardBrick ?? a.dataset.testid ?? a.tagName;
+    });
+    // Keyboard: Enter on Speed (top) -> focus the brick now on top (Pay).
+    await page.locator('[data-board-brick="speed"]').focus();
+    await page.keyboard.press("Enter");
+    await expect.poll(focused).toBe("payments");
+    // Undo from the toast (keyboard) -> focus the brick that came back.
+    await page.getByTestId("toast-undo").focus();
+    await page.keyboard.press("Enter");
+    await expect.poll(focused).toBe("speed");
+    // Click removal -> the board region.
+    await page.locator('[data-board-brick="b20"]').click();
+    await expect(brick(page, "b20")).toHaveAttribute("aria-pressed", "false");
+    await expect.poll(focused).toBe("board");
+    // Undo by click -> the restored brick.
+    await page.getByTestId("toast-undo").click();
+    await expect.poll(focused).toBe("b20");
   });
 
   test("Present mode: P or the toggle; the tray slides away, a drawer keeps the bricks; Esc leaves; remembered for the tab, not the URL", async ({ page }) => {

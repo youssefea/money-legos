@@ -69,6 +69,33 @@ function subscribePresent(l: () => void) {
   };
 }
 
+/** A board brick's button (the live board's hit targets), or Build app when there is no such brick. */
+function boardBrick(id: LegoId | undefined): string {
+  return id ? `button[data-board-brick="${id}"]` : '[data-testid="build"]';
+}
+
+/**
+ * Focus the element once it exists (board hit targets appear after the stage measures the new stack),
+ * falling back to Build app, then the board region. Gives up after ~0.5s.
+ */
+function focusSoon(selector: string) {
+  let tries = 0;
+  const step = () => {
+    const el = document.querySelector<HTMLElement>(selector);
+    if (el) {
+      el.focus({ preventScroll: true });
+      return;
+    }
+    if (++tries < 30) {
+      requestAnimationFrame(step);
+      return;
+    }
+    const fallback = document.querySelector<HTMLElement>('[data-testid="build"]');
+    fallback?.focus({ preventScroll: true });
+  };
+  requestAnimationFrame(step);
+}
+
 /**
  * The whole playground: pick bricks (the phone shows them as wireframes), Build app (the phone boots
  * into a fake app), then every change updates it live; copy the prompt.
@@ -161,9 +188,25 @@ export default function MoneyLegosApp() {
     if (keyboard && !compactNow()) requestAnimationFrame(() => copyRef.current?.focus({ preventScroll: true }));
   };
 
-  const onRemoveBoard = (id: LegoId) => {
+  // After a board brick goes (or Undo brings one back), focus stays on the board: the brick now in
+  // that place, the one below it, or Build app when the board is empty. Never <body>.
+  // A pointer removal focuses the board region instead (no inspect highlight under a resting mouse).
+  const onRemoveBoard = (id: LegoId, keyboard: boolean) => {
+    const i = state.ids.indexOf(id);
+    const rest = state.ids.filter((x) => x !== id);
     dispatch({ type: "remove", id, toast: true });
     setInspect(null);
+    focusSoon(keyboard ? boardBrick(rest[i] ?? rest[i - 1]) : '[data-testid="board"]');
+  };
+
+  const onUndo = () => {
+    const t = state.toast;
+    if (!t) return;
+    const back = t.prev.ids.find((x) => !state.ids.includes(x));
+    // Undo from the toast unmounts its button: move focus to the brick that came back.
+    const fromToast = !!document.activeElement?.closest("[data-testid='toast']");
+    dispatch({ type: "undo" });
+    if (fromToast) focusSoon(boardBrick(back));
   };
 
   // Compact bar: Build app, then View app (the live app in the sheet).
@@ -215,13 +258,25 @@ export default function MoneyLegosApp() {
     return () => window.clearTimeout(t);
   }, [state.typing]);
 
-  // Present mode: P toggles it and Escape leaves it.
+  // Present mode: P toggles it and Escape leaves it. Ctrl/Cmd+Z is the toast's Undo (only while it shows).
+  const undoRef = useRef(onUndo);
+  useEffect(() => {
+    undoRef.current = onUndo;
+  });
+  const hasToast = !!state.toast;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.defaultPrevented || e.altKey) return;
       const t = e.target as HTMLElement | null;
       if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
       if (document.querySelector("dialog[open]")) return;
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && (e.key === "z" || e.key === "Z")) {
+        if (!hasToast) return;
+        e.preventDefault();
+        undoRef.current();
+        return;
+      }
+      if (e.metaKey || e.ctrlKey) return;
       if (e.key === "p" || e.key === "P") {
         if (compactNow()) return;
         e.preventDefault();
@@ -232,7 +287,7 @@ export default function MoneyLegosApp() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [present, setPresent]);
+  }, [present, setPresent, hasToast]);
 
   // Deep links: #b20,payments,speed or #recipe=neobroker load the stack and build it. An empty hash
   // (Back to the start) or a link with no known bricks clears the board, so URL and screen agree.
@@ -418,14 +473,13 @@ export default function MoneyLegosApp() {
         <SoundToggle on={sound.on} onChange={sound.setOn} />
       </footer>
 
-      <Toast toast={state.toast} onUndo={() => dispatch({ type: "undo" })} onDone={(n) => dispatch({ type: "toastDone", n })} />
+      <Toast toast={state.toast} onUndo={onUndo} onDone={(n) => dispatch({ type: "toastDone", n })} />
 
       {isMobile && result && (
         <ResultSheet
           open={sheetOpen}
           app={app}
           name={result.name}
-          typing={state.typing}
           copied={state.copied}
           onCopy={() => void onCopy()}
           onDetails={openDetails}

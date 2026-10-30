@@ -24,8 +24,8 @@ export type BoardProps = {
   ghostSize?: [number, number];
   inspect: LegoId | null;
   onInspect: (id: LegoId | null) => void;
-  /** A board brick was clicked (or Enter): take it off (the page shows Undo). */
-  onRemove: (id: LegoId) => void;
+  /** A board brick was clicked (or Enter, `keyboard`): take it off (the page shows Undo). */
+  onRemove: (id: LegoId, keyboard: boolean) => void;
   onBuild: (e: MouseEvent<HTMLButtonElement>) => void;
   onSurprise: () => void;
   onClear: () => void;
@@ -61,7 +61,7 @@ export default function Board({ dropRef, ...p }: BoardProps) {
   const { inspect, onInspect, onRemove } = p;
   const hits = { inspect, onInspect, onRemove };
   return (
-    <section className={styles.board} aria-labelledby="board-h">
+    <section className={styles.board} aria-labelledby="board-h" tabIndex={-1} data-testid="board">
       <h2 id="board-h" className="visually-hidden">
         Board
       </h2>

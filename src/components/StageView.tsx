@@ -34,7 +34,7 @@ export type StageViewProps = {
    * (its tile and outline light up); click or Enter removes it. On touch the first tap selects, the
    * second removes.
    */
-  hits?: { inspect: LegoId | null; onInspect: (id: LegoId | null) => void; onRemove: (id: LegoId) => void };
+  hits?: { inspect: LegoId | null; onInspect: (id: LegoId | null) => void; onRemove: (id: LegoId, keyboard: boolean) => void };
 };
 
 export type Frame = { stackTop: number; platePx: number };
@@ -215,7 +215,7 @@ export default function StageView({ ids, dark, reducedMotion, generation, lastAd
                 onBlur={() => {
                   if (touchSel.current !== id) hits.onInspect(null);
                 }}
-                onClick={() => {
+                onClick={(e) => {
                   if (lastPointer.current === "touch" && touchSel.current !== id) {
                     touchSel.current = id;
                     hits.onInspect(id);
@@ -224,7 +224,7 @@ export default function StageView({ ids, dark, reducedMotion, generation, lastAd
                   lastPointer.current = "mouse";
                   touchSel.current = null;
                   hits.onInspect(null);
-                  hits.onRemove(id);
+                  hits.onRemove(id, e.detail === 0);
                 }}
               />
             );

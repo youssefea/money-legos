@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { LegoId } from "@/lib";
+import { BY_ID, type LegoId } from "@/lib";
 import { initialState, isLive, reducer, resultOf, setNumber, stepStates, type Action, type State } from "./store";
 
 const run = (...actions: Action[]): State => actions.reduce(reducer, initialState);
@@ -38,11 +38,41 @@ describe("store", () => {
     expect(more.built).toBe(true);
     expect(resultOf(more)?.ids).toContain("speed");
     expect(more.announce.text).toMatch(/^Speed added, 3 of 4\. App: /);
-    // Below 2 bricks there is no app, but adding one back makes it live again without Build.
+    // Below 2 bricks there is no app any more: adding a second brick offers Build app again (not Replay).
     const low = reducer(reducer(more, { type: "remove", id: "speed" }), { type: "remove", id: "payments" });
     expect(resultOf(low)).toBeNull();
-    expect(resultOf(reducer(low, add("financing")))).not.toBeNull();
-    expect(reducer(low, add("financing")).generation).toBe(built.generation);
+    expect(low.built).toBe(false);
+    const again = reducer(low, add("financing"));
+    expect(isLive(again)).toBe(false);
+    expect(isLive(reducer(again, { type: "build" }))).toBe(true);
+  });
+
+  it("Undo reverses only the swap or removal that made the toast; any later edit drops it", () => {
+    const full = run(add("b20"), add("payments"), add("speed"), add("financing"));
+    const swapped = reducer(full, add("validity"));
+    expect(swapped.toast?.text).toBe(`Full · swapped Issue for ${BY_ID.validity.kicker}`);
+    // Immediate Undo restores the board before the swap.
+    expect(reducer(swapped, { type: "undo" }).ids).toEqual(full.ids);
+    // swap -> remove (tray) -> Undo: the toast is gone, so Undo does nothing (Speed stays removed).
+    const removed = reducer(swapped, { type: "remove", id: "speed" });
+    expect(removed.toast).toBeNull();
+    expect(reducer(removed, { type: "undo" }).ids).toEqual(removed.ids);
+    // swap -> remove -> add -> Undo: same.
+    const readded = reducer(removed, add("b20"));
+    expect(readded.toast).toBeNull();
+    expect(reducer(readded, { type: "undo" }).ids).toEqual(readded.ids);
+    // A board removal makes its own toast; a later swap replaces it with the swap's own.
+    const boardRemoved = reducer(full, { type: "remove", id: "speed", toast: true });
+    expect(boardRemoved.toast?.text).toBe(`${BY_ID.speed.kicker} removed`);
+    const added = reducer(boardRemoved, add("validity"));
+    expect(added.toast).toBeNull();
+    const twice = reducer(reducer(full, add("validity")), add("verify"));
+    expect(twice.toast?.text).toBe(`Full · swapped Pay for ${BY_ID.verify.kicker}`);
+    expect(reducer(twice, { type: "undo" }).ids).toEqual(reducer(full, add("validity")).ids);
+    // Build, Clear, a recipe and Surprise me drop it too.
+    for (const a of [{ type: "build" }, { type: "clear" }, { type: "load", ids: ["b20", "payments"], recipe: null, build: true, source: "surprise" }] as Action[]) {
+      expect(reducer(swapped, a).toast).toBeNull();
+    }
   });
 
   it("loads a recipe and builds it", () => {
