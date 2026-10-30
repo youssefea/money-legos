@@ -74,7 +74,7 @@ export const initialState: State = {
 };
 
 function toastOf(state: State, text: string): Toast {
-  return { text, prev: { ids: state.ids.slice(), built: state.built, recipe: state.recipe }, n: (state.toast?.n ?? 0) + 1 };
+  return { text, prev: { ids: state.ids.slice(), built: state.built, recipe: state.recipe }, n: state.announce.n + 1 }; // always increases (a toast after Undo never reuses an id)
 }
 
 function say(state: State, text: string): Announcement {

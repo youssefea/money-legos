@@ -189,6 +189,12 @@ export default function StageView({ ids, dark, reducedMotion, generation, lastAd
             const b = itemBox(it);
             const lego = BY_ID[id];
             if (!lego) return null;
+            // The hit area is the brick's silhouette (when the stage sent one), so a brick's studs and
+            // top face never steal the pointer from the brick above or below.
+            const clip =
+              it.hull && it.hull.length >= 3 && b.w > 0 && b.h > 0
+                ? `polygon(${it.hull.map(([x, y]) => `${(((x - b.x) / b.w) * 100).toFixed(2)}% ${(((y - b.y) / b.h) * 100).toFixed(2)}%`).join(", ")})`
+                : undefined;
             return (
               <button
                 key={id}
@@ -197,7 +203,7 @@ export default function StageView({ ids, dark, reducedMotion, generation, lastAd
                 data-board-brick={id}
                 data-on={selected === id || undefined}
                 aria-label={`${lego.kicker} — remove`}
-                style={{ left: `${b.x * 100}%`, top: `${b.y * 100}%`, width: `${b.w * 100}%`, height: `${b.h * 100}%` }}
+                style={{ left: `${b.x * 100}%`, top: `${b.y * 100}%`, width: `${b.w * 100}%`, height: `${b.h * 100}%`, clipPath: clip }}
                 onPointerDown={(e) => {
                   lastPointer.current = e.pointerType;
                 }}

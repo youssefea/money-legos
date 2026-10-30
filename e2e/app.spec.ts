@@ -58,7 +58,8 @@ test.describe("desktop", () => {
     await build(page).click();
     await expect(phone(page)).toHaveAttribute("data-phase", "live");
     await expect(page.getByTestId("app-name")).not.toHaveText("Your app");
-    await expect(build(page)).toHaveCount(0);
+    // The Build button stays in its slot as Replay (the toolbar never jumps).
+    await expect(build(page)).toHaveText("Replay");
     await expect(page.getByTestId("copy")).not.toHaveAttribute("data-quiet", "true");
     expect(await tileIds(page)).toEqual(["payments", "b20"]);
     await expect(page.locator('[aria-label="Steps"] li').nth(1)).toHaveAttribute("data-state", "done");
@@ -76,25 +77,61 @@ test.describe("desktop", () => {
     await expect(page.getByTestId("app-name")).toHaveText(before!);
   });
 
-  test("placed bricks fade with a check on the front face; click again removes", async ({ page }) => {
+  test("placed bricks keep full colour with a ring and a check off the print; click again removes", async ({ page }) => {
     await brick(page, "b20").click();
+    await brick(page, "swaps").click();
     await expect(brick(page, "b20")).toHaveAttribute("aria-pressed", "true");
+    // Full colour (no fade), a 2px Base Blue ring.
+    expect(await brick(page, "b20").locator("[data-sprite]").evaluate((el) => getComputedStyle(el).opacity)).toBe("1");
+    expect(await brick(page, "b20").evaluate((el) => getComputedStyle(el).boxShadow)).toMatch(/rgb\(0, 0, 255\).*inset|inset.*rgb\(0, 0, 255\)/);
+    // Hero: the check sits on the studs (top of the front face), never over the centred verb.
     const check = (await brick(page, "b20").getByTestId("placed-check").boundingBox())!;
-    const art = (await brick(page, "b20").locator("[data-sprite]").boundingBox())!;
-    // Bottom half of the brick, not on the studs.
-    expect(check.y).toBeGreaterThan(art.y + art.height * 0.5);
+    const cell = (await brick(page, "b20").boundingBox())!;
+    expect(check.y + check.height).toBeLessThan(cell.y + cell.height * 0.45);
+    expect(check.x + check.width).toBeLessThanOrEqual(cell.x + cell.width + 1);
+    // Small brick: bottom-right corner of its cell.
+    const c2 = (await brick(page, "swaps").getByTestId("placed-check").boundingBox())!;
+    const b2 = (await brick(page, "swaps").boundingBox())!;
+    expect(c2.y).toBeGreaterThan(b2.y + b2.height * 0.5);
     await expect.poll(async () => Math.round((await brick(page, "b20").getByTestId("placed-check").boundingBox())!.width)).toBe(16);
     await brick(page, "b20").click();
     await expect(brick(page, "b20")).toHaveAttribute("aria-pressed", "false");
-    await expect(live(page)).toHaveText(/Issue removed, 0 of 4/);
-    await expect(phone(page).locator("[data-tile]")).toHaveCount(0);
+    await expect(live(page)).toHaveText(/Issue removed, 1 of 4/);
+    await expect(phone(page).locator("[data-tile]")).toHaveCount(1);
   });
 
-  test("one stud scale: a hero 2x4 is about twice a small 2x2", async ({ page }) => {
+  test("hero shelf: 5 across above the bin, the same stud scale (a 2x4 is about twice a 2x2), rows never overlap", async ({ page }) => {
+    const shelf = page.getByTestId("hero-shelf");
+    const heroes = shelf.locator("button[data-lego]");
+    await expect(heroes).toHaveCount(5);
+    const boxes = await heroes.evaluateAll((els) => els.map((e) => e.getBoundingClientRect().toJSON() as DOMRect));
+    for (const b of boxes) expect(Math.abs(b.y - boxes[0]!.y)).toBeLessThan(2);
     const hero = (await brick(page, "b20").locator("[data-sprite]").boundingBox())!;
     const small = (await brick(page, "swaps").locator("[data-sprite]").boundingBox())!;
-    expect(hero.height).toBeCloseTo(small.height, 0);
-    expect(hero.width).toBeGreaterThan(small.width * 1.5);
+    // The shelf may run its stud a little smaller than the bin's when 5 fronts would not fit.
+    expect(hero.width).toBeGreaterThan(small.width * 1.4);
+    expect(hero.height).toBeGreaterThan(small.height * 0.85);
+    // The bin under the shelf: row boxes never overlap vertically.
+    const rows = await page.getByTestId("tray-scroll").locator("li").evaluateAll((els) => {
+      const r = els.map((e) => e.getBoundingClientRect());
+      const tops = [...new Set(r.map((x) => Math.round(x.top)))].sort((a, b) => a - b);
+      return tops.map((t) => Math.max(...r.filter((x) => Math.round(x.top) === t).map((x) => x.bottom)) - t).map((h, i) => [tops[i]!, h] as const);
+    });
+    for (let i = 1; i < rows.length; i++) expect(rows[i]![0]).toBeGreaterThanOrEqual(rows[i - 1]![0] + rows[i - 1]![1] - 0.5);
+    // Shelf over the hairline, above the bin.
+    const sb = (await shelf.boundingBox())!;
+    const bin = (await page.getByTestId("tray-scroll").boundingBox())!;
+    expect(sb.y + sb.height).toBeLessThanOrEqual(bin.y + 1);
+  });
+
+  test("category chips: all 8 visible, 40px tall, nothing clipped", async ({ page }) => {
+    const chips = page.getByRole("group", { name: "Filter bricks" }).getByRole("button");
+    await expect(chips).toHaveCount(8);
+    for (const c of await chips.all()) {
+      await expect(c).toBeInViewport({ ratio: 1 });
+      expect(Math.round((await c.boundingBox())!.height)).toBeGreaterThanOrEqual(40);
+    }
+    await expect(page.locator("#brick-keys")).toHaveText(/Arrow keys/);
   });
 
   test("keyboard: arrow keys move through the bin, Enter and Space add", async ({ page }) => {
@@ -160,7 +197,7 @@ test.describe("desktop", () => {
     await expect(tip).toBeVisible();
     await expect(tip).toContainText("200ms blocks");
     await expect(tip).toContainText("Live on Base Sepolia; mainnet targeting November 2026");
-    await expect(brick(page, "speed")).toHaveAttribute("aria-describedby", "brick-tip");
+    await expect(brick(page, "speed")).toHaveAttribute("aria-describedby", "brick-tip brick-keys");
     const box = (await tip.boundingBox())!;
     expect(box.x).toBeGreaterThanOrEqual(15);
     await page.keyboard.press("Escape");
@@ -200,7 +237,11 @@ test.describe("desktop", () => {
     await expect(phone(page).locator("[data-tile]")).toHaveCount(4);
     expect(await tileIds(page)).toEqual(["validity", "speed", "payments", "b20"]);
     await expect(phone(page).locator('[data-role="hero"]')).toHaveCount(1);
-    await expect(phone(page).locator('[data-role="hero"]')).toHaveAttribute("data-tile", "b20");
+    // The top tile is the hero, whatever it is; the rest are compact rows.
+    await expect(phone(page).locator('[data-role="hero"]')).toHaveAttribute("data-tile", "validity");
+    const hh = (await phone(page).locator('[data-role="hero"]').boundingBox())!.height;
+    expect(hh).toBeGreaterThanOrEqual(110);
+    expect(hh).toBeLessThanOrEqual(144);
     await expect(phone(page).locator('[data-role="status"]')).toHaveAttribute("data-tile", "speed");
     const lines = page.getByTestId("connectors").locator("[data-line]");
     await expect(lines).toHaveCount(4);
@@ -296,16 +337,29 @@ test.describe("desktop", () => {
     await expect(details).toBeFocused();
   });
 
-  test("full at 4: a fifth brick replaces the bottom one and the board says so", async ({ page }) => {
+  test("full at 4: a fifth brick swaps out the bottom one with a toast and Undo; no permanent sentence", async ({ page }) => {
     for (const id of ["b20", "payments", "financing", "validity"]) await brick(page, id).click();
     await expect(count(page)).toHaveAttribute("aria-label", "4 of 4 bricks");
-    await expect(page.getByTestId("board-full")).toHaveText("Full. A new brick swaps out the bottom one.");
+    await expect(page.getByText(/^Full/)).toHaveCount(0);
     await brick(page, "speed").click();
     await expect(brick(page, "speed")).toHaveAttribute("aria-pressed", "true");
     await expect(brick(page, "b20")).toHaveAttribute("aria-pressed", "false");
-    await expect(page.getByTestId("board-full")).toHaveText("Full. Speed swapped in for Issue.");
+    const toast = page.getByTestId("toast");
+    await expect(toast).toHaveAttribute("role", "status");
+    await expect(toast).toContainText("Full · swapped Issue for Speed");
+    expect(await toast.evaluate((el) => getComputedStyle(el).fontSize)).toBe("13px");
     await expect(live(page)).toHaveText(/Board full: Speed replaced Issue, 4 of 4/);
     expect(await tileIds(page)).toEqual(["speed", "validity", "financing", "payments"]);
+    await toast.getByRole("button", { name: "Undo" }).click();
+    await expect(toast).toHaveCount(0);
+    await expect(brick(page, "b20")).toHaveAttribute("aria-pressed", "true");
+    await expect(brick(page, "speed")).toHaveAttribute("aria-pressed", "false");
+    expect(await tileIds(page)).toEqual(["validity", "financing", "payments", "b20"]);
+    // It goes away by itself after 2.8s.
+    await brick(page, "speed").click();
+    await expect(toast).toBeVisible();
+    await page.mouse.move(5, 5);
+    await expect(toast).toHaveCount(0, { timeout: 4500 });
   });
 
   test("surprise me builds; clear resets", async ({ page }) => {
@@ -318,7 +372,7 @@ test.describe("desktop", () => {
     await expect(page.getByTestId("app-name")).toHaveText("Your app");
     await expect(live(page)).toHaveText(/Board cleared/);
     await expect(page).toHaveURL(/\/$/);
-    await expect(build(page)).toBeVisible();
+    await expect(build(page)).toHaveText("Build app");
   });
 });
 
@@ -432,7 +486,7 @@ test.describe("accessibility", () => {
 
   test("the phone is a labelled region summarising the app", async ({ page }) => {
     await page.goto("/#b20,payments");
-    await expect(page.getByRole("region", { name: /^Acme .+ app: Order #1042, ACME USD$/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /^Acme .+ app: Order #1042 · 1 item, ACME USD$/ })).toBeVisible();
   });
 
   test("one polite live region announces every change", async ({ page }) => {
@@ -444,7 +498,7 @@ test.describe("accessibility", () => {
     await expect(live(page)).toHaveText(/Issue added, 1 of 4/);
     await brick(page, "payments").click();
     await build(page).click();
-    await expect(live(page)).toHaveText(/built\. Copy prompt to use it\./);
+    await expect(live(page)).toHaveText(/App built: .+\. Copy prompt to use it\./);
     await page.getByRole("button", { name: "Clear" }).click();
     await expect(live(page)).toHaveText(/Board cleared, 0 of 4/);
   });
@@ -503,17 +557,18 @@ test.describe("compact tablet", () => {
 test.describe("phone", () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: "reduce" });
 
-  test("first screen: compact bar, tools, chips and two hero columns", async ({ page }) => {
+  test("first screen: compact bar, tools, chips and the hero shelf", async ({ page }) => {
     await page.goto("/");
     const bar = page.getByTestId("mobile-bar");
     await expect(bar.getByTestId("board-count")).toHaveAttribute("aria-label", "0 of 4 bricks");
-    expect((await bar.boundingBox())!.height).toBeLessThanOrEqual(116);
+    expect((await bar.boundingBox())!.height).toBeLessThanOrEqual(132);
     await expect(page.getByTestId("recipes").locator("visible=true")).toBeInViewport();
     await expect(page.getByRole("button", { name: "Surprise me" })).toBeInViewport();
     await expect(page.getByRole("button", { name: "Money", exact: true })).toBeInViewport();
     const [a, b, c] = await Promise.all(["b20", "payments", "financing"].map((id) => brick(page, id).boundingBox()));
-    expect(Math.abs(a!.y - b!.y)).toBeLessThan(2); // two per row
-    expect(c!.y).toBeGreaterThan(a!.y + a!.height * 0.8);
+    // The five heroes share one shelf row.
+    expect(Math.abs(a!.y - b!.y)).toBeLessThan(2);
+    expect(Math.abs(c!.y - a!.y)).toBeLessThan(2);
     const chips = page.getByRole("group", { name: "Filter bricks" });
     expect(await chips.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
   });
@@ -527,6 +582,12 @@ test.describe("phone", () => {
     // No device frame inside the sheet: the phone fills the sheet's width.
     const ph = (await sheet.getByTestId("phone").boundingBox())!;
     expect(ph.width).toBeGreaterThan(340);
+    // One screen colour edge to edge; the fake tab bar sits at the end of the scroll, right above the action bar.
+    expect(await sheet.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe("rgb(238, 240, 243)");
+    const tab = (await sheet.locator('[class*="tabbar"]').boundingBox())!;
+    const actions = (await sheet.getByRole("button", { name: "Back to bricks" }).locator("..").boundingBox())!;
+    expect(Math.abs(tab.y + tab.height - actions.y)).toBeLessThan(2);
+    expect(actions.height).toBeGreaterThanOrEqual(72);
     // Tapping a tile names its brick.
     await sheet.locator('[data-tile="payments"] button').tap();
     await expect(sheet.locator('[data-tile="payments"]')).toContainText("Made with Pay");
@@ -580,3 +641,162 @@ test.describe("phone", () => {
     await expect(b).toHaveAttribute("aria-pressed", "false");
   });
 });
+
+test.describe("v6: Replay, inspect from the board, Present mode, the name", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/");
+    await page.getByTestId("brick-stage").waitFor();
+  });
+
+  test("before 2 bricks Build is a quiet Gray 10 slab and Surprise me is a text button; then Build is the only filled button", async ({ page }) => {
+    const b = build(page);
+    const style = () => b.evaluate((el) => { const cs = getComputedStyle(el); return [cs.backgroundColor, cs.color, cs.borderTopColor]; });
+    expect(await style()).toEqual(["rgb(238, 240, 243)", "rgb(91, 97, 110)", "rgb(238, 240, 243)"]);
+    const surprise = page.getByTestId("surprise");
+    expect(await surprise.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe("rgba(0, 0, 0, 0)");
+    await brick(page, "b20").click();
+    await brick(page, "payments").click();
+    await expect.poll(async () => (await style())[0]).toBe("rgb(0, 0, 255)");
+    expect(await surprise.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe("rgba(0, 0, 0, 0)");
+  });
+
+  test("Build by keyboard moves focus to Copy prompt and announces; Replay keeps the slot and the focus", async ({ page }) => {
+    await brick(page, "b20").click();
+    await brick(page, "payments").click();
+    const slot = (await build(page).boundingBox())!;
+    await build(page).focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByTestId("copy")).toBeFocused();
+    await expect(live(page)).toHaveText(/^App built: /);
+    await expect(build(page)).toHaveText("Replay");
+    const again = (await build(page).boundingBox())!;
+    expect(Math.abs(again.x - slot.x)).toBeLessThan(1);
+    expect(Math.abs(again.y - slot.y)).toBeLessThan(1);
+    // Replay by mouse: the boot plays again, focus stays on the button (never drops to <body>).
+    await build(page).click();
+    await expect(build(page)).toBeFocused();
+    await expect(phone(page)).toHaveAttribute("data-phase", "live");
+    expect(await page.evaluate(() => document.activeElement === document.body)).toBe(false);
+  });
+
+  test("the app name: typed on Build, crossfade on edits, no invisible trailing letters; a shared link shows it at once", async ({ page }) => {
+    const hidden = () =>
+      page.getByTestId("app-name").evaluate((h) => [...h.querySelectorAll("span")].filter((s) => parseFloat(getComputedStyle(s).opacity) < 0.99).length);
+    await brick(page, "b20").click();
+    await brick(page, "payments").click();
+    await build(page).click();
+    await expect(page.getByTestId("app-name")).toHaveAttribute("data-typing", "true");
+    await expect.poll(hidden, { timeout: 3000 }).toBe(0);
+    await expect(page.getByTestId("app-name")).not.toHaveAttribute("data-typing", "true", { timeout: 3000 });
+    const before = await page.getByTestId("app-name").textContent();
+    await brick(page, "speed").click();
+    await expect(page.getByTestId("app-name")).not.toHaveText(before!);
+    await expect(page.getByTestId("app-name")).not.toHaveAttribute("data-typing", "true");
+    await expect.poll(hidden, { timeout: 1000 }).toBe(0);
+    // One text node per name: no per-letter spans left over from typing.
+    expect(await page.getByTestId("app-name").evaluate((h) => h.querySelectorAll("span span").length)).toBe(0);
+    await page.goto("/#b20,payments,speed");
+    await expect(page.getByTestId("app-name")).not.toHaveText("Your app");
+    await expect(page.getByTestId("app-name")).not.toHaveAttribute("data-typing", "true");
+    expect(await hidden()).toBe(0);
+  });
+
+  test("board bricks are controls: hover highlights the tile and outlines the brick; click removes with Undo", async ({ page }) => {
+    await page.goto("/#b20,payments,speed");
+    await expect(phone(page).locator("[data-tile]")).toHaveCount(3);
+    const hit = page.locator('[data-board-brick="payments"]');
+    await expect(hit).toHaveAttribute("aria-label", "Pay — remove");
+    await hit.hover();
+    await expect(phone(page).locator('[data-tile="payments"]')).toHaveAttribute("data-inspect", "true");
+    const ring = page.getByTestId("brick-ring");
+    await expect(ring).toBeVisible();
+    const shape = await ring.getAttribute("data-shape");
+    expect(["hull", "rect"]).toContain(shape);
+    if (shape === "hull") expect((await ring.getAttribute("points"))!.trim().split(/\s+/).length).toBeGreaterThanOrEqual(3);
+    // "Made with" sits on the colour strip, not over the tile's text.
+    const tile = phone(page).locator('[data-tile="payments"]');
+    const made = (await tile.getByText("Made with").boundingBox())!;
+    const body = (await tile.locator('[class*="body"]').first().boundingBox())!;
+    expect(made.y + made.height).toBeLessThanOrEqual(body.y + 4);
+    await hit.click();
+    await expect(brick(page, "payments")).toHaveAttribute("aria-pressed", "false");
+    await expect(page.getByTestId("toast")).toContainText("Pay removed");
+    await page.getByTestId("toast-undo").click();
+    await expect(brick(page, "payments")).toHaveAttribute("aria-pressed", "true");
+    expect(await tileIds(page)).toEqual(["speed", "payments", "b20"]);
+    // Keyboard: Enter on a focused board brick removes it too.
+    await page.locator('[data-board-brick="speed"]').focus();
+    await expect(phone(page).locator('[data-tile="speed"]')).toHaveAttribute("data-inspect", "true");
+    await page.keyboard.press("Enter");
+    await expect(brick(page, "speed")).toHaveAttribute("aria-pressed", "false");
+  });
+
+  test("Present mode: P or the toggle; the tray slides away, a drawer keeps the bricks; Esc leaves; remembered for the tab, not the URL", async ({ page }) => {
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await page.goto("/#b20,payments");
+    await expect(phone(page).locator("[data-tile]")).toHaveCount(2);
+    const toggle = page.getByTestId("present-toggle");
+    await expect(toggle).toHaveAttribute("aria-pressed", "false");
+    await page.locator("body").press("p");
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    const drawer = page.getByTestId("present-drawer");
+    await expect(drawer).toBeVisible();
+    await expect(page.getByTestId("hero-shelf")).toHaveCount(0);
+    expect((await phone(page).boundingBox())!.width).toBeGreaterThanOrEqual(460);
+    // Pick from the drawer with the keyboard.
+    await drawer.locator('button[data-lego="speed"]').focus();
+    await page.keyboard.press("Enter");
+    await expect(count(page)).toHaveAttribute("aria-label", "3 of 4 bricks");
+    await expect(page).not.toHaveURL(/present/);
+    await page.reload();
+    await expect(page.getByTestId("present-toggle")).toHaveAttribute("aria-pressed", "true");
+    await page.locator("body").press("Escape");
+    await expect(page.getByTestId("present-toggle")).toHaveAttribute("aria-pressed", "false");
+    await expect(page.getByTestId("hero-shelf")).toBeVisible();
+    await page.getByTestId("present-toggle").click();
+    await expect(page.getByTestId("present-drawer")).toBeVisible();
+    await page.getByTestId("present-toggle").click();
+    await expect(page.getByTestId("present-drawer")).toHaveCount(0);
+  });
+
+  test("hovering a tray brick does not add it; the compact DOM is not mounted on desktop", async ({ page }) => {
+    await brick(page, "swaps").hover();
+    await expect(count(page)).toHaveAttribute("aria-label", "0 of 4 bricks");
+    await expect(page.getByTestId("mobile-bar")).toHaveCount(0);
+  });
+});
+
+for (const w of [320, 390, 430]) {
+  test.describe(`compact bar at ${w}px`, () => {
+    test.use({ viewport: { width: w, height: 760 }, hasTouch: true, isMobile: true, reducedMotion: "reduce" });
+
+    test("nothing overflows; module chips preview the app; no prose; 44px targets", async ({ page }) => {
+      await page.goto("/");
+      const bar = page.getByTestId("mobile-bar");
+      await expect(bar).toBeVisible();
+      for (const id of ["b20", "payments", "speed"]) await brick(page, id).tap();
+      const mods = bar.getByTestId("mobile-modules").locator("li");
+      await expect(mods).toHaveCount(3);
+      const over = await bar.evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        return [...el.querySelectorAll("*")].filter((c) => {
+          const b = c.getBoundingClientRect();
+          return b.width > 0 && (b.left < r.left - 0.5 || b.right > r.right + 0.5);
+        }).length + (el.scrollWidth > el.clientWidth + 1 ? 1 : 0);
+      });
+      expect(over).toBe(0);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(w);
+      // One word per chip, no sentences.
+      for (const t of await mods.allTextContents()) expect(t.trim().split(/\s+/).length).toBeLessThanOrEqual(2);
+      expect((await bar.getByTestId("mobile-action").boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      for (const c of await page.getByRole("group", { name: "Filter bricks" }).getByRole("button").all()) {
+        expect(Math.round((await c.boundingBox())!.height)).toBeGreaterThanOrEqual(44);
+      }
+      // A fifth brick: the swap is a toast, the bar stays prose-free.
+      await brick(page, "financing").tap();
+      await brick(page, "validity").tap();
+      await expect(page.getByTestId("toast")).toContainText("Full · swapped");
+      await expect(bar).not.toContainText("Full");
+    });
+  });
+}

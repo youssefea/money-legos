@@ -456,6 +456,16 @@
 .heroShelf .art {
   position: static;
 }
+/* (Lift the sprite, not .art: a transform on .art would move the check's containing block.) */
+.heroShelf .brick .art {
+  transform: none;
+}
+@media (hover: hover) {
+  .heroShelf .brick:hover .sprite,
+  .heroShelf .brick:hover .drawn {
+    transform: translateY(-3px);
+  }
+}
 .heroShelf .check {
   top: 2px;
   right: 2px;

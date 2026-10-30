@@ -18,12 +18,14 @@ export type ToastProps = {
  * 2.8s, paused while the pointer or focus is on it, so the Undo button can be reached.
  */
 export default function Toast({ toast, onUndo, onDone }: ToastProps) {
-  const [held, setHeld] = useState(false);
+  // Held (pointer or focus on it) for this toast only: a new toast, or Undo unmounting it, never stays held.
+  const [heldN, setHeldN] = useState<number | null>(null);
   const doneRef = useRef(onDone);
   useEffect(() => {
     doneRef.current = onDone;
   });
   const n = toast?.n;
+  const held = n !== undefined && heldN === n;
   useEffect(() => {
     if (n === undefined || held) return;
     const t = window.setTimeout(() => doneRef.current(n), TOAST_MS);
@@ -38,10 +40,10 @@ export default function Toast({ toast, onUndo, onDone }: ToastProps) {
           className={styles.toast}
           role="status"
           data-testid="toast"
-          onMouseEnter={() => setHeld(true)}
-          onMouseLeave={() => setHeld(false)}
-          onFocus={() => setHeld(true)}
-          onBlur={() => setHeld(false)}
+          onMouseEnter={() => setHeldN(toast.n)}
+          onMouseLeave={() => setHeldN(null)}
+          onFocus={() => setHeldN(toast.n)}
+          onBlur={() => setHeldN(null)}
         >
           <span className={styles.text}>{toast.text}</span>
           <span className={styles.sep} aria-hidden="true">
