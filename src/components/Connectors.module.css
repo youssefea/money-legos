@@ -40,7 +40,15 @@
   }
 }
 
+.halo {
+  stroke: var(--base-gray-0);
+  animation: ring-in var(--dur-fast) var(--ease-out) both;
+}
+
 @media (prefers-color-scheme: dark) {
+  .halo {
+    stroke: var(--base-gray-100);
+  }
   .ring {
     stroke: var(--base-cerulean);
   }

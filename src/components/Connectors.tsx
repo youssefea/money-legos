@@ -129,6 +129,10 @@ export default function Connectors({ hostRef, ids, layout, tiles, dark, boot, in
 
   if (!lines.length) return null;
   const ring = inspect ? rings.get(inspect) : undefined;
+  // The outline is the brick's full silhouette; the bricks stacked above hide part of it (its top
+  // face), so mask those out: the outline only traces what you can see.
+  const above = inspect && ring?.hull ? ids.slice(ids.indexOf(inspect) + 1).map((id) => rings.get(id)?.hull).filter((h): h is [number, number][] => !!h) : [];
+  const pts = (h: [number, number][]) => h.map((p) => p.map((n) => n.toFixed(1)).join(",")).join(" ");
   return (
     <svg
       className={styles.overlay}
@@ -143,6 +147,14 @@ export default function Connectors({ hostRef, ids, layout, tiles, dark, boot, in
       data-boot={play || undefined}
     >
       <defs>
+        {above.length > 0 && (
+          <mask id="ring-mask" maskUnits="userSpaceOnUse" x="0" y="0" width={box[0]} height={box[1]}>
+            <rect x="0" y="0" width={box[0]} height={box[1]} fill="#fff" />
+            {above.map((h, i) => (
+              <polygon key={i} points={pts(h)} fill="#000" />
+            ))}
+          </mask>
+        )}
         {lines.map((l) => (
           <mask key={`${l.id}-${boot}`} id={`cm-${l.id}`} maskUnits="userSpaceOnUse" x="0" y="0" width={box[0]} height={box[1]}>
             <path className={styles.draw} d={l.d} pathLength={1} fill="none" stroke="#fff" strokeWidth="12" style={{ "--o": l.order } as CSSProperties} />
@@ -161,7 +173,11 @@ export default function Connectors({ hostRef, ids, layout, tiles, dark, boot, in
       })}
       {ring &&
         (ring.hull ? (
-          <polygon className={styles.ring} points={ring.hull.map((p) => p.map((n) => n.toFixed(1)).join(",")).join(" ")} fill="none" strokeWidth="2" strokeLinejoin="round" data-testid="brick-ring" data-shape="hull" />
+          <g mask={above.length ? "url(#ring-mask)" : undefined}>
+            {/* A halo under the line so the outline reads on a brick of the same blue. */}
+            <polygon className={styles.halo} points={pts(ring.hull)} fill="none" strokeWidth="6" strokeLinejoin="round" />
+            <polygon className={styles.ring} points={pts(ring.hull)} fill="none" strokeWidth="2.5" strokeLinejoin="round" data-testid="brick-ring" data-shape="hull" />
+          </g>
         ) : (
           <rect className={styles.ring} x={ring.x - 4} y={ring.y - 4} width={ring.w + 8} height={ring.h + 8} rx="8" fill="none" strokeWidth="2" data-testid="brick-ring" data-shape="rect" />
         ))}

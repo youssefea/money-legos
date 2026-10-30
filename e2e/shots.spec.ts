@@ -4,10 +4,11 @@ import { join } from "node:path";
 /**
  * Design QA screenshots (not a test). Run with:
  *   SHOTS=1 npx playwright test shots
- * Writes PNGs to SHOTS_DIR (default ../design/ui-shots-v5).
+ * Writes PNGs to SHOTS_DIR (default ../design/ui-shots-v6).
  */
-const DIR = process.env.SHOTS_DIR ?? join(process.cwd(), "..", "design", "ui-shots-v5");
+const DIR = process.env.SHOTS_DIR ?? join(process.cwd(), "..", "design", "ui-shots-v6");
 const SIZES = [
+  [320, 640],
   [390, 844],
   [768, 1024],
   [1280, 720],
@@ -22,7 +23,7 @@ test.skip(!process.env.SHOTS, "set SHOTS=1 to take design screenshots");
 
 async function open(page: Page, w: number, state: string) {
   const compact = w < 1024;
-  const built = ["built", "details", "inspect", "full"].includes(state);
+  const built = ["built", "details", "inspect", "full", "toast", "present"].includes(state);
   await page.goto(built ? "/#b20,payments,speed,financing" : "/");
   await page.waitForTimeout(1200);
   if (state === "wire") {
@@ -38,20 +39,34 @@ async function open(page: Page, w: number, state: string) {
     if (compact) await page.getByTestId("result-sheet").getByRole("button", { name: "Details" }).click();
     else await page.getByRole("button", { name: "Details" }).click();
   }
-  if (state === "inspect") await page.getByTestId("phone").locator('[data-tile="payments"]').hover();
-  if (state === "full") await page.locator('button[data-lego="validity"]').click();
+  if (state === "inspect") {
+    // Hover the brick on the board: its tile lights up and its silhouette is outlined.
+    if (compact) await page.getByTestId("result-sheet").locator('[data-tile="payments"] button').click();
+    else await page.locator('[data-board-brick="payments"]').hover();
+  }
+  if (compact && (state === "full" || state === "toast")) await page.keyboard.press("Escape");
+  if (state === "full" || state === "toast") await page.locator('button[data-lego="validity"]').click();
+  if (state === "present") await page.locator("body").press("p");
   await page.waitForTimeout(1000);
 }
 
 const EXTRA: [number, number, string, string][] = [
   [1440, 900, "light", "filter"],
+  [1440, 900, "dark", "filter"],
   [1440, 900, "light", "recipes"],
   [1440, 900, "light", "details"],
   [1440, 900, "light", "inspect"],
-  [1440, 900, "light", "full"],
+  [1440, 900, "dark", "inspect"],
+  [1440, 900, "light", "toast"],
+  [1440, 900, "dark", "toast"],
+  [1440, 900, "light", "present"],
+  [1920, 1080, "light", "present"],
+  [1920, 1080, "dark", "present"],
   [1920, 1080, "dark", "details"],
+  [390, 844, "light", "inspect"],
   [390, 844, "light", "details"],
   [390, 844, "dark", "details"],
+  [390, 844, "light", "toast"],
 ];
 
 const ALL: [number, number, string, string][] = [
