@@ -10,21 +10,24 @@ export type SpriteMeta = {
 /** Device pixel ratio the sprites were baked at: CSS size = pixel size / SPRITE_DPR. */
 export const SPRITE_DPR = 2;
 
-/** Tight-cropped tray sprites, per Lego id. */
+/**
+ * Tray sprites, per Lego id: heroes on one 384x208 canvas (192x104 CSS px, 16 px clear above the
+ * rear studs); 2x2s at the same scale and height. Seen from TRAY_CAMERA (more front-on than the board).
+ */
 export const SPRITE_META: Readonly<Record<string, SpriteMeta>> = {
-  "b20": { width: 560, height: 365, aspect: 1.5342 },
-  "payments": { width: 560, height: 364, aspect: 1.5385 },
-  "financing": { width: 560, height: 364, aspect: 1.5385 },
-  "validity": { width: 560, height: 365, aspect: 1.5342 },
-  "speed": { width: 561, height: 365, aspect: 1.537 },
-  "swaps": { width: 344, height: 298, aspect: 1.1544 },
-  "stocks": { width: 344, height: 298, aspect: 1.1544 },
-  "verify": { width: 344, height: 298, aspect: 1.1544 },
-  "builder": { width: 344, height: 298, aspect: 1.1544 },
-  "memos": { width: 343, height: 298, aspect: 1.151 },
-  "subscriptions": { width: 344, height: 298, aspect: 1.1544 },
-  "escrow": { width: 344, height: 298, aspect: 1.1544 },
-  "refunds": { width: 344, height: 298, aspect: 1.1544 },
+  "b20": { width: 384, height: 208, aspect: 1.8462 },
+  "payments": { width: 384, height: 208, aspect: 1.8462 },
+  "financing": { width: 384, height: 208, aspect: 1.8462 },
+  "validity": { width: 384, height: 208, aspect: 1.8462 },
+  "speed": { width: 384, height: 208, aspect: 1.8462 },
+  "swaps": { width: 190, height: 208, aspect: 0.9135 },
+  "stocks": { width: 190, height: 208, aspect: 0.9135 },
+  "verify": { width: 190, height: 208, aspect: 0.9135 },
+  "builder": { width: 190, height: 208, aspect: 0.9135 },
+  "memos": { width: 188, height: 208, aspect: 0.9038 },
+  "subscriptions": { width: 190, height: 208, aspect: 0.9135 },
+  "escrow": { width: 190, height: 208, aspect: 0.9135 },
+  "refunds": { width: 190, height: 208, aspect: 0.9135 },
 };
 
 /** Glyph sprites public/sprites/glyph-<legoId>.webp: one shape (a 2x4 brick), all the same size. */

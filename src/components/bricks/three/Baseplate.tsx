@@ -6,8 +6,14 @@ import { DIM } from "../core/dims";
 import { brickGeometry, studGeometry } from "./geometry";
 import { plasticMaterial } from "./material";
 
-/** Studded baseplate: one slab and one InstancedMesh for all studs (two draw calls). */
-export function Baseplate({ studs, color }: { studs: [number, number]; color: string }) {
+/** Height of the inset foot under the slab (mm): the underside lip that lifts the plate off the table. */
+export const PLATE_FOOT = 0.6;
+
+/**
+ * Studded baseplate: one slab, one InstancedMesh for all studs, and a slightly inset foot under the
+ * slab (the moulded underside lip): its shadow line keeps the plate's lower edge readable on any page.
+ */
+export function Baseplate({ studs, color, dark = false }: { studs: [number, number]; color: string; dark?: boolean }) {
   const [w, d] = studs;
   const slab = useMemo(() => brickGeometry({ w, d, plates: 1, studs: false, hollow: false }), [w, d]);
   const stud = useMemo(() => {
@@ -15,8 +21,22 @@ export function Baseplate({ studs, color }: { studs: [number, number]; color: st
     g.setAttribute("wear", new THREE.BufferAttribute(new Float32Array(g.attributes.position!.count), 1));
     return g;
   }, []);
-  const mat = useMemo(() => plasticMaterial(color, "baseplate", 0.3, DIM.plate), [color]);
+  const foot = useMemo(() => {
+    const inset = 0.7;
+    const g = new THREE.BoxGeometry(w * DIM.pitch - DIM.gap - 2 * inset, PLATE_FOOT, d * DIM.pitch - DIM.gap - 2 * inset);
+    g.translate(0, -PLATE_FOOT / 2, 0);
+    g.setAttribute("wear", new THREE.BufferAttribute(new Float32Array(g.attributes.position!.count), 1));
+    return g;
+  }, [w, d]);
+  useEffect(() => () => foot.dispose(), [foot]);
+  const mat = useMemo(() => plasticMaterial(color, "baseplate", 0.3, DIM.plate, dark), [color, dark]);
+  const footMat = useMemo(() => {
+    const m = plasticMaterial(color, "baseplate", 0.5, 0, dark);
+    m.color.multiplyScalar(0.55);
+    return m;
+  }, [color, dark]);
   useEffect(() => () => mat.dispose(), [mat]);
+  useEffect(() => () => footMat.dispose(), [footMat]);
   useEffect(() => () => stud.dispose(), [stud]);
   const inst = useRef<THREE.InstancedMesh>(null);
   useLayoutEffect(() => {
@@ -36,6 +56,7 @@ export function Baseplate({ studs, color }: { studs: [number, number]; color: st
   return (
     <group>
       <mesh geometry={slab} material={mat} receiveShadow castShadow />
+      <mesh geometry={foot} material={footMat} receiveShadow />
       <instancedMesh ref={inst} args={[stud, mat, w * d]} castShadow receiveShadow />
     </group>
   );

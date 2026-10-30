@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { LEGOS } from "@/lib/legos";
-import { toPlacedBricks } from "@/lib/bricks";
+import { nextLevel, toPlacedBricks } from "@/lib/bricks";
 import { brickGeometry, frontFace } from "../three/geometry";
-import { EXTENTS, project, svgViewBox } from "../svg/projector";
+import { EXTENTS, extentOf, project, svgViewBox } from "../svg/projector";
 import { DIM, studCenters } from "./dims";
 import { ghostGeom } from "./ghost";
 import { approxMeasure, layoutLabel, VERB_TRACKING } from "./label";
-import { CAMERA, DEFAULT_FRAMING, VIEW, poseFor } from "./layout";
+import { CAMERA, DEFAULT_FRAMING, VIEW, massBox, poseFor } from "./layout";
 
 /** Stud tips: the lathe apex of every stud sits on its axis at the top of the brick. */
 function studTips(w: number, d: number) {
@@ -83,16 +83,32 @@ describe("board framing", () => {
   const plateW = EXTENTS.plate.x1 - EXTENTS.plate.x0;
   const boxH = EXTENTS.box.y1 - EXTENTS.box.y0;
 
-  it("fills 88% of a desktop board panel with the baseplate", () => {
+  it("fills a desktop board panel with the baseplate, 24 px clear at each side", () => {
     const vb = svgViewBox(567, 520);
-    expect(plateW * vb.scale).toBeCloseTo(0.88 * 567, 0);
-    expect(boxH * vb.scale).toBeLessThanOrEqual(0.94 * 520);
+    expect(plateW * vb.scale).toBeCloseTo(567 - 48, 0);
+    expect(boxH * vb.scale).toBeLessThanOrEqual(DEFAULT_FRAMING.maxH * 520 + 0.01);
   });
 
-  it("keeps the 4-brick tower inside a phone sticky bar", () => {
-    const vb = svgViewBox(340, 130);
+  it("gives a 144 px phone scene a ~120 px plate", () => {
+    const vb = svgViewBox(144, 130);
     expect(boxH * vb.scale).toBeLessThanOrEqual(DEFAULT_FRAMING.maxH * 130 + 0.01);
-    expect(plateW * vb.scale).toBeGreaterThan(120);
+    expect(plateW * vb.scale).toBeGreaterThan(112);
+    expect(plateW * vb.scale).toBeLessThanOrEqual(144 - 2 * 11.9);
+  });
+
+  it("lifts the visible mass above centre and keeps it in frame", () => {
+    for (const n of [0, 1, 4]) {
+      const ids = (["b20", "payments", "validity", "speed"] as const).slice(0, n);
+      const bricks = toPlacedBricks([...ids]);
+      const next = nextLevel(n);
+      const mass = massBox(bricks, next);
+      const vb = svgViewBox(567, 600, DEFAULT_FRAMING, mass);
+      const e = extentOf(mass);
+      const mid = ((e.y0 + e.y1) / 2 - vb.y) / vb.h;
+      expect(mid).toBeLessThan(0.5);
+      expect(e.y0).toBeGreaterThanOrEqual(vb.y);
+      expect(e.y1).toBeLessThanOrEqual(vb.y + vb.h);
+    }
   });
 });
 

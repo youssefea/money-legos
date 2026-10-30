@@ -29,7 +29,7 @@
 /* Soft stand-in in the brick colour (the lower part of the box, where the body is). */
 .fallback {
   position: absolute;
-  inset: 22% 6% 8% 4%;
+  inset: 30% 8% 8% 8%;
   display: block;
   background: var(--sprite-color);
   border-radius: 6px;

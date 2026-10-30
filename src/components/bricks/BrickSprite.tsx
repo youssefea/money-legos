@@ -18,8 +18,8 @@ export type BrickSpriteProps = {
   /** Tooltip (title attribute). */
   title?: string;
   /**
-   * Display size in CSS px. Defaults to the baked size at 1x (see spriteMeta.ts; a hero 2x4 is
-   * ~280 px wide). Give one side to scale; the other follows the baked aspect. A CSS width on
+   * Display size in CSS px. Defaults to the baked size at 1x (see spriteMeta.ts: every hero 2x4 is a
+   * 192 x 104 box with 16 px clear above the studs; a 2x2 is 104 px tall at the same scale). Give one side to scale; the other follows the baked aspect. A CSS width on
    * `className` works too: the box keeps the sprite's aspect ratio before the WebP loads.
    */
   width?: number;
@@ -28,8 +28,8 @@ export type BrickSpriteProps = {
 };
 
 /**
- * Pre-baked brick sprite (scripts/bake-sprites renders it from the board's own 3D rig), tight-cropped
- * to the brick and its contact shadow. The box takes its aspect ratio from spriteMeta.ts, so it is
+ * Pre-baked brick sprite (scripts/bake-sprites renders it with the board's own 3D studio and
+ * materials, from the tray's more front-on hero angle), on a fixed canvas with clear space above. The box takes its aspect ratio from spriteMeta.ts, so it is
  * reserved before the WebP loads (no layout shift). A soft block in the brick colour stands in until
  * the WebP has loaded, and stays if the file is missing.
  */

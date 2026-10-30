@@ -5,7 +5,8 @@ import type { GhostRect } from "../core/ghost";
 import type { BrickStageProps, PlacedBrick } from "@/lib/contract";
 import { GhostMarker } from "../core/GhostMarker";
 import { ghostGeom } from "../core/ghost";
-import { BASEPLATE, BOARD, DEFAULT_FRAMING, byLevel, poseFor, stackLabel, type Framing } from "../core/layout";
+import { BASEPLATE, BOARD, DEFAULT_FRAMING, GHOST_SIZE, byLevel, massBox, plateCorners, poseFor, stackLabel, type Framing } from "../core/layout";
+import type { BoardFrame } from "../three/Scene";
 import { EXTENTS, project, svgViewBox } from "./projector";
 import { SvgBrick } from "./SvgBrick";
 import styles from "./SvgBrickStage.module.css";
@@ -71,6 +72,8 @@ export type SvgBrickStageProps = BrickStageProps & {
   framing?: Framing;
   /** The ghost slot's box in this element's CSS px (null = stack full). */
   onGhostRect?: (rect: GhostRect | null) => void;
+  /** Framing readout (see BrickStage `onFrame`). */
+  onFrame?: (f: BoardFrame) => void;
 };
 
 /**
@@ -78,7 +81,7 @@ export type SvgBrickStageProps = BrickStageProps & {
  * (zero image bytes). Drops use a CSS keyframe; prefers-reduced-motion places bricks at once.
  */
 export default function SvgBrickStage(props: SvgBrickStageProps) {
-  const { bricks, nextLevel, dark, reducedMotion, settledSignal = 0, onSettled, className, decorative = false, onGhostRect } = props;
+  const { bricks, nextLevel, dark, reducedMotion, settledSignal = 0, onSettled, className, decorative = false, onGhostRect, onFrame } = props;
   const framing = props.framing ?? DEFAULT_FRAMING;
   const root = useRef<HTMLDivElement>(null);
   const [box, setBox] = useState<[number, number]>([0, 0]);
@@ -94,7 +97,8 @@ export default function SvgBrickStage(props: SvgBrickStageProps) {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  const vb = svgViewBox(box[0], box[1], framing);
+  const mass = massBox(bricks, nextLevel);
+  const vb = svgViewBox(box[0], box[1], framing, mass);
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
   // Bricks present at first render appear in place; later ones drop in (also after a remove and re-add).
   const [initial, setInitial] = useState(() => new Set(bricks.map((b) => b.id)));
@@ -114,6 +118,20 @@ export default function SvgBrickStage(props: SvgBrickStageProps) {
     ghostCb.current = onGhostRect;
   });
   const measured = vb.scale > 0;
+  // Framing readout: the mass top's highest projected point, as a fraction of the height.
+  const gx = (GHOST_SIZE[0] * 8) / 2, gz = (GHOST_SIZE[1] * 8) / 2;
+  const topY = Math.min(...[-gx, gx].flatMap((x) => [-gz, gz].map((z) => project([x, mass.max[1], z])[1])));
+  const plateXs = plateCorners().map((p) => project(p)[0]);
+  const frameKey = measured ? `${((topY - vb.y) / vb.h).toFixed(4)},${((Math.max(...plateXs) - Math.min(...plateXs)) * vb.scale).toFixed(0)}` : "";
+  const frameCb = useRef(onFrame);
+  useEffect(() => {
+    frameCb.current = onFrame;
+  });
+  useEffect(() => {
+    if (!frameKey) return;
+    const [stackTop, platePx] = frameKey.split(",").map(Number);
+    frameCb.current?.({ stackTop: stackTop!, platePx: platePx! });
+  }, [frameKey]);
   useEffect(() => {
     if (!measured) return;
     const [slot, x, y, width, height] = grKey ? grKey.split(",").map(Number) : [];

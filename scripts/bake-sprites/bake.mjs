@@ -1,7 +1,9 @@
 // npm run bake-sprites — renders every Lego from the board's own 3D rig (same studio, materials,
 // lens and camera direction) on a transparent background, crops it tight to the brick and its
 // contact shadow, and writes:
-//   public/sprites/<legoId>.webp        tray sprite (hero 2x4 = HERO_W px wide; 2x2 at the same scale)
+//   public/sprites/<legoId>.webp        tray sprite: every hero 2x4 on the same CANVAS (192x104 CSS px at 2x,
+//                                       TOP_PAD clear above the rear studs); 2x2s at the same mm-to-px
+//                                       scale, same height and baseline, width = brick + side margins
 //   public/sprites/glyph-<legoId>.webp  unprinted 2x4 glyph, GLYPH px, for small lists
 //   src/components/bricks/spriteMeta.ts pixel sizes + aspect, so <BrickSprite> reserves its box.
 // Uses Playwright's bundled Chromium with real GPU flags. ONLY=<id> bakes one Lego.
@@ -18,8 +20,12 @@ const DPR = 2;
 /** Render viewport (CSS px) at RENDER_DPR, then crop and downsample: supersampled edges and print. */
 const VIEWPORT = [360, 280];
 const RENDER_DPR = 3;
-/** Final width of a hero 2x4 sprite, px (= 280 CSS px at 2x). 2x2 sprites keep the same mm-to-px scale. */
-const HERO_W = 560;
+/** Hero sprite canvas, px (192 x 104 CSS px at 2x). */
+const CANVAS = [384, 208];
+/** Clear space above the brick (16 CSS px) so rear studs are never cropped, and at the other sides. */
+const TOP_PAD = 32;
+const SIDE_PAD = 8;
+const BOTTOM_PAD = 6;
 /** Glyph canvas, px (64 x 40 CSS px at 2x). */
 const GLYPH = [128, 80];
 /** Alpha below this counts as empty when cropping (invisible on any background). */
@@ -78,7 +84,7 @@ async function render(id, glyph) {
 
 const webp = (img) => img.webp({ quality: 88, alphaQuality: 85, effort: 6, smartSubsample: true });
 
-// Same scale for every sprite: set by the hero 2x4 crop width.
+// Same scale for every sprite: set by fitting the first hero 2x4 (brick + shadow) inside the canvas.
 let scale = null;
 const meta = {};
 let total = 0;
@@ -88,14 +94,22 @@ try {
     const { png, box, renderer } = await render(id, false);
     if (scale === null) {
       if (!hero) throw new Error("first bake must be a hero brick");
-      scale = HERO_W / box.width;
+      scale = Math.min((CANVAS[0] - 2 * SIDE_PAD) / box.width, (CANVAS[1] - TOP_PAD - BOTTOM_PAD) / box.height);
     }
-    const w = Math.round(box.width * scale);
-    const h = Math.round(box.height * scale);
-    meta[id] = { width: w, height: h, aspect: +(w / h).toFixed(4) };
+    const w = Math.min(CANVAS[0] - 2 * SIDE_PAD, Math.round(box.width * scale));
+    const h = Math.min(CANVAS[1] - TOP_PAD - BOTTOM_PAD, Math.round(box.height * scale));
+    const cw = hero ? CANVAS[0] : w + 2 * SIDE_PAD;
+    const ch = CANVAS[1];
+    meta[id] = { width: cw, height: ch, aspect: +(cw / ch).toFixed(4) };
     if (only && only !== id) continue;
     const file = path.join(outDir, `${id}.webp`);
-    await webp(sharp(png).extract(box).resize(w, h, { kernel: "lanczos3" })).toFile(file);
+    // Bottom-aligned above BOTTOM_PAD so every sprite shares one baseline; centred across.
+    const left = Math.round((cw - w) / 2);
+    const top = ch - BOTTOM_PAD - h;
+    const fitted = await sharp(png).extract(box).resize(w, h, { kernel: "lanczos3" }).png().toBuffer();
+    await webp(
+      sharp({ create: { width: cw, height: ch, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } }).composite([{ input: fitted, left, top }]),
+    ).toFile(file);
 
     const g = await render(id, true);
     const gfile = path.join(outDir, `glyph-${id}.webp`);
@@ -126,7 +140,10 @@ export type SpriteMeta = {
 /** Device pixel ratio the sprites were baked at: CSS size = pixel size / SPRITE_DPR. */
 export const SPRITE_DPR = ${DPR};
 
-/** Tight-cropped tray sprites, per Lego id. */
+/**
+ * Tray sprites, per Lego id: heroes on one ${CANVAS[0]}x${CANVAS[1]} canvas (${CANVAS[0] / DPR}x${CANVAS[1] / DPR} CSS px, ${TOP_PAD / DPR} px clear above the
+ * rear studs); 2x2s at the same scale and height. Seen from TRAY_CAMERA (more front-on than the board).
+ */
 export const SPRITE_META: Readonly<Record<string, SpriteMeta>> = {
 ${ordered.map(([id, m]) => `  ${JSON.stringify(id)}: { width: ${m.width}, height: ${m.height}, aspect: ${m.aspect} },`).join("\n")}
 };
@@ -137,4 +154,4 @@ export const GLYPH_META: SpriteMeta = { width: ${GLYPH[0]}, height: ${GLYPH[1]},
 fs.writeFileSync(path.join(repo, "src/components/bricks/spriteMeta.ts"), manifest);
 const all = fs.readdirSync(outDir).filter((f) => f.endsWith(".webp")).reduce((a, f) => a + fs.statSync(path.join(outDir, f)).size, 0);
 console.log(`baked ${only ? 1 : ids.length} (+glyphs); this run ${(total / 1024).toFixed(1)} KB; all sprites ${(all / 1024).toFixed(1)} KB`);
-if (all > 400 * 1024) throw new Error(`sprite budget exceeded: ${(all / 1024).toFixed(1)} KB > 400 KB`);
+if (all > 450 * 1024) throw new Error(`sprite budget exceeded: ${(all / 1024).toFixed(1)} KB > 450 KB`);

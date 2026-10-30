@@ -1,4 +1,4 @@
-import { DEFAULT_FRAMING, VIEW, frameBox, plateCorners, type Framing, type V3 } from "../core/layout";
+import { DEFAULT_FRAMING, VIEW, boxCorners, frameBox, plateCorners, plateFraction, type Framing, type V3 } from "../core/layout";
 
 /** Orthographic projector for the SVG fallback, looking along the same VIEW as the 3D camera. */
 type Basis = { right: V3; up: V3; dir: V3 };
@@ -44,16 +44,31 @@ export const EXTENTS = (() => {
 
 export type ViewBox = { x: number; y: number; w: number; h: number; scale: number };
 
-/** Same framing rule as the 3D camera, for a container of cw x ch px. */
-export function svgViewBox(cw: number, ch: number, framing: Framing = DEFAULT_FRAMING): ViewBox {
+/** Projected extents (mm) of any world box. */
+export function extentOf(box: { min: V3; max: V3 }) {
+  const p = boxCorners(box).map(project);
+  const xs = p.map((q) => q[0]);
+  const ys = p.map((q) => q[1]);
+  return { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
+}
+
+/**
+ * Same framing rule as the 3D camera, for a container of cw x ch px: scale from the plate and the full
+ * tower, then centre `mass` (the visible plate + stack + ghost) lifted by `framing.bias`.
+ */
+export function svgViewBox(cw: number, ch: number, framing: Framing = DEFAULT_FRAMING, mass?: { min: V3; max: V3 }): ViewBox {
   const { box, plate } = EXTENTS;
   const bw = box.x1 - box.x0, bh = box.y1 - box.y0;
   if (cw <= 0 || ch <= 0) {
     const m = bw * 0.055;
     return { x: box.x0 - m, y: box.y0 - m, w: bw + 2 * m, h: bh + 2 * m, scale: 0 };
   }
-  const scale = Math.min((framing.plateFill * cw) / (plate.x1 - plate.x0), (framing.maxH * ch) / bh, (framing.maxW * cw) / bw);
+  const scale = Math.min((plateFraction(framing, cw) * cw) / (plate.x1 - plate.x0), (framing.maxH * ch) / bh, (framing.maxW * cw) / bw);
   const w = cw / scale, h = ch / scale;
-  const cx = (box.x0 + box.x1) / 2, cy = (box.y0 + box.y1) / 2;
+  const m = mass ? extentOf(mass) : box;
+  const cx = (m.x0 + m.x1) / 2;
+  // centre y in view units, lifted by bias * h, clamped so the mass stays 1.5% inside the frame
+  const want = (m.y0 + m.y1) / 2 + framing.bias * h;
+  const cy = Math.min(m.y0 - 0.015 * h + h / 2, Math.max(m.y1 + 0.015 * h - h / 2, want));
   return { x: cx - w / 2, y: cy - h / 2, w, h, scale };
 }

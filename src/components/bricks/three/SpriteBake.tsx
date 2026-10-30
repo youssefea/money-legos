@@ -7,7 +7,7 @@ import * as THREE from "three";
 import type { PlacedBrick } from "@/lib/contract";
 import { DIM } from "../core/dims";
 import { loadLabelFonts } from "../core/label";
-import { FOV, VIEW, poseFor } from "../core/layout";
+import { FOV, TRAY_VIEW, poseFor } from "../core/layout";
 import { AO } from "./AO";
 import { MotionContext, MotionStore } from "./motion";
 import { StackBrick } from "./StackBrick";
@@ -20,7 +20,8 @@ declare global {
 }
 
 /**
- * Same camera direction and lens as the board. The distance is fitted to a 2x4 brick and its floor
+ * The tray's hero view (TRAY_VIEW: more front-on than the board, so the print reads) through the
+ * board's lens. The distance is fitted to a 2x4 brick and its floor
  * shadow and kept for every brick, so 2x2 sprites come out at the same mm-to-px scale as the 2x4s
  * (the baker then crops each one tight).
  */
@@ -43,7 +44,7 @@ function FitBrick({ brick }: { brick: PlacedBrick }) {
     };
     const ref = box(4, 2);
     const target = new THREE.Vector3(0, pose.y + H / 2, 0);
-    const dir = new THREE.Vector3(...VIEW).normalize();
+    const dir = new THREE.Vector3(...TRAY_VIEW).normalize();
     camera.fov = FOV;
     camera.aspect = size.width / size.height;
     const place = (dist: number) => {
@@ -88,7 +89,7 @@ function ReadyFlag({ fontsReady }: { fontsReady: boolean }) {
 
 /**
  * One brick on a transparent background, lit by the board's studio and seen through the board's
- * lens. scripts/bake-sprites screenshots it into public/sprites/<legoId>.webp, or, with `glyph`, an
+ * lens from the tray's hero angle. scripts/bake-sprites screenshots it into public/sprites/<legoId>.webp, or, with `glyph`, an
  * unprinted 2x4 in the Lego's colour into public/sprites/glyph-<legoId>.webp.
  */
 export default function SpriteBake({ brick, glyph = false }: { brick: PlacedBrick; glyph?: boolean }) {
@@ -118,7 +119,7 @@ export default function SpriteBake({ brick, glyph = false }: { brick: PlacedBric
         <Studio floorShadow={false} />
         {/* a glyph is too small for print: never draw the label */}
         <StackBrick brick={brick} drop={false} leaving={false} reducedMotion bounceSignal={0} index={0} fontsReady={fontsReady && !glyph} />
-        <ContactShadows position={[0, pose.y - 0.02, 0]} scale={80} far={12} blur={1.8} opacity={0.6} resolution={1024} frames={1} color="#0a0b0d" />
+        <ContactShadows position={[0, pose.y - 0.02, 0]} scale={80} far={12} blur={2.4} opacity={0.72} resolution={1024} frames={1} color="#0a0b0d" />
         <AO />
         <ReadyFlag fontsReady={fontsReady} />
       </MotionContext.Provider>

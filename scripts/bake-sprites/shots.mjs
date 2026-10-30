@@ -1,6 +1,6 @@
-// QA screenshots of the brick layer -> ../design/bricks-shots-v2/ (or OUT=dir). Real GPU, bundled Chromium.
+// QA screenshots of the brick layer -> ../design/bricks-shots-v3/ (or OUT=dir). Real GPU, bundled Chromium.
 // node scripts/bake-sprites/shots.mjs   [ONLY=substring]
-// Stages are drawn in fixed-size panels: desktop board panel 567x520 and the phone sticky bar 340x130.
+// Stages are drawn in fixed-size panels: desktop board panel 567x520 and the phone scene region 144x130.
 import { chromium } from "playwright";
 import fs from "node:fs";
 import path from "node:path";
@@ -8,11 +8,11 @@ import { fileURLToPath } from "node:url";
 import { serve, GPU_ARGS } from "./serve.mjs";
 
 const repo = fileURLToPath(new URL("../..", import.meta.url));
-const out = process.env.OUT ?? path.join(repo, "../design/bricks-shots-v2");
+const out = process.env.OUT ?? path.join(repo, "../design/bricks-shots-v3");
 fs.mkdirSync(out, { recursive: true });
 const STACKS = { 0: "", 1: "b20", 3: "b20,payments,validity", 4: "b20,payments,validity,speed" };
 // [panel, viewport w, h, dpr]
-const VIEWS = { desktop: ["567x520", 640, 580, 2], phone: ["340x130", 390, 180, 3] };
+const VIEWS = { desktop: ["567x520", 640, 580, 2], phone: ["144x130", 390, 180, 3] };
 const jobs = [];
 for (const [v, [box, w, h, dpr]] of Object.entries(VIEWS)) {
   for (const theme of ["light", "dark"]) {
@@ -39,7 +39,7 @@ try {
     const info = await page.evaluate(() => {
       const st = document.querySelector("[data-testid=brick-stage]");
       const c = document.querySelector("canvas");
-      return st ? `${st.getAttribute("data-renderer")} plate=${c?.dataset.platePx ?? "-"}px` : "";
+      return st ? `${st.getAttribute("data-renderer")} plate=${c?.dataset.platePx ?? "-"}px top=${st.getAttribute("data-stack-top")}` : "";
     });
     const panel = page.getByTestId("box-panel");
     if (await panel.count()) await panel.screenshot({ path: path.join(out, `${name}.png`) });

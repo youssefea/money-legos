@@ -12,11 +12,21 @@ export const CAMERA = { pitch: 28, azimuth: 32 } as const;
  * so all three show the bricks from the same angle: front face (where the label is) towards
  * the viewer, some of the right side and enough of the top to read the studs.
  */
-export const VIEW: V3 = (() => {
-  const p = (CAMERA.pitch * Math.PI) / 180;
-  const a = (CAMERA.azimuth * Math.PI) / 180;
+export const VIEW: V3 = viewDir(CAMERA);
+
+/**
+ * Tray sprites use a more front-on hero view than the board (24° up, 12° round): the printed label
+ * slopes under 5° and reads at a glance in a small tile. The board keeps CAMERA (28°/32°) so the stack
+ * shows its depth; the two angles differ on purpose, for legibility.
+ */
+export const TRAY_CAMERA = { pitch: 24, azimuth: 12 } as const;
+export const TRAY_VIEW: V3 = viewDir(TRAY_CAMERA);
+
+function viewDir({ pitch, azimuth }: { pitch: number; azimuth: number }): V3 {
+  const p = (pitch * Math.PI) / 180;
+  const a = (azimuth * Math.PI) / 180;
   return [Math.sin(a) * Math.cos(p), Math.sin(p), Math.cos(a) * Math.cos(p)];
-})();
+}
 /** Long lens (vertical field of view in degrees): close to product photography, little distortion. */
 export const FOV = 20;
 
@@ -35,11 +45,23 @@ export const BOARD = {
 
 /**
  * Board framing. The camera (and the SVG fallback's view box) scales so the baseplate spans
- * `plateFill` of the container width, unless the full 4-brick tower would then not fit: it is kept
- * inside `maxH` of the height and `maxW` of the width. Every container size frames itself.
+ * `plateFill` of the container width, keeping at least `side` px clear at each side (capped at
+ * `sideMax` of the width, so a 144 px phone scene still gets a ~120 px plate), unless the full
+ * 4-brick tower would then not fit: it is kept inside `maxH` of the height and `maxW` of the width,
+ * so the board never re-zooms as bricks are added.
+ * Then the visual mass (the plate plus the stack and its ghost slot, see `massBox`) is centred in the
+ * container and lifted by `bias` of the container height, so an empty board does not sit low under
+ * a blank band.
  */
-export type Framing = { plateFill: number; maxH: number; maxW: number };
-export const DEFAULT_FRAMING: Framing = { plateFill: 0.88, maxH: 0.94, maxW: 0.98 };
+export type Framing = { plateFill: number; maxH: number; maxW: number; side: number; sideMax: number; bias: number };
+export const DEFAULT_FRAMING: Framing = { plateFill: 0.97, maxH: 0.96, maxW: 0.98, side: 24, sideMax: 0.083, bias: 0.08 };
+
+/** Fraction of the container width the plate may take, after `plateFill` and the side clearance. */
+export function plateFraction(f: Framing, width: number): number {
+  if (width <= 0) return f.plateFill;
+  const side = Math.min(f.side, f.sideMax * width);
+  return Math.min(f.plateFill, 1 - (2 * side) / width);
+}
 
 /** FNV-1a: a stable 32-bit hash of a string. */
 export function hash32(s: string): number {
@@ -119,6 +141,26 @@ export function frameBox(): { min: V3; max: V3 } {
   const hz = (BASEPLATE[1] * DIM.pitch) / 2;
   const top = levelY(MAX_STACK * PLATES_PER_BRICK) - DIM.stackGap + DIM.studH;
   return { min: [-hx, 0, -hz], max: [hx, top, hz] };
+}
+
+/**
+ * The part of the board actually on show: the baseplate slab plus the stack up to its top, or up to
+ * the ghost slot's top while there is one. Framing centres this box, not the full 4-brick tower.
+ */
+export function massBox(bricks: readonly PlacedBrick[], nextLevel: number | null): { min: V3; max: V3 } {
+  const hx = (BASEPLATE[0] * DIM.pitch) / 2;
+  const hz = (BASEPLATE[1] * DIM.pitch) / 2;
+  let top = BASEPLATE_TOP + DIM.studH;
+  for (const b of bricks) top = Math.max(top, levelY(b.level) + pieceHeight(b.kind) + DIM.studH);
+  if (nextLevel !== null) top = Math.max(top, levelY(nextLevel) + pieceHeight("brick"));
+  return { min: [-hx, 0, -hz], max: [hx, top, hz] };
+}
+
+/** The eight corners of a box. */
+export function boxCorners({ min, max }: { min: V3; max: V3 }): V3[] {
+  const out: V3[] = [];
+  for (const x of [min[0], max[0]]) for (const y of [min[1], max[1]]) for (const z of [min[2], max[2]]) out.push([x, y, z]);
+  return out;
 }
 
 /** Accessible summary of the stack, bottom to top. */

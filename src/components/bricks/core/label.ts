@@ -19,13 +19,14 @@ export const NAME_TRACKING = 0.08;
 export const VERB_TRACKING = -0.02; // em
 
 /*
- * Print sizes in mm on the face. With the tray's hero sprite ~216 CSS px wide, the front face is
- * ~160 px (~5.3 px/mm), so these read as: 16 px left inset, 22 px Base Sans Bold verb, 10 px mono
- * caps. The board and larger sprites show them bigger.
+ * Print sizes in mm on the face. A tray hero sprite is 192 CSS px wide (seen from TRAY_CAMERA, about
+ * 4.1 px/mm), so these read as: 10 px left inset, ~21 px Base Sans Bold verb, ~9-10 px mono caps
+ * (a long name shrinks to stay on one line, down to `minName`, before it wraps). The board shows them
+ * bigger.
  */
 const PRINT = {
-  hero: { inset: 2.9, verb: 4.2, name: 1.85, minName: 1.45 },
-  small: { inset: 1.7, verb: 3.4, name: 1.45, minName: 1.15 },
+  hero: { inset: 2.4, verb: 5.1, name: 2.3, minName: 1.75 },
+  small: { inset: 1.6, verb: 3.9, name: 1.6, minName: 1.2 },
 } as const;
 
 function wrap2(words: string[], fits: (s: string) => boolean): string[] | null {
@@ -51,11 +52,16 @@ export function layoutLabel(verb: string, name: string, faceW: number, faceH: nu
   const nameFits = (s: string, sz: number) => measure(s, "name", sz) <= maxW;
   if (!nameFits(caps, nameSize)) {
     const shrunk = nameSize * (maxW / measure(caps, "name", nameSize));
-    if (shrunk >= P.name * 0.9) nameSize = shrunk;
+    if (shrunk >= P.minName) nameSize = shrunk;
     else {
-      const two = wrap2(caps.split(" "), (s) => nameFits(s, nameSize));
-      if (two) lines = two;
-      else nameSize = Math.max(P.minName, shrunk);
+      // Two lines at the largest size (down to minName) that fits; else one line shrunk to fit.
+      let two: string[] | null = null;
+      let sz: number = P.name;
+      for (; sz >= P.minName - 1e-6 && !two; sz -= 0.05) two = wrap2(caps.split(" "), (t) => nameFits(t, sz));
+      if (two) {
+        lines = two;
+        nameSize = sz + 0.05;
+      } else nameSize = shrunk; // one long word: always fit the face
     }
   }
   // Two sublabel lines on a small face: give the verb a little less room.
