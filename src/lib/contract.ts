@@ -22,8 +22,16 @@ export type BrickStageProps = {
   reducedMotion: boolean;
   settledSignal?: number;
   onSettled?: (id: string) => void;
+  /**
+   * Reports where each brick sits inside the stage container so the UI can draw connector lines to it.
+   * Coordinates are fractions (0..1) of the container: cx/cy = centre of the brick's front face, w/h = its size.
+   * Called after layout and again whenever bricks move/settle or the container resizes.
+   */
+  onLayout?: (items: BrickLayoutItem[]) => void;
   className?: string;
 };
+
+export type BrickLayoutItem = { id: string; cx: number; cy: number; w: number; h: number };
 
 /** A Lego id; sprite files live at public/sprites/<legoId>.webp. */
 export type SpriteId = string;
