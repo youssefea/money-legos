@@ -1,34 +1,36 @@
 import type { CSSProperties } from "react";
 import { BOARD } from "./layout";
-import type { Affine, GhostGeom } from "./ghost";
+import type { GhostGeom } from "./ghost";
 import styles from "./GhostMarker.module.css";
 
-const mat = (a: Affine) => `matrix(${a.map((n) => n.toFixed(3)).join(" ")})`;
-const line = (pts: [number, number][]) => pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`).join("");
+const path = (pts: [number, number][]) => pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(2)} ${y.toFixed(2)}`).join("") + "Z";
+
+export type GhostMarkerProps = {
+  ghost: GhostGeom;
+  dark: boolean;
+  still: boolean;
+  /** Screen px per drawing unit (1 in the 3D overlay, which draws in px; the SVG view-box scale otherwise). */
+  pxPerUnit?: number;
+};
 
 /**
- * Dashed "next slot" outline with a flat number badge above its stud grid. An SVG <g>: the 3D stage
- * draws it in an overlay above the canvas, the SVG fallback draws it inline. It never sits behind
- * a brick (it always marks the top of the stack), so the overlay needs no depth test.
+ * "Next slot" marker: the outer silhouette of the brick that lands next, as a 2px dashed outline,
+ * with an upright slot numeral (Base Sans Mono, 16px) in the middle of its front face. Brand blue on
+ * slot 1 of an empty board, grey after. An SVG <g>: the 3D stage draws it in an overlay above the
+ * canvas, the SVG fallback inline. It always marks the top of the stack, so it never needs a depth test.
  */
-export function GhostMarker({ ghost, dark, still }: { ghost: GhostGeom; dark: boolean; still: boolean }) {
+export function GhostMarker({ ghost, dark, still, pxPerUnit = 1 }: GhostMarkerProps) {
   const c = dark ? BOARD.dark : BOARD.light;
-  const style = { "--ghost-color": c.ghost, "--ghost-ink": c.ghostInk } as CSSProperties;
+  const color = ghost.slot === 1 ? c.ghostNext : c.ghost;
+  const u = 1 / pxPerUnit;
+  const style = { "--ghost-color": color, "--ghost-bob": `${-3 * u}px`, "--ghost-halo": c.page } as CSSProperties;
   return (
     <g key={ghost.slot} className={[styles.ghost, still ? styles.still : ""].join(" ")} style={style} data-ghost-slot={ghost.slot}>
-      {ghost.studs.map((s, i) => (
-        <circle key={i} className={styles.stud} transform={mat(s)} r={2.4} />
-      ))}
-      {ghost.edges.map((e, i) => (
-        <path key={i} className={styles.edges} d={line(e)} />
-      ))}
-      <g className={styles.badge}>
-        <g transform={mat(ghost.badge)}>
-          <rect className={styles.badgePlate} x={-3.6} y={-3.6} width={7.2} height={7.2} rx={1.4} />
-          <text className={styles.badgeText} x={0} y={0.2}>
-            {ghost.slot}
-          </text>
-        </g>
+      <g className={styles.bob}>
+        <path className={styles.outline} d={path(ghost.outline)} />
+        <text className={styles.numeral} x={ghost.centre[0]} y={ghost.centre[1]} fontSize={16 * u} strokeWidth={4 * u}>
+          {ghost.slot}
+        </text>
       </g>
     </g>
   );

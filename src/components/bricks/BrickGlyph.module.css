@@ -1,0 +1,21 @@
+.root {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  vertical-align: middle;
+  line-height: 0;
+}
+
+.img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.fallback {
+  position: absolute;
+  inset: 25% 8% 10% 4%;
+  background: var(--glyph-color);
+  border-radius: 3px;
+}

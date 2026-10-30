@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import BrickStage from "@/components/bricks/BrickStage";
+import BrickGlyph from "@/components/bricks/BrickGlyph";
 import BrickSprite from "@/components/bricks/BrickSprite";
 import SvgBrickStage from "@/components/bricks/svg/SvgBrickStage";
 import { nextLevel, toPlacedBricks } from "@/lib/bricks";
@@ -21,13 +22,15 @@ function fromUrl() {
     dark: q.get("dark") === "1",
     reduced: q.get("rm") === "1" || window.matchMedia("(prefers-reduced-motion: reduce)").matches,
     only: q.get("only"),
+    /** ?box=567x520: draw the stage in a fixed-size panel (the UI's board panel size). */
+    box: (/^(\d+)x(\d+)$/.exec(q.get("box") ?? "") ?? []).slice(1).map(Number) as number[],
   };
 }
 
 /**
  * Dev test page: the live board with add/remove controls, the SVG fallback beside it, and the 13
  * baked tray sprites. URL: ?n=0..4 | ?ids=b20,payments  &dark=1  &rm=1  &only=stage|svg|sprites
- * &bricks=svg|webgl (force a renderer).
+ * &bricks=svg|webgl (force a renderer)  &box=567x520 (stage/svg in a fixed-size panel; the ghost box is outlined in red with &ghostbox=1).
  */
 export default function DevBricks() {
   const [init] = useState(fromUrl);
@@ -46,6 +49,17 @@ export default function DevBricks() {
   };
   const page = [styles.page, dark ? styles.dark : ""].join(" ");
 
+  if ((init.only === "stage" || init.only === "svg") && init.box.length === 2) {
+    const [bw, bh] = init.box as [number, number];
+    return (
+      <div className={[page, styles.boxPage].join(" ")}>
+        <div className={styles.boxPanel} style={{ width: bw, height: bh }} data-testid="box-panel">
+          {init.only === "stage" ? <BrickStage {...stageProps} className={styles.fullStage} /> : <SvgBrickStage {...stageProps} className={styles.fullStage} />}
+        </div>
+      </div>
+    );
+  }
+
   if (init.only === "stage" || init.only === "svg") {
     return (
       <div className={[page, styles.full].join(" ")}>
@@ -59,14 +73,26 @@ export default function DevBricks() {
   }
 
   const sprites = (
-    <div className={styles.sprites}>
-      {[...HERO_LEGOS, ...MORE_LEGOS].map((l) => (
-        <div key={l.id} className={styles.sprite}>
-          <BrickSprite id={l.id} color={l.brick.hex} size={l.size} />
-          <span className={styles.mono}>{l.id}</span>
-        </div>
-      ))}
-    </div>
+    <>
+      <div className={styles.sprites}>
+        {[...HERO_LEGOS, ...MORE_LEGOS].map((l) => (
+          <div key={l.id} className={styles.sprite}>
+            <BrickSprite id={l.id} color={l.brick.hex} size={l.size} title={l.title} />
+            <span className={styles.mono}>{l.id}</span>
+          </div>
+        ))}
+      </div>
+      <div className={styles.glyphs}>
+        {[...HERO_LEGOS, ...MORE_LEGOS].map((l) => (
+          <span key={l.id} className={styles.glyphRow}>
+            <BrickGlyph id={l.id} color={l.brick.hex} />
+            <span>
+              <b>{l.kicker}:</b> {l.title}
+            </span>
+          </span>
+        ))}
+      </div>
+    </>
   );
   if (init.only === "sprites") return <div className={[page, styles.fullSprites].join(" ")}>{sprites}</div>;
 

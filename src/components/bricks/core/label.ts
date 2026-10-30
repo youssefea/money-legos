@@ -5,16 +5,28 @@
  */
 
 export type LabelLine = { text: string; size: number; y: number };
-export type LabelLayout = { verb: LabelLine; name: LabelLine[]; tracking: number };
+/** `x` is the left edge of both lines (left-aligned pad print), mm from the face's left edge. */
+export type LabelLayout = { x: number; verb: LabelLine; name: LabelLine[]; tracking: number };
 
 export type Measure = (text: string, font: "verb" | "name", size: number) => number;
 
 /** Rough widths for when no canvas is around (server render, SVG fallback). */
 export const approxMeasure: Measure = (text, font, size) =>
-  font === "verb" ? text.length * size * 0.56 : text.length * size * (0.6 + NAME_TRACKING);
+  font === "verb" ? text.length * size * 0.58 : text.length * size * (0.6 + NAME_TRACKING);
 
-export const NAME_TRACKING = 0.12; // em
-const VERB_TRACKING = -0.015; // em
+/** Sublabel tracking (Base Sans Mono caps), em. */
+export const NAME_TRACKING = 0.08;
+export const VERB_TRACKING = -0.02; // em
+
+/*
+ * Print sizes in mm on the face. With the tray's hero sprite ~216 CSS px wide, the front face is
+ * ~160 px (~5.3 px/mm), so these read as: 16 px left inset, 22 px Base Sans Bold verb, 10 px mono
+ * caps. The board and larger sprites show them bigger.
+ */
+const PRINT = {
+  hero: { inset: 2.9, verb: 4.2, name: 1.85, minName: 1.45 },
+  small: { inset: 1.7, verb: 3.4, name: 1.45, minName: 1.15 },
+} as const;
 
 function wrap2(words: string[], fits: (s: string) => boolean): string[] | null {
   for (let cut = words.length - 1; cut >= 1; cut--) {
@@ -26,34 +38,38 @@ function wrap2(words: string[], fits: (s: string) => boolean): string[] | null {
 }
 
 export function layoutLabel(verb: string, name: string, faceW: number, faceH: number, measure: Measure): LabelLayout {
-  const maxW = faceW * 0.86;
-  const small = faceW < 20;
-  let verbSize = Math.min(faceH * 0.5, small ? 4.0 : 4.8);
+  const P = faceW < 20 ? PRINT.small : PRINT.hero;
+  const x = P.inset;
+  const maxW = faceW - 2 * P.inset;
+  let verbSize: number = P.verb;
   const vw = measure(verb, "verb", verbSize) + verb.length * verbSize * VERB_TRACKING;
   if (vw > maxW) verbSize *= maxW / vw;
 
   const caps = name.toUpperCase();
-  let nameSize = small ? 1.05 : 1.2;
+  let nameSize: number = P.name;
   let lines = [caps];
   const nameFits = (s: string, sz: number) => measure(s, "name", sz) <= maxW;
   if (!nameFits(caps, nameSize)) {
     const shrunk = nameSize * (maxW / measure(caps, "name", nameSize));
-    if (shrunk >= 0.92) nameSize = shrunk;
+    if (shrunk >= P.name * 0.9) nameSize = shrunk;
     else {
       const two = wrap2(caps.split(" "), (s) => nameFits(s, nameSize));
       if (two) lines = two;
-      else nameSize = Math.max(0.7, shrunk);
+      else nameSize = Math.max(P.minName, shrunk);
     }
   }
+  // Two sublabel lines on a small face: give the verb a little less room.
+  if (lines.length > 1 && faceW < 20) verbSize = Math.min(verbSize, P.verb * 0.86);
 
-  // Vertical block: verb cap height (~0.7 em) + gap + name lines, centred on the face.
-  const capH = verbSize * 0.7;
-  const gap = verbSize * 0.32;
-  const lineH = nameSize * 1.25;
-  const block = capH + gap + lines.length * lineH - (lineH - nameSize * 0.72);
-  const top = (faceH - block) / 2 + faceH * 0.01;
+  // Vertical block: verb cap height (~0.7 em) + gap + name lines, centred on the face (a hair low: the top bevel catches the light and reads as part of the face).
+  const capH = verbSize * 0.71;
+  const gap = verbSize * 0.3;
+  const lineH = nameSize * 1.3;
+  const block = capH + gap + nameSize * 0.72 + (lines.length - 1) * lineH;
+  const top = (faceH - block) / 2 + faceH * 0.025;
   const verbBaseline = top + capH;
   return {
+    x,
     verb: { text: verb, size: verbSize, y: verbBaseline },
     name: lines.map((text, i) => ({ text, size: nameSize, y: verbBaseline + gap + nameSize * 0.72 + i * lineH })),
     tracking: NAME_TRACKING,

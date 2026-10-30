@@ -42,7 +42,7 @@ export function Studio({ dark = false, floorShadow = true, shadowSize = 2048 }: 
         shadow-camera-far={260}
       />
       {floorShadow && (
-        <ContactShadows position={[0, -0.02, 0]} scale={150} far={30} blur={2.6} opacity={dark ? 0.85 : 0.5} resolution={512} frames={1} color="#0a0b0d" />
+        <ContactShadows position={[0, -0.02, 0]} scale={150} far={24} blur={2.2} opacity={dark ? 0.9 : 0.68} resolution={1024} frames={1} color="#0a0b0d" />
       )}
     </>
   );

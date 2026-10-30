@@ -3,7 +3,7 @@
 import { useState, type CSSProperties } from "react";
 import type { SpriteId } from "@/lib/contract";
 import { asset } from "@/lib/basePath";
-import { SPRITE_DPR, SPRITE_SIZES } from "./sprites";
+import { SPRITE_DPR, SPRITE_META } from "./spriteMeta";
 import styles from "./BrickSprite.module.css";
 
 export type BrickSpriteProps = {
@@ -15,33 +15,44 @@ export type BrickSpriteProps = {
   size?: [number, number];
   /** Decorative by default: the button around it carries the name. */
   alt?: string;
-  /** Display size in CSS px. Defaults to the baked size at 1x (hero 240x180, secondary 150x142); give one to scale. */
+  /** Tooltip (title attribute). */
+  title?: string;
+  /**
+   * Display size in CSS px. Defaults to the baked size at 1x (see spriteMeta.ts; a hero 2x4 is
+   * ~280 px wide). Give one side to scale; the other follows the baked aspect. A CSS width on
+   * `className` works too: the box keeps the sprite's aspect ratio before the WebP loads.
+   */
   width?: number;
   height?: number;
   className?: string;
 };
 
 /**
- * Pre-baked brick sprite (scripts/bake-sprites renders it from the board's own 3D rig). The img gets
- * width/height from the baked size, so the box is reserved before the WebP loads (no layout shift).
- * Shows a flat block in the brick colour until the WebP has loaded, and keeps showing it if the file
- * is missing.
+ * Pre-baked brick sprite (scripts/bake-sprites renders it from the board's own 3D rig), tight-cropped
+ * to the brick and its contact shadow. The box takes its aspect ratio from spriteMeta.ts, so it is
+ * reserved before the WebP loads (no layout shift). A soft block in the brick colour stands in until
+ * the WebP has loaded, and stays if the file is missing.
  */
-export default function BrickSprite({ id, color, size = [4, 2], alt = "", width, height, className }: BrickSpriteProps) {
+export default function BrickSprite({ id, color, size = [4, 2], alt = "", title, width, height, className }: BrickSpriteProps) {
   // Track by id so a new id never inherits the previous sprite's state.
   const [loadedId, setLoadedId] = useState<string | null>(null);
   const [failedId, setFailedId] = useState<string | null>(null);
   const loaded = loadedId === id;
   const failed = failedId === id;
-  const baked = SPRITE_SIZES[id];
-  const [w, h] = sizeFor(baked, width, height);
-  const aspect = baked ? `${baked[0]} / ${baked[1]}` : `${size[0]} / ${size[1]}`;
-  const style = { "--sprite-color": color, "--sprite-aspect": aspect, "--sprite-w": w ? `${w}px` : undefined } as CSSProperties;
+  const meta = SPRITE_META[id];
+  const aspect = meta ? meta.aspect : (size[0] * 1.25) / (size[1] + 1.4);
+  const [w, h] = sizeFor(meta ? [meta.width / SPRITE_DPR, meta.height / SPRITE_DPR] : undefined, aspect, width, height);
+  const style = {
+    "--sprite-color": color,
+    "--sprite-aspect": String(aspect),
+    "--sprite-w": w ? `${w}px` : undefined,
+  } as CSSProperties;
 
   return (
     <span
       className={[styles.root, w ? styles.sized : "", className].filter(Boolean).join(" ")}
       style={style}
+      title={title}
       data-sprite={id}
       data-state={failed ? "fallback" : loaded ? "loaded" : "loading"}
       role={alt ? "img" : undefined}
@@ -52,7 +63,7 @@ export default function BrickSprite({ id, color, size = [4, 2], alt = "", width,
       {!failed && (
         // eslint-disable-next-line @next/next/no-img-element -- static export, pre-baked WebP
         <img
-          className={loaded ? styles.img : styles.imgPending}
+          className={[styles.img, loaded ? "" : styles.pending].join(" ")}
           src={asset(`/sprites/${id}.webp`)}
           alt=""
           width={w}
@@ -73,11 +84,9 @@ export default function BrickSprite({ id, color, size = [4, 2], alt = "", width,
   );
 }
 
-function sizeFor(baked: readonly [number, number] | undefined, width?: number, height?: number): [number | undefined, number | undefined] {
-  if (!baked) return [width, height];
-  const ratio = baked[0] / baked[1];
+function sizeFor(baked: [number, number] | undefined, aspect: number, width?: number, height?: number): [number | undefined, number | undefined] {
   if (width !== undefined && height !== undefined) return [width, height];
-  if (width !== undefined) return [width, Math.round(width / ratio)];
-  if (height !== undefined) return [Math.round(height * ratio), height];
-  return [baked[0] / SPRITE_DPR, baked[1] / SPRITE_DPR];
+  if (width !== undefined) return [width, Math.round(width / aspect)];
+  if (height !== undefined) return [Math.round(height * aspect), height];
+  return baked ? [baked[0], baked[1]] : [undefined, undefined];
 }

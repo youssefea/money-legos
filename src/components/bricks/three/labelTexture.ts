@@ -1,15 +1,16 @@
 import * as THREE from "three";
-import { fontStacks, layoutLabel, NAME_TRACKING, type Measure } from "../core/label";
+import { fontStacks, layoutLabel, NAME_TRACKING, VERB_TRACKING, type Measure } from "../core/label";
 
-const PX_PER_MM = 40;
+/** Print resolution: a 2x4 face (30 mm) is ~2000 px wide, sharp even on a 3x phone. */
+const PX_PER_MM = 64;
 const cache = new Map<string, THREE.CanvasTexture>();
 
 /**
  * Draws the pad-printed label for a brick front face into a transparent canvas texture.
  * Call after loadLabelFonts() so Base Sans is used, not a fallback.
  */
-export function labelTexture(verb: string, name: string, ink: string, faceW: number, faceH: number) {
-  const key = [verb, name, ink, faceW.toFixed(2), faceH.toFixed(2)].join("|");
+export function labelTexture(verb: string, name: string, ink: string, faceW: number, faceH: number, anisotropy = 8) {
+  const key = [verb, name, ink, faceW.toFixed(2), faceH.toFixed(2), anisotropy].join("|");
   const hit = cache.get(key);
   if (hit) return hit;
   const { sans, mono } = fontStacks();
@@ -25,22 +26,21 @@ export function labelTexture(verb: string, name: string, ink: string, faceW: num
   };
   const L = layoutLabel(verb, name, faceW, faceH, measure);
   ctx.fillStyle = ink;
-  ctx.textAlign = "center";
+  ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
-  const cx = canvas.width / 2;
+  const x = L.x * PX_PER_MM;
   ctx.font = font("verb", L.verb.size);
-  ctx.letterSpacing = `${-0.015 * L.verb.size * PX_PER_MM}px`;
-  ctx.fillText(L.verb.text, cx, L.verb.y * PX_PER_MM);
+  ctx.letterSpacing = `${VERB_TRACKING * L.verb.size * PX_PER_MM}px`;
+  // Bold glyphs carry a little left side bearing: pull the verb back so both lines share one edge.
+  ctx.fillText(L.verb.text, x - L.verb.size * 0.045 * PX_PER_MM, L.verb.y * PX_PER_MM);
   for (const line of L.name) {
     ctx.font = font("name", line.size);
-    const tr = NAME_TRACKING * line.size * PX_PER_MM;
-    ctx.letterSpacing = `${tr}px`;
-    // letter-spacing adds trailing space after the last glyph; shift to keep it optically centred
-    ctx.fillText(line.text, cx + tr / 2, line.y * PX_PER_MM);
+    ctx.letterSpacing = `${NAME_TRACKING * line.size * PX_PER_MM}px`;
+    ctx.fillText(line.text, x, line.y * PX_PER_MM);
   }
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 8;
+  tex.anisotropy = anisotropy;
   tex.generateMipmaps = true;
   tex.minFilter = THREE.LinearMipmapLinearFilter;
   cache.set(key, tex);

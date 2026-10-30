@@ -2,7 +2,11 @@
   animation: ghost-in 240ms cubic-bezier(0.23, 1, 0.32, 1) 280ms both;
 }
 
-.edges {
+.bob {
+  animation: ghost-bob 2.4s ease-in-out infinite;
+}
+
+.outline {
   fill: none;
   stroke: var(--ghost-color);
   stroke-width: 2px;
@@ -10,31 +14,16 @@
   stroke-linecap: round;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
-  animation: ghost-march 1.6s linear infinite;
 }
 
-.stud {
-  fill: none;
-  stroke: var(--ghost-color);
-  stroke-width: 1.25px;
-  stroke-dasharray: 3 3;
-  vector-effect: non-scaling-stroke;
-  opacity: 0.7;
-}
-
-.badge {
-  animation: ghost-bob 2.4s ease-in-out infinite;
-}
-
-.badgePlate {
+/* Upright numeral with a halo in the page colour, so it stays legible over studs. */
+.numeral {
   fill: var(--ghost-color);
-}
-
-.badgeText {
-  fill: var(--ghost-ink);
-  font-family: var(--font-sans);
-  font-weight: 700;
-  font-size: 4.6px;
+  stroke: var(--ghost-halo);
+  stroke-linejoin: round;
+  paint-order: stroke;
+  font-family: var(--font-mono);
+  font-weight: 500;
   text-anchor: middle;
   dominant-baseline: central;
   font-variant-numeric: tabular-nums;
@@ -54,19 +43,13 @@
   }
 }
 
-@keyframes ghost-march {
-  to {
-    stroke-dashoffset: -22;
-  }
-}
-
 @keyframes ghost-bob {
   0%,
   100% {
     transform: translateY(0);
   }
   50% {
-    transform: translateY(-3px);
+    transform: translateY(var(--ghost-bob, -3px));
   }
 }
 

@@ -1,11 +1,25 @@
 "use client";
 
-import { lazy, Suspense, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { BrickStageProps } from "@/lib/contract";
 import { detectRenderer, markSlow } from "./core/capability";
-import { stackLabel } from "./core/layout";
+import type { GhostRect } from "./core/ghost";
+import { DEFAULT_FRAMING, stackLabel, type Framing } from "./core/layout";
 import SvgBrickStage from "./svg/SvgBrickStage";
 import styles from "./BrickStage.module.css";
+
+export type { GhostRect } from "./core/ghost";
+export type { Framing } from "./core/layout";
+
+export type BrickStageViewProps = BrickStageProps & {
+  /**
+   * Framing inside the container (it fills it: size the container, the board fits itself).
+   * Default: baseplate 88% of the width, the 4-brick tower kept inside 94% of the height.
+   */
+  framing?: Partial<Framing>;
+  /** Called with the ghost slot's box in this element's CSS px whenever it moves (null = stack full). */
+  onGhostRect?: (rect: GhostRect | null) => void;
+};
 
 const Stage3D = lazy(() => import("./three/Stage3D"));
 
@@ -24,8 +38,10 @@ const serverSnapshot = () => null;
  * a brick added after the first render has landed, and for each brick after the hop started by
  * changing `settledSignal` (the Generate moment; 60 ms stagger, bottom first).
  */
-export default function BrickStage(props: BrickStageProps) {
-  const { bricks, nextLevel, className, onSettled } = props;
+export default function BrickStage(props: BrickStageViewProps) {
+  const { bricks, nextLevel, className, onSettled, onGhostRect } = props;
+  const { plateFill = DEFAULT_FRAMING.plateFill, maxH = DEFAULT_FRAMING.maxH, maxW = DEFAULT_FRAMING.maxW } = props.framing ?? {};
+  const framing = useMemo<Framing>(() => ({ plateFill, maxH, maxW }), [plateFill, maxH, maxW]);
   const det = useSyncExternalStore(noSubscribe, detectRenderer, serverSnapshot);
   const [slow, setSlow] = useState(false);
   const [ready, setReady] = useState(false);
@@ -43,10 +59,23 @@ export default function BrickStage(props: BrickStageProps) {
   const onFps = useCallback((fps: number) => root.current?.setAttribute("data-fps", fps.toFixed(0)), []);
 
   // Only the visible renderer reports landings.
-  const live = useRef({ show3D, onSettled });
+  const live = useRef({ show3D, onSettled, onGhostRect });
   useEffect(() => {
-    live.current = { show3D, onSettled };
+    live.current = { show3D, onSettled, onGhostRect };
   });
+  // Each renderer reports its ghost; only the visible one's reaches the caller (re-sent on a switch).
+  const rects = useRef<{ svg: GhostRect | null; gl: GhostRect | null }>({ svg: null, gl: null });
+  const svgGhost = useCallback((r: GhostRect | null) => {
+    rects.current.svg = r;
+    if (!live.current.show3D) live.current.onGhostRect?.(r);
+  }, []);
+  const glGhost = useCallback((r: GhostRect | null) => {
+    rects.current.gl = r;
+    if (live.current.show3D) live.current.onGhostRect?.(r);
+  }, []);
+  useEffect(() => {
+    live.current.onGhostRect?.(show3D ? rects.current.gl : rects.current.svg);
+  }, [show3D]);
   const svgSettled = useCallback((id: string) => {
     if (!live.current.show3D) live.current.onSettled?.(id);
   }, []);
@@ -54,7 +83,7 @@ export default function BrickStage(props: BrickStageProps) {
     if (live.current.show3D) live.current.onSettled?.(id);
   }, []);
 
-  const inner = { ...props, className: undefined };
+  const inner = { ...props, className: undefined, framing, onGhostRect: undefined };
   return (
     <div
       ref={root}
@@ -68,12 +97,12 @@ export default function BrickStage(props: BrickStageProps) {
       data-next-level={nextLevel ?? "full"}
     >
       <div className={[styles.layer, show3D ? styles.hidden : ""].join(" ")}>
-        <SvgBrickStage {...inner} onSettled={svgSettled} decorative />
+        <SvgBrickStage {...inner} onSettled={svgSettled} onGhostRect={svgGhost} decorative />
       </div>
       {mode === "webgl" && (
         <Suspense fallback={null}>
           <div className={styles.layer} style={{ opacity: show3D ? 1 : 0 }}>
-            <Stage3D {...inner} onSettled={glSettled} onReady={onReady} onSlow={onSlow} onFps={onFps} />
+            <Stage3D {...inner} onSettled={glSettled} onGhostRect={glGhost} onReady={onReady} onSlow={onSlow} onFps={onFps} />
           </div>
         </Suspense>
       )}

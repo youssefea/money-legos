@@ -1,5 +1,6 @@
-// QA screenshots of the brick layer -> ../design/bricks-shots/ (or OUT=dir). Real GPU, bundled Chromium.
+// QA screenshots of the brick layer -> ../design/bricks-shots-v2/ (or OUT=dir). Real GPU, bundled Chromium.
 // node scripts/bake-sprites/shots.mjs   [ONLY=substring]
+// Stages are drawn in fixed-size panels: desktop board panel 567x520 and the phone sticky bar 340x130.
 import { chromium } from "playwright";
 import fs from "node:fs";
 import path from "node:path";
@@ -7,21 +8,21 @@ import { fileURLToPath } from "node:url";
 import { serve, GPU_ARGS } from "./serve.mjs";
 
 const repo = fileURLToPath(new URL("../..", import.meta.url));
-const out = process.env.OUT ?? path.join(repo, "../design/bricks-shots");
+const out = process.env.OUT ?? path.join(repo, "../design/bricks-shots-v2");
 fs.mkdirSync(out, { recursive: true });
-const STACKS = { 1: "b20", 3: "b20,payments,validity", 4: "b20,payments,validity,speed" };
-const VIEWS = { "1440x900": [1440, 900, 2], "390x844": [390, 844, 3] };
+const STACKS = { 0: "", 1: "b20", 3: "b20,payments,validity", 4: "b20,payments,validity,speed" };
+// [panel, viewport w, h, dpr]
+const VIEWS = { desktop: ["567x520", 640, 580, 2], phone: ["340x130", 390, 180, 3] };
 const jobs = [];
-for (const [v, size] of Object.entries(VIEWS)) {
+for (const [v, [box, w, h, dpr]] of Object.entries(VIEWS)) {
   for (const theme of ["light", "dark"]) {
     const d = theme === "dark" ? "&dark=1" : "";
-    for (const n of [1, 3, 4]) jobs.push([`stage-${theme}-${v}-${n}brick${n > 1 ? "s" : ""}`, `?only=stage&ids=${STACKS[n]}${d}`, size]);
-    jobs.push([`sprites-${theme}-${v}`, `?only=sprites${d}`, size, true]);
-    jobs.push([`svg-fallback-${theme}-${v}-4bricks`, `?only=svg&ids=${STACKS[4]}${d}`, size]);
+    for (const n of [0, 1, 3, 4]) jobs.push([`stage-${theme}-${v}-${n}brick${n === 1 ? "" : "s"}`, `?only=stage&box=${box}&n=${n}&ids=${STACKS[n]}${d}`, [w, h, dpr]]);
+    jobs.push([`svg-fallback-${theme}-${v}-3bricks`, `?only=svg&box=${box}&ids=${STACKS[3]}${d}`, [w, h, dpr]]);
   }
 }
-jobs.push(["dev-page-light-1440", "?ids=" + STACKS[3], [1440, 1500, 1], true]);
-jobs.push(["dev-page-dark-1440", "?dark=1&ids=" + STACKS[4], [1440, 1500, 1], true]);
+for (const theme of ["light", "dark"]) jobs.push([`sprites-${theme}`, `?only=sprites${theme === "dark" ? "&dark=1" : ""}`, [1440, 900, 2], true]);
+jobs.push(["sprites-light-phone", "?only=sprites", [390, 844, 3], true]);
 
 const only = process.env.ONLY;
 const s = await serve();
@@ -35,8 +36,14 @@ try {
     await page.waitForFunction(() => [...document.querySelectorAll("[data-testid=brick-stage]")].every((e) => e.getAttribute("data-ready") === "true"), null, { timeout: 30000 });
     await page.waitForFunction(() => [...document.images].every((i) => i.complete), null, { timeout: 30000 });
     await page.waitForTimeout(1500); // AO fade-in and ghost entrance
-    const info = await page.evaluate(() => [...document.querySelectorAll("[data-testid=brick-stage]")].map((e) => e.getAttribute("data-renderer")).join(","));
-    await page.screenshot({ path: path.join(out, `${name}.png`), fullPage: Boolean(fullPage) });
+    const info = await page.evaluate(() => {
+      const st = document.querySelector("[data-testid=brick-stage]");
+      const c = document.querySelector("canvas");
+      return st ? `${st.getAttribute("data-renderer")} plate=${c?.dataset.platePx ?? "-"}px` : "";
+    });
+    const panel = page.getByTestId("box-panel");
+    if (await panel.count()) await panel.screenshot({ path: path.join(out, `${name}.png`) });
+    else await page.screenshot({ path: path.join(out, `${name}.png`), fullPage: Boolean(fullPage) });
     console.log("shot", name, info);
     await page.close();
   }

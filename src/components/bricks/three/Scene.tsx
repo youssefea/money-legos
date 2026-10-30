@@ -1,33 +1,38 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import type { PlacedBrick } from "@/lib/contract";
 import { ghostGeom, type GhostGeom } from "../core/ghost";
-import { BASEPLATE, BOARD, FOV, VIEW, byLevel, frameBox, type V3 } from "../core/layout";
+import { BASEPLATE, BOARD, DEFAULT_FRAMING, FOV, VIEW, byLevel, frameBox, plateCorners, type Framing, type V3 } from "../core/layout";
 import { AO } from "./AO";
 import { Baseplate } from "./Baseplate";
 import { MotionContext, MotionStore, useMotion } from "./motion";
 import { StackBrick } from "./StackBrick";
 import { Studio } from "./Studio";
 
-/** Fits the fixed board box (baseplate + full stack) into the canvas and projects the ghost marker. */
-function CameraRig({ nextLevel, onGhost }: { nextLevel: number | null; onGhost: (g: GhostGeom | null) => void }) {
+/**
+ * Frames the board for the canvas size: the baseplate spans `framing.plateFill` of the width unless
+ * the full 4-brick tower would then overflow, and the board box (plate + tower) is centred. Then it
+ * projects the ghost marker into canvas px.
+ */
+function CameraRig({ nextLevel, framing, onGhost }: { nextLevel: number | null; framing: Framing; onGhost: (g: GhostGeom | null) => void }) {
   const get = useThree((s) => s.get);
   const size = useThree((s) => s.size);
   const invalidate = useThree((s) => s.invalidate);
+  const { plateFill, maxH, maxW } = framing;
   useLayoutEffect(() => {
     if (size.width === 0 || size.height === 0) return;
     const camera = get().camera as THREE.PerspectiveCamera;
     const { min, max } = frameBox();
     const corners: THREE.Vector3[] = [];
     for (const x of [min[0], max[0]]) for (const y of [min[1], max[1]]) for (const z of [min[2], max[2]]) corners.push(new THREE.Vector3(x, y, z));
+    const plate = plateCorners().map((p) => new THREE.Vector3(...p));
     const dir = new THREE.Vector3(...VIEW).normalize();
     const target = new THREE.Vector3((min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2);
     camera.fov = FOV;
     camera.aspect = size.width / size.height;
-    const margin = 0.9;
     const place = (dist: number) => {
       camera.position.copy(target).addScaledVector(dir, dist);
       camera.near = dist / 10;
@@ -36,28 +41,32 @@ function CameraRig({ nextLevel, onGhost }: { nextLevel: number | null; onGhost: 
       camera.updateProjectionMatrix();
       camera.updateMatrixWorld();
     };
-    const extent = () => {
+    const extent = (pts: THREE.Vector3[]) => {
       let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-      for (const c of corners) {
+      for (const c of pts) {
         const p = c.clone().project(camera);
         x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y);
       }
       return { x0, x1, y0, y1 };
     };
-    // Two passes: fit the distance, then re-centre the projected box, then fit again.
-    for (let pass = 0; pass < 2; pass++) {
+    // Too close when the plate is wider than plateFill, or the board box leaves maxW x maxH (NDC spans 2).
+    const tooClose = () => {
+      const p = extent(plate);
+      const b = extent(corners);
+      return p.x1 - p.x0 > 2 * plateFill || b.y1 - b.y0 > 2 * maxH || b.x1 - b.x0 > 2 * maxW || Math.max(-b.x0, b.x1, -b.y0, b.y1) > 0.995;
+    };
+    // Fit the distance, re-centre the projected box, fit again.
+    for (let pass = 0; pass < 3; pass++) {
       let lo = 20, hi = 4000;
       for (let i = 0; i < 40; i++) {
         const mid = (lo + hi) / 2;
         place(mid);
-        const e = extent();
-        if (Math.max(-e.x0, e.x1, -e.y0, e.y1) > margin) lo = mid; else hi = mid;
+        if (tooClose()) lo = mid; else hi = mid;
       }
       place(hi);
-      if (pass === 0) {
-        const e = extent();
+      if (pass < 2) {
+        const e = extent(corners);
         const cx = (e.x0 + e.x1) / 2, cy = (e.y0 + e.y1) / 2;
-        // Shift the target in the camera plane by the off-centre amount.
         const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
         const up = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
         const dist = camera.position.distanceTo(target);
@@ -65,6 +74,9 @@ function CameraRig({ nextLevel, onGhost }: { nextLevel: number | null; onGhost: 
         target.addScaledVector(right, cx * halfH * camera.aspect).addScaledVector(up, cy * halfH);
       }
     }
+    // Framing readout for QA (plate width in CSS px).
+    const pe = extent(plate);
+    get().gl.domElement.dataset.platePx = (((pe.x1 - pe.x0) / 2) * size.width).toFixed(0);
     invalidate();
     if (nextLevel === null) onGhost(null);
     else {
@@ -74,37 +86,8 @@ function CameraRig({ nextLevel, onGhost }: { nextLevel: number | null; onGhost: 
       };
       onGhost(ghostGeom(nextLevel, project));
     }
-  }, [get, size, nextLevel, onGhost, invalidate]);
+  }, [get, size, nextLevel, onGhost, invalidate, plateFill, maxH, maxW]);
   return null;
-}
-
-/** Studio floor: a soft pool of the panel colour that fades into the page, like a studio sweep. */
-function Floor({ dark }: { dark: boolean }) {
-  const tex = useMemo(() => {
-    const c = document.createElement("canvas");
-    c.width = c.height = 256;
-    const g = c.getContext("2d")!;
-    const r = g.createRadialGradient(128, 128, 0, 128, 128, 128);
-    // smooth (cosine) falloff that reaches zero well inside the plane, so no edge ever shows
-    for (let i = 0; i <= 16; i++) {
-      const t = i / 16;
-      const a = t >= 0.98 ? 0 : Math.pow(0.5 + 0.5 * Math.cos((Math.PI * t) / 0.98), 1.4);
-      const v = Math.round(255 * a); // alphaMap reads the green channel: draw opaque greys
-      r.addColorStop(t, `rgb(${v},${v},${v})`);
-    }
-    g.fillStyle = "#000";
-    g.fillRect(0, 0, 256, 256);
-    g.fillStyle = r;
-    g.fillRect(0, 0, 256, 256);
-    return new THREE.CanvasTexture(c);
-  }, []);
-  useEffect(() => () => tex.dispose(), [tex]);
-  return (
-    <mesh rotation-x={-Math.PI / 2} position={[0, -0.05, 4]} renderOrder={-1}>
-      <planeGeometry args={[260, 210]} />
-      <meshBasicMaterial color={dark ? BOARD.dark.floor : BOARD.light.floor} alphaMap={tex} transparent opacity={dark ? 0.6 : 1} depthWrite={false} toneMapped={false} dithering />
-    </mesh>
-  );
 }
 
 /**
@@ -196,6 +179,7 @@ export type SceneProps = {
   onSettled?: (id: string) => void;
   fontsReady: boolean;
   ao: boolean;
+  framing?: Framing;
   onGhost: (g: GhostGeom | null) => void;
   onReady?: () => void;
   onSlow?: () => void;
@@ -205,7 +189,7 @@ export type SceneProps = {
 type Shown = { brick: PlacedBrick; leaving: boolean };
 
 export function Scene(props: SceneProps) {
-  const { bricks, nextLevel, dark, reducedMotion, settledSignal = 0, onSettled, fontsReady, ao, onGhost, onReady, onSlow, onFps } = props;
+  const { bricks, nextLevel, dark, reducedMotion, settledSignal = 0, onSettled, fontsReady, ao, framing = DEFAULT_FRAMING, onGhost, onReady, onSlow, onFps } = props;
   const [motion] = useState(() => new MotionStore());
 
   // Bricks present at first render appear in place; later ones drop in.
@@ -231,9 +215,8 @@ export function Scene(props: SceneProps) {
 
   return (
     <MotionContext.Provider value={motion}>
-      <CameraRig nextLevel={nextLevel} onGhost={onGhost} />
+      <CameraRig nextLevel={nextLevel} framing={framing} onGhost={onGhost} />
       <Studio dark={dark} floorShadow={!debug.includes("nocontact")} />
-      {!debug.includes("nofloor") && <Floor dark={dark} />}
       <Baseplate studs={BASEPLATE} color={c.baseplate} />
       {shown.map(({ brick, leaving: isLeaving }, i) => (
         <StackBrick

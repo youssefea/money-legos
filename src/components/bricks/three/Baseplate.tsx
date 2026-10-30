@@ -15,7 +15,7 @@ export function Baseplate({ studs, color }: { studs: [number, number]; color: st
     g.setAttribute("wear", new THREE.BufferAttribute(new Float32Array(g.attributes.position!.count), 1));
     return g;
   }, []);
-  const mat = useMemo(() => plasticMaterial(color, "baseplate", 0.3), [color]);
+  const mat = useMemo(() => plasticMaterial(color, "baseplate", 0.3, DIM.plate), [color]);
   useEffect(() => () => mat.dispose(), [mat]);
   useEffect(() => () => stud.dispose(), [stud]);
   const inst = useRef<THREE.InstancedMesh>(null);

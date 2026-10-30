@@ -1,4 +1,4 @@
-import { VIEW, type V3 } from "../core/layout";
+import { DEFAULT_FRAMING, VIEW, frameBox, plateCorners, type Framing, type V3 } from "../core/layout";
 
 /** Orthographic projector for the SVG fallback, looking along the same VIEW as the 3D camera. */
 type Basis = { right: V3; up: V3; dir: V3 };
@@ -26,4 +26,34 @@ export function project(p: V3): [number, number] {
 /** Larger = closer to the viewer. */
 export function depth(p: V3): number {
   return dot(p, basis.dir);
+}
+
+/** Projected extents (mm) of the board box (plate + full tower) and of the plate alone. */
+export const EXTENTS = (() => {
+  const ext = (pts: V3[]) => {
+    const p = pts.map(project);
+    const xs = p.map((q) => q[0]);
+    const ys = p.map((q) => q[1]);
+    return { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
+  };
+  const { min, max } = frameBox();
+  const box: V3[] = [];
+  for (const x of [min[0], max[0]]) for (const y of [min[1], max[1]]) for (const z of [min[2], max[2]]) box.push([x, y, z]);
+  return { box: ext(box), plate: ext(plateCorners()) };
+})();
+
+export type ViewBox = { x: number; y: number; w: number; h: number; scale: number };
+
+/** Same framing rule as the 3D camera, for a container of cw x ch px. */
+export function svgViewBox(cw: number, ch: number, framing: Framing = DEFAULT_FRAMING): ViewBox {
+  const { box, plate } = EXTENTS;
+  const bw = box.x1 - box.x0, bh = box.y1 - box.y0;
+  if (cw <= 0 || ch <= 0) {
+    const m = bw * 0.055;
+    return { x: box.x0 - m, y: box.y0 - m, w: bw + 2 * m, h: bh + 2 * m, scale: 0 };
+  }
+  const scale = Math.min((framing.plateFill * cw) / (plate.x1 - plate.x0), (framing.maxH * ch) / bh, (framing.maxW * cw) / bw);
+  const w = cw / scale, h = ch / scale;
+  const cx = (box.x0 + box.x1) / 2, cy = (box.y0 + box.y1) / 2;
+  return { x: cx - w / 2, y: cy - h / 2, w, h, scale };
 }

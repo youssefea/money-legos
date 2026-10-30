@@ -1,35 +1,38 @@
+/* The box always has the sprite's aspect ratio, so nothing moves when the WebP arrives. */
 .root {
   position: relative;
   display: inline-block;
+  vertical-align: middle;
   line-height: 0;
+  aspect-ratio: var(--sprite-aspect, 2 / 1);
 }
 
-/* Reserve the sprite's box before it loads. Zero specificity: any width from the caller wins. */
+/* Default width from the baked size. Zero specificity: any width from the caller wins. */
 :where(.sized) {
   width: var(--sprite-w);
   max-width: 100%;
 }
 
 .img {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-/* Flat colour stand-in until the baked sprite exists (or if it fails to load). */
-.fallback {
-  display: block;
-  width: 100%;
-  aspect-ratio: var(--sprite-aspect, 2 / 1);
-  background: var(--sprite-color);
-  border-radius: var(--radius-sm);
-  box-shadow: inset 0 0 0 1px var(--color-hairline);
-}
-
-.imgPending {
   position: absolute;
   inset: 0;
+  display: block;
   width: 100%;
-  height: auto;
+  height: 100%;
+  object-fit: contain;
+}
+
+.pending {
   opacity: 0;
+}
+
+/* Soft stand-in in the brick colour (the lower part of the box, where the body is). */
+.fallback {
+  position: absolute;
+  inset: 22% 6% 8% 4%;
+  display: block;
+  background: var(--sprite-color);
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px rgb(10 11 13 / 0.08);
+  opacity: 0.6;
 }

@@ -1,27 +1,37 @@
 import { DIM } from "./dims";
 import { GHOST_SIZE, levelY, slotNumber, type V3 } from "./layout";
 
-/** 2D affine transform (SVG matrix order a b c d e f) mapping plane mm (u along +X, v along +Z) to screen px. */
-export type Affine = [number, number, number, number, number, number];
-
 /** The "next slot" marker in screen space, ready for the SVG overlay. */
 export type GhostGeom = {
   slot: number;
-  /** Visible dashed edges of the slot box, as polylines. */
-  edges: [number, number][][];
-  /** Flat stud rings on the slot top. */
-  studs: Affine[];
-  /** Flat number badge above the stud grid. */
-  badge: Affine;
+  /** Outer silhouette of the slot's brick body (convex hull of its box), screen coordinates. */
+  outline: [number, number][];
+  /** Centre of the silhouette, where the upright numeral sits. */
+  centre: [number, number];
+  /** Screen-space bounds of the silhouette. */
+  bounds: { x: number; y: number; width: number; height: number };
 };
+
+/** The ghost slot's box in the stage's own CSS px, for anchoring UI (e.g. a "Start here" pill). */
+export type GhostRect = { slot: number; x: number; y: number; width: number; height: number };
 
 export type Project = (p: V3) => [number, number];
 
-function affineAt(c: V3, project: Project): Affine {
-  const o = project(c);
-  const u = project([c[0] + 1, c[1], c[2]]);
-  const v = project([c[0], c[1], c[2] + 1]);
-  return [u[0] - o[0], u[1] - o[1], v[0] - o[0], v[1] - o[1], o[0], o[1]];
+/** Convex hull (monotone chain), clockwise in screen space. */
+export function hull(pts: [number, number][]): [number, number][] {
+  const p = [...pts].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cr = (o: [number, number], a: [number, number], b: [number, number]) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lo: [number, number][] = [];
+  const up: [number, number][] = [];
+  for (const q of p) {
+    while (lo.length >= 2 && cr(lo[lo.length - 2]!, lo[lo.length - 1]!, q) <= 0) lo.pop();
+    lo.push(q);
+  }
+  for (const q of p.reverse()) {
+    while (up.length >= 2 && cr(up[up.length - 2]!, up[up.length - 1]!, q) <= 0) up.pop();
+    up.push(q);
+  }
+  return [...lo.slice(0, -1), ...up.slice(0, -1)];
 }
 
 /** Builds the ghost for a stack level (plates) with any projector (3D camera or the SVG orthographic one). */
@@ -29,24 +39,18 @@ export function ghostGeom(level: number, project: Project): GhostGeom {
   const [w, d] = GHOST_SIZE;
   const W = w * DIM.pitch - DIM.gap;
   const D = d * DIM.pitch - DIM.gap;
-  const H = DIM.plate * 3;
   const y0 = levelY(level);
-  const y1 = y0 + H;
-  const x0 = -W / 2;
-  const x1 = W / 2;
-  const z0 = -D / 2;
-  const z1 = D / 2;
-  const P = (x: number, y: number, z: number) => project([x, y, z]);
-  const edges: [number, number][][] = [
-    [P(x0, y1, z0), P(x1, y1, z0), P(x1, y1, z1), P(x0, y1, z1), P(x0, y1, z0)],
-    [P(x0, y1, z1), P(x0, y0, z1), P(x1, y0, z1), P(x1, y0, z0), P(x1, y1, z0)],
-    [P(x1, y1, z1), P(x1, y0, z1)],
-  ];
-  const studs: Affine[] = [];
-  for (let i = 0; i < w; i++) {
-    for (let j = 0; j < d; j++) {
-      studs.push(affineAt([(i + 0.5) * DIM.pitch - (w * DIM.pitch) / 2, y1, (j + 0.5) * DIM.pitch - (d * DIM.pitch) / 2], project));
-    }
-  }
-  return { slot: slotNumber(level), edges, studs, badge: affineAt([0, y1 + DIM.studH + 0.6, 0], project) };
+  const y1 = y0 + DIM.plate * 3;
+  const pts: [number, number][] = [];
+  for (const x of [-W / 2, W / 2]) for (const y of [y0, y1]) for (const z of [-D / 2, D / 2]) pts.push(project([x, y, z]));
+  const outline = hull(pts);
+  const xs = outline.map((p) => p[0]);
+  const ys = outline.map((p) => p[1]);
+  const x = Math.min(...xs);
+  const y = Math.min(...ys);
+  const width = Math.max(...xs) - x;
+  const height = Math.max(...ys) - y;
+  // Numeral at the centre of the slot's volume, lifted a little clear of the studs below.
+  const centre = project([0, y0 + (y1 - y0) * 0.62, 0]);
+  return { slot: slotNumber(level), outline, centre, bounds: { x, y, width, height } };
 }

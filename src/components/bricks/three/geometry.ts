@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { mergeGeometries, toCreasedNormals } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { DIM } from "../core/dims";
+import { DIM, studCenters } from "../core/dims";
 
 /*
  * Brick geometry in true proportions (pitch 8, height 9.6, stud 4.8 x 1.7, wall 1.2), merged into one
@@ -186,12 +186,12 @@ export function brickGeometry({ w, d, plates, studs = true, hollow = true }: Bri
   }
 
   if (studs) {
-    for (let i = 0; i < w; i++) {
-      for (let j = 0; j < d; j++) {
-        const s = studGeometry();
-        s.translate((i + 0.5) * pitch - (w * pitch) / 2, H, (j + 0.5) * pitch - (d * pitch) / 2);
-        parts.push(prep(s));
-      }
+    const centres = studCenters(w, d);
+    if (centres.length !== w * d) throw new Error(`stud count ${centres.length} != ${w * d}`);
+    for (const [x, z] of centres) {
+      const s = studGeometry();
+      s.translate(x, H, z);
+      parts.push(prep(s));
     }
   }
 

@@ -11,11 +11,18 @@ export const DIM = {
   tubeIn: 2.4,
   rodR: 1.6, // 1xN underside rod
   cornerR: 0.5, // vertical edge radius
-  fillet: 0.36, // top and bottom edge fillet
-  studFillet: 0.3,
+  fillet: 0.4, // top and bottom edge bevel (0.4 mm)
+  studFillet: 0.4, // stud top bevel (0.4 mm)
   /** Hairline between stacked bricks: real stacks never sit perfectly flush. */
   stackGap: 0.15,
 } as const;
 
 /** The baseplate is a plate-thick slab; bricks sit on its top face. */
 export const BASEPLATE_TOP = DIM.plate;
+
+/** Stud centres [x, z] on top of a w x d piece (origin = piece centre): exactly w * d of them. */
+export function studCenters(w: number, d: number): [number, number][] {
+  const out: [number, number][] = [];
+  for (let i = 0; i < w; i++) for (let j = 0; j < d; j++) out.push([(i + 0.5) * DIM.pitch - (w * DIM.pitch) / 2, (j + 0.5) * DIM.pitch - (d * DIM.pitch) / 2]);
+  return out;
+}

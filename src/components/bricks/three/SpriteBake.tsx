@@ -19,7 +19,11 @@ declare global {
   }
 }
 
-/** Same camera direction and lens as the board, fitted to one brick and its floor shadow. */
+/**
+ * Same camera direction and lens as the board. The distance is fitted to a 2x4 brick and its floor
+ * shadow and kept for every brick, so 2x2 sprites come out at the same mm-to-px scale as the 2x4s
+ * (the baker then crops each one tight).
+ */
 function FitBrick({ brick }: { brick: PlacedBrick }) {
   const get = useThree((s) => s.get);
   const size = useThree((s) => s.size);
@@ -27,13 +31,17 @@ function FitBrick({ brick }: { brick: PlacedBrick }) {
   useLayoutEffect(() => {
     const camera = get().camera as THREE.PerspectiveCamera;
     const pose = poseFor(brick);
-    const W = brick.size[0] * DIM.pitch;
-    const D = brick.size[1] * DIM.pitch;
     const H = pose.height + DIM.studH;
-    const pts: THREE.Vector3[] = [];
-    for (const x of [-W / 2, W / 2]) for (const y of [0, H]) for (const z of [-D / 2, D / 2]) pts.push(new THREE.Vector3(x, pose.y + y, z));
-    // room for the soft shadow at the front-right and below
-    pts.push(new THREE.Vector3(W / 2 + 2.5, pose.y, D / 2 + 3.5), new THREE.Vector3(-W / 2 - 1, pose.y, D / 2 + 3.5));
+    const box = (w: number, d: number) => {
+      const W = w * DIM.pitch;
+      const D = d * DIM.pitch;
+      const pts: THREE.Vector3[] = [];
+      for (const x of [-W / 2, W / 2]) for (const y of [0, H]) for (const z of [-D / 2, D / 2]) pts.push(new THREE.Vector3(x, pose.y + y, z));
+      // room for the soft shadow at the front-right and below
+      pts.push(new THREE.Vector3(W / 2 + 2.5, pose.y, D / 2 + 3.5), new THREE.Vector3(-W / 2 - 1, pose.y, D / 2 + 3.5));
+      return pts;
+    };
+    const ref = box(4, 2);
     const target = new THREE.Vector3(0, pose.y + H / 2, 0);
     const dir = new THREE.Vector3(...VIEW).normalize();
     camera.fov = FOV;
@@ -50,9 +58,9 @@ function FitBrick({ brick }: { brick: PlacedBrick }) {
     for (let i = 0; i < 40; i++) {
       const mid = (lo + hi) / 2;
       place(mid);
-      const over = pts.some((p) => {
+      const over = ref.some((p) => {
         const v = p.clone().project(camera);
-        return Math.abs(v.x) > 0.94 || Math.abs(v.y) > 0.94;
+        return Math.abs(v.x) > 0.96 || Math.abs(v.y) > 0.96;
       });
       if (over) lo = mid;
       else hi = mid;
@@ -80,9 +88,10 @@ function ReadyFlag({ fontsReady }: { fontsReady: boolean }) {
 
 /**
  * One brick on a transparent background, lit by the board's studio and seen through the board's
- * lens. scripts/bake-sprites screenshots it into public/sprites/<legoId>.webp.
+ * lens. scripts/bake-sprites screenshots it into public/sprites/<legoId>.webp, or, with `glyph`, an
+ * unprinted 2x4 in the Lego's colour into public/sprites/glyph-<legoId>.webp.
  */
-export default function SpriteBake({ brick }: { brick: PlacedBrick }) {
+export default function SpriteBake({ brick, glyph = false }: { brick: PlacedBrick; glyph?: boolean }) {
   const [motion] = useState(() => new MotionStore());
   const [fontsReady, setFontsReady] = useState(false);
   useEffect(() => {
@@ -107,8 +116,9 @@ export default function SpriteBake({ brick }: { brick: PlacedBrick }) {
       <MotionContext.Provider value={motion}>
         <FitBrick brick={brick} />
         <Studio floorShadow={false} />
-        <StackBrick brick={brick} drop={false} leaving={false} reducedMotion bounceSignal={0} index={0} fontsReady={fontsReady} />
-        <ContactShadows position={[0, pose.y - 0.02, 0]} scale={80} far={14} blur={2.2} opacity={0.42} resolution={512} frames={1} color="#0a0b0d" />
+        {/* a glyph is too small for print: never draw the label */}
+        <StackBrick brick={brick} drop={false} leaving={false} reducedMotion bounceSignal={0} index={0} fontsReady={fontsReady && !glyph} />
+        <ContactShadows position={[0, pose.y - 0.02, 0]} scale={80} far={12} blur={1.8} opacity={0.6} resolution={1024} frames={1} color="#0a0b0d" />
         <AO />
         <ReadyFlag fontsReady={fontsReady} />
       </MotionContext.Provider>

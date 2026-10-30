@@ -57,7 +57,7 @@ export function StackBrick({ brick, drop, leaving, reducedMotion, bounceSignal, 
   const plates = brick.kind === "plate" ? 1 : 3;
   const geometry = useMemo(() => brickGeometry({ w, d, plates }), [w, d, plates]);
   const seed = jitter(brick.id, 9);
-  const material = useMemo(() => plasticMaterial(brick.color, "gloss", seed), [brick.color, seed]);
+  const material = useMemo(() => plasticMaterial(brick.color, "gloss", seed, plates * DIM.plate), [brick.color, seed, plates]);
   useEffect(() => () => material.dispose(), [material]);
 
   const face = frontFace(w, plates);
@@ -65,14 +65,16 @@ export function StackBrick({ brick, drop, leaving, reducedMotion, bounceSignal, 
   const verb = brick.label.verb;
   const name = brick.label.name;
   const ink = brick.labelColor;
+  const maxAniso = useThree((s) => s.gl.capabilities.getMaxAnisotropy());
   const labelMat = useMemo(() => {
     if (!fontsReady) return null;
+    // Pad print: a thin ink film, a touch less glossy than the ABS under it.
     return new THREE.MeshPhysicalMaterial({
-      map: labelTexture(verb, name, ink, face.width, face.height),
+      map: labelTexture(verb, name, ink, face.width, face.height, Math.min(16, maxAniso)),
       transparent: true,
-      roughness: 0.32,
-      clearcoat: 0.42,
-      clearcoatRoughness: 0.1,
+      roughness: 0.3,
+      clearcoat: 0.45,
+      clearcoatRoughness: 0.14,
       ior: 1.53,
       specularIntensity: 0.6,
       depthWrite: false,
@@ -80,7 +82,7 @@ export function StackBrick({ brick, drop, leaving, reducedMotion, bounceSignal, 
       polygonOffsetFactor: -2,
       polygonOffsetUnits: -2,
     });
-  }, [fontsReady, verb, name, ink, face.width, face.height]);
+  }, [fontsReady, verb, name, ink, face.width, face.height, maxAniso]);
   useEffect(() => () => labelMat?.dispose(), [labelMat]);
 
   const blobMat = useMemo(

@@ -1,5 +1,5 @@
 import { DIM } from "../core/dims";
-import { approxMeasure, layoutLabel, NAME_TRACKING } from "../core/label";
+import { approxMeasure, layoutLabel, NAME_TRACKING, VERB_TRACKING } from "../core/label";
 import type { V3 } from "../core/layout";
 import { depth, project } from "./projector";
 
@@ -77,20 +77,12 @@ export function SvgBrick({ size: [w, d], kind = "brick", color, id, label, matte
     const v = P([-fw / 2, H - DIM.fillet - 1, z1]);
     const m = [u[0] - o[0], u[1] - o[1], v[0] - o[0], v[1] - o[1], o[0], o[1]].map((n) => n.toFixed(4)).join(" ");
     print = (
-      <g transform={`matrix(${m})`} fill={label.ink} textAnchor="middle">
-        <text x={fw / 2} y={L.verb.y} fontSize={L.verb.size} fontWeight={700} letterSpacing={-0.015 * L.verb.size} style={{ fontFamily: "var(--font-sans)" }}>
+      <g transform={`matrix(${m})`} fill={label.ink} textAnchor="start">
+        <text x={L.x - L.verb.size * 0.045} y={L.verb.y} fontSize={L.verb.size} fontWeight={700} letterSpacing={VERB_TRACKING * L.verb.size} style={{ fontFamily: "var(--font-sans)" }}>
           {L.verb.text}
         </text>
         {L.name.map((line, i) => (
-          <text
-            key={i}
-            x={fw / 2 + (NAME_TRACKING * line.size) / 2}
-            y={line.y}
-            fontSize={line.size}
-            fontWeight={500}
-            letterSpacing={NAME_TRACKING * line.size}
-            style={{ fontFamily: "var(--font-mono)" }}
-          >
+          <text key={i} x={L.x} y={line.y} fontSize={line.size} fontWeight={500} letterSpacing={NAME_TRACKING * line.size} style={{ fontFamily: "var(--font-mono)" }}>
             {line.text}
           </text>
         ))}
@@ -126,7 +118,9 @@ export function SvgBrick({ size: [w, d], kind = "brick", color, id, label, matte
       <polygon points={pts(top)} fill={`url(#${id}-t)`} />
       {/* fillet highlight along the front and right top edges, hairline shadow at the bottom */}
       <polyline points={pts([top[3]!, top[2]!, top[1]!])} fill="none" stroke="rgba(255,255,255,.6)" strokeWidth={0.32} strokeLinejoin="round" />
-      <polyline points={pts([front[3]!, front[2]!, side[3]!])} fill="none" stroke="rgba(10,11,13,.35)" strokeWidth={0.2} />
+      <polyline points={pts([front[1]!, front[2]!])} fill="none" stroke="rgba(255,255,255,.35)" strokeWidth={0.28} />
+      {/* recess seam at the bottom edge: reads as the joint to the brick below */}
+      <polyline points={pts([front[3]!, front[2]!, side[3]!])} fill="none" stroke="rgba(10,11,13,.55)" strokeWidth={0.32} strokeLinejoin="round" />
       {print}
       {studs.map((s, k) => (
         <g key={k}>
