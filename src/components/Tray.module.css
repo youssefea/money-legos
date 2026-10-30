@@ -384,8 +384,14 @@
 
 /* ---------------------------------------------------------------- projector */
 @media (min-width: 1600px) {
+  .tray {
+    --stud: 20px;
+  }
   .chip {
     font-size: 16px;
+  }
+  .stripRow {
+    --stud: 18px;
   }
 }
 
