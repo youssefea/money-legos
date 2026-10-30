@@ -50,7 +50,8 @@ export default function Connectors({ hostRef, ids, layout, tiles, dark }: Connec
       const starts = ids.map((id) => {
         const it = byId.get(id);
         if (!it) return null;
-        return { id, x: sr.left - hr.left + (it.cx + it.w / 2) * sr.width, y: sr.top - hr.top + it.cy * sr.height };
+        // Start on the brick's right side face (just past the front face), not across the label.
+        return { id, x: sr.left - hr.left + (it.cx + it.w / 2) * sr.width + it.h * sr.height * 0.35, y: sr.top - hr.top + it.cy * sr.height };
       });
       const rightMost = Math.max(...starts.map((s) => s?.x ?? 0)) + 12;
       const out: Line[] = [];
@@ -61,7 +62,7 @@ export default function Connectors({ hostRef, ids, layout, tiles, dark }: Connec
         const tr = tile.getBoundingClientRect();
         const x1 = tr.left - hr.left;
         const y1 = tr.top - hr.top + tr.height / 2;
-        const x0 = s.x + 4;
+        const x0 = s.x;
         const k = Math.max(24, (x1 - rightMost) * 0.5);
         const d = `M${x0.toFixed(1)} ${s.y.toFixed(1)} H${rightMost.toFixed(1)} C${(rightMost + k).toFixed(1)} ${s.y.toFixed(1)} ${(x1 - k).toFixed(1)} ${y1.toFixed(1)} ${x1.toFixed(1)} ${y1.toFixed(1)}`;
         out.push({ id: s.id, d, x0, y0: s.y, x1, y1, color: lineColor(s.id, dark) });
@@ -102,7 +103,7 @@ export default function Connectors({ hostRef, ids, layout, tiles, dark }: Connec
 
   if (!lines.length) return null;
   return (
-    <svg className={styles.overlay} width={box[0]} height={box[1]} viewBox={`0 0 ${box[0]} ${box[1]}`} aria-hidden="true" focusable="false" data-testid="connectors">
+    <svg className={styles.overlay} width={box[0]} height={box[1]} viewBox={`0 0 ${box[0]} ${box[1]}`} aria-hidden="true" focusable="false" data-testid="connectors" data-layout={layout?.estimated ? "estimated" : "stage"}>
       <defs>
         {lines.map((l) => (
           <mask key={l.id} id={`cm-${l.id}`} maskUnits="userSpaceOnUse" x="0" y="0" width={box[0]} height={box[1]}>

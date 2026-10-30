@@ -45,7 +45,7 @@
   margin-top: var(--space-5);
   display: grid;
   position: relative;
-  grid-template-columns: minmax(360px, var(--col-tray)) minmax(var(--col-board-min), 1fr) minmax(280px, var(--col-result));
+  grid-template-columns: minmax(340px, var(--col-tray)) minmax(var(--col-board-min), 1fr) var(--col-result);
   gap: var(--col-gap);
 }
 
@@ -136,8 +136,20 @@
   }
   /* Laptop heights (900 and below 960): tighten the hero so the stage and set box keep their height. */
   @media (max-height: 960px) {
+    /* The rail moves up beside the subline so the columns keep their height. */
     .hero {
       margin-top: var(--space-2);
+      display: grid;
+      grid-template-columns: auto minmax(0, 560px);
+      justify-content: space-between;
+      align-items: center;
+      column-gap: var(--space-12);
+    }
+    .h1 {
+      grid-column: 1 / -1;
+    }
+    .hero .rail {
+      margin-top: var(--space-1);
     }
     .h1 {
       font-size: clamp(36px, 2.8vw, 48px);

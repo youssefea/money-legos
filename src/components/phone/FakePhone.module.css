@@ -147,7 +147,7 @@
   flex: 1;
   min-height: 0;
   margin: 0;
-  padding: calc(var(--u) * 3) calc(var(--u) * 4) calc(var(--u) * 4);
+  padding: calc(var(--u) * 3) calc(var(--u) * 4) calc(var(--u) * 7);
   list-style: none;
   display: flex;
   flex-direction: column;
@@ -258,9 +258,12 @@
   flex: 1;
   min-width: 0;
   font-weight: var(--weight-medium);
-  white-space: nowrap;
+  line-height: 1.2;
   overflow: hidden;
-  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 .row .titleText {
   flex: 0 1 auto;
