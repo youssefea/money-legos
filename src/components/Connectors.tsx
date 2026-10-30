@@ -18,13 +18,15 @@ export type ConnectorsProps = {
   boot: number;
   /** The inspected brick: its line goes solid and its brick gets a ring; the rest step back. */
   inspect: LegoId | null;
+  /** The Build boot is playing (paced for a room): lines wait for their tiles. */
+  play?: boolean;
 };
 
 type Line = { id: LegoId; d: string; x0: number; y0: number; x1: number; y1: number; color: string; order: number };
-type Ring = { x: number; y: number; w: number; h: number };
+type Ring = { x: number; y: number; w: number; h: number; hull: [number, number][] | null };
 
-/** Pale bricks would vanish as a dotted line on a light page: they use Gray 60 (Gray 30 in dark). */
-const PALE_LIGHT = new Set(["white", "gray-light", "lime", "trade", "speed"]);
+/** Pale bricks would vanish as a dotted line on a light page (under 3:1): they use Gray 60. */
+const PALE_LIGHT = new Set(["white", "gray-light", "gray", "lime", "trade", "speed", "tan"]);
 
 function lineColor(id: LegoId, dark: boolean): string {
   const c = BY_ID[id].brick;
@@ -37,7 +39,7 @@ function lineColor(id: LegoId, dark: boolean): string {
  * tile, so lines never cross). They end on the phone's outer edge with a disc, and draw just after
  * the tile lands. Redrawn on resize, scroll and every layout report; decorative.
  */
-export default function Connectors({ hostRef, ids, layout, tiles, dark, boot, inspect }: ConnectorsProps) {
+export default function Connectors({ hostRef, ids, layout, tiles, dark, boot, inspect, play }: ConnectorsProps) {
   const [lines, setLines] = useState<Line[]>([]);
   const [rings, setRings] = useState<Map<string, Ring>>(new Map());
   const [box, setBox] = useState<[number, number]>([0, 0]);
@@ -60,7 +62,10 @@ export default function Connectors({ hostRef, ids, layout, tiles, dark, boot, in
       const starts = ids.map((id) => {
         const it = byId.get(id);
         if (!it) return null;
-        ring.set(id, { x: sr.left - hr.left + (it.cx - it.w / 2) * sr.width, y: sr.top - hr.top + (it.cy - it.h / 2) * sr.height, w: it.w * sr.width, h: it.h * sr.height });
+        const ox = sr.left - hr.left;
+        const oy = sr.top - hr.top;
+        const hull = it.hull && it.hull.length >= 3 ? it.hull.map(([x, y]): [number, number] => [ox + x * sr.width, oy + y * sr.height]) : null;
+        ring.set(id, { x: ox + (it.cx - it.w / 2) * sr.width, y: oy + (it.cy - it.h / 2) * sr.height, w: it.w * sr.width, h: it.h * sr.height, hull });
         // Start on the brick's right side face (just past the front face), not across the label.
         return { id, x: sr.left - hr.left + (it.cx + it.w / 2) * sr.width + it.h * sr.height * 0.35, y: sr.top - hr.top + it.cy * sr.height };
       });
@@ -84,7 +89,11 @@ export default function Connectors({ hostRef, ids, layout, tiles, dark, boot, in
         out.push({ id: s.id, d, x0, y0: s.y, x1, y1, color: lineColor(s.id, dark), order: ids.length - 1 - i });
       });
       // Only re-render when something moved (this runs after every render).
-      const key = `${Math.round(hr.width)}x${Math.round(hr.height)}|` + out.map((l) => l.id + l.d + l.color).join("|");
+      const key =
+        `${Math.round(hr.width)}x${Math.round(hr.height)}|` +
+        out.map((l) => l.id + l.d + l.color).join("|") +
+        "|" +
+        [...ring.values()].map((r) => (r.hull ? r.hull.map((p) => p.map(Math.round).join(",")).join(" ") : "")).join("|");
       if (key === lastKey.current) return;
       lastKey.current = key;
       setBox([hr.width, hr.height]);
@@ -131,6 +140,7 @@ export default function Connectors({ hostRef, ids, layout, tiles, dark, boot, in
       data-testid="connectors"
       data-layout={layout?.estimated ? "estimated" : "stage"}
       data-inspect={inspect ?? undefined}
+      data-boot={play || undefined}
     >
       <defs>
         {lines.map((l) => (
@@ -142,14 +152,19 @@ export default function Connectors({ hostRef, ids, layout, tiles, dark, boot, in
       {lines.map((l) => {
         const on = inspect === l.id;
         return (
-          <g key={l.id} mask={`url(#cm-${l.id})`} data-line={l.id} data-on={on || undefined} className={styles.line} data-dim={(inspect && !on) || undefined}>
-            <path d={l.d} fill="none" stroke={l.color} strokeWidth={on ? 3 : 2.5} strokeLinecap="round" strokeDasharray={on ? undefined : "0 5"} />
+          <g key={`${l.id}-${boot}`} mask={`url(#cm-${l.id})`} data-line={l.id} data-on={on || undefined} className={styles.line} data-dim={(inspect && !on) || undefined}>
+            <path d={l.d} fill="none" stroke={l.color} strokeWidth={on ? 3 : l.color === "#66C800" ? 3 : 2.5} strokeLinecap="round" strokeDasharray={on ? undefined : l.color === "#66C800" ? "0 4" : "0 5"} />
             <circle cx={l.x0} cy={l.y0} r="3" fill={l.color} />
             <circle cx={l.x1} cy={l.y1} r="5" fill={l.color} />
           </g>
         );
       })}
-      {ring && <rect className={styles.ring} x={ring.x - 4} y={ring.y - 4} width={ring.w + 8} height={ring.h + 8} rx="8" fill="none" strokeWidth="2" data-testid="brick-ring" />}
+      {ring &&
+        (ring.hull ? (
+          <polygon className={styles.ring} points={ring.hull.map((p) => p.map((n) => n.toFixed(1)).join(",")).join(" ")} fill="none" strokeWidth="2" strokeLinejoin="round" data-testid="brick-ring" data-shape="hull" />
+        ) : (
+          <rect className={styles.ring} x={ring.x - 4} y={ring.y - 4} width={ring.w + 8} height={ring.h + 8} rx="8" fill="none" strokeWidth="2" data-testid="brick-ring" data-shape="rect" />
+        ))}
     </svg>
   );
 }

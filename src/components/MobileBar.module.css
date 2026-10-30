@@ -1,42 +1,37 @@
-/* Compact sticky bar: a boxed 116px card. [mini stack 144x88] | count studs + note | Build app 104x48 */
+/*
+ * Compact sticky bar (a boxed card, --mobile-bar-height tall):
+ *   [mini stack] [four count studs] [Build app]
+ *   [module chips: one per tile, one line]
+ */
 .bar {
   position: sticky;
   top: 8px;
   z-index: 20;
   display: grid;
-  grid-template-columns: var(--mini-w, 144px) 1fr auto;
+  grid-template-columns: var(--mini-w, 96px) minmax(0, 1fr) auto;
+  grid-template-rows: var(--mini-h, 64px) 28px;
+  row-gap: 6px;
   align-items: center;
   height: var(--mobile-bar-height);
   margin: var(--space-4) 0 0;
-  padding: var(--space-3) var(--space-3);
+  padding: 10px var(--space-3);
   border: 1px solid var(--color-hairline);
   border-radius: var(--radius-card);
   background: var(--color-panel);
+  overflow: hidden;
 }
 
 .stage {
-  width: var(--mini-w, 144px);
-  height: var(--mini-h, 88px);
+  width: var(--mini-w, 96px);
+  height: var(--mini-h, 64px);
 }
 
 .count {
   height: 100%;
+  min-width: 0;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  text-align: center;
-  gap: 6px;
-  min-width: 0;
-  padding: 0 var(--space-2);
-  border-left: 1px solid var(--color-hairline);
-  border-right: 1px solid var(--color-hairline);
-  margin: 0 var(--space-2);
-}
-.need {
-  font-size: 14px;
-  line-height: 16px;
-  color: var(--color-fg-muted);
 }
 
 .generate {
@@ -53,9 +48,63 @@
   cursor: pointer;
 }
 .generate[aria-disabled="true"] {
+  background: var(--base-gray-15);
+  border-color: var(--base-gray-15);
+  color: var(--base-gray-60);
+}
+
+/* One line of tiny module chips; scrolls sideways (never wraps) if four long names do not fit. */
+.modules {
+  grid-column: 1 / -1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.modules::-webkit-scrollbar {
+  display: none;
+}
+.module {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 9px 0 7px;
+  border-radius: 999px;
   background: var(--color-surface);
-  border-color: var(--color-hairline);
+  box-shadow: inset 0 0 0 1px var(--color-hairline);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  animation: module-in var(--dur-base) var(--ease-out) both;
+}
+.module i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgb(10 11 13 / 0.18);
+}
+.module[data-empty] {
   color: var(--color-fg-muted);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--color-hairline);
+  animation: none;
+}
+.module[data-empty] i {
+  background: var(--base-gray-15);
+  box-shadow: none;
+}
+@keyframes module-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -63,8 +112,16 @@
     background: var(--base-gray-100);
     border-color: var(--base-gray-80);
   }
-  .count {
-    border-color: var(--base-gray-80);
+  .module {
+    background: var(--base-gray-80);
+    box-shadow: none;
+  }
+  .module[data-empty] {
+    background: transparent;
+    box-shadow: inset 0 0 0 1px var(--base-gray-80);
+  }
+  .module[data-empty] i {
+    background: var(--base-gray-80);
   }
   .generate[aria-disabled="true"] {
     background: var(--base-gray-80);

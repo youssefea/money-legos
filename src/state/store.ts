@@ -4,8 +4,17 @@ import type { GenerateResult, LegoId } from "@/lib";
 /** One message for the polite live region. `n` changes on every message so repeats are read again. */
 export type Announcement = { text: string; n: number };
 
-/** Shown on the board for a moment after a fifth brick swapped out the oldest one. */
+/** The last capacity swap: a fifth brick replaced the oldest one. */
 export type Swap = { added: LegoId; removed: LegoId; n: number };
+
+/**
+ * A transient toast (2.8s) after a change the user may want to take back: a capacity swap
+ * ("Full · swapped Issue for Hold") or a brick removed from the board. Undo restores `prev`.
+ */
+export type Toast = { text: string; prev: { ids: LegoId[]; built: boolean; recipe: string | null }; n: number };
+
+/** The app name types in once per Build (or recipe / Surprise me load): `n` is that Build's generation. */
+export type Typing = { n: number; name: string };
 
 export type State = {
   /** The stack on the baseplate, bottom brick first (max 4). */
@@ -28,6 +37,10 @@ export type State = {
   lastAdded: LegoId | null;
   /** The last capacity swap (a fifth brick replaced the oldest), or null. */
   swap: Swap | null;
+  /** The toast on screen (with Undo), or null. */
+  toast: Toast | null;
+  /** Set by a Build that should type the app name in (not by a shared link); cleared once it has played. */
+  typing: Typing | null;
   announce: Announcement;
 };
 
@@ -36,9 +49,12 @@ export type LoadSource = "recipe" | "surprise" | "link";
 export type Action =
   | { type: "toggle"; id: LegoId }
   | { type: "add"; id: LegoId }
-  | { type: "remove"; id: LegoId }
+  | { type: "remove"; id: LegoId; toast?: boolean }
   | { type: "clear" }
-  | { type: "build" }
+  | { type: "build"; animate?: boolean }
+  | { type: "undo" }
+  | { type: "toastDone"; n: number }
+  | { type: "typed" }
   | { type: "load"; ids: readonly string[]; recipe?: string | null; build: boolean; source: LoadSource }
   | { type: "copied" }
   | { type: "copyReset" };
@@ -52,8 +68,14 @@ export const initialState: State = {
   copiedOnce: false,
   lastAdded: null,
   swap: null,
+  toast: null,
+  typing: null,
   announce: { text: "", n: 0 },
 };
+
+function toastOf(state: State, text: string): Toast {
+  return { text, prev: { ids: state.ids.slice(), built: state.built, recipe: state.recipe }, n: (state.toast?.n ?? 0) + 1 };
+}
 
 function say(state: State, text: string): Announcement {
   return { text, n: state.announce.n + 1 };
@@ -101,7 +123,8 @@ export function reducer(state: State, action: Action): State {
         const removed = state.ids[0]!;
         const ids = [...state.ids.slice(1), action.id];
         const swap = { added: action.id, removed, n: (state.swap?.n ?? 0) + 1 };
-        return changed({ ...base, ids, swap }, `Board full: ${BY_ID[action.id].kicker} replaced ${BY_ID[removed].kicker}`);
+        const toast = toastOf(state, `Full · swapped ${BY_ID[removed].kicker} for ${BY_ID[action.id].kicker}`);
+        return changed({ ...base, ids, swap, toast }, `Board full: ${BY_ID[action.id].kicker} replaced ${BY_ID[removed].kicker}`);
       }
       return changed({ ...base, ids: [...state.ids, action.id], swap: null }, `${BY_ID[action.id].kicker} added`);
     }
@@ -109,12 +132,26 @@ export function reducer(state: State, action: Action): State {
     case "remove": {
       if (!state.ids.includes(action.id)) return state;
       const ids = state.ids.filter((id) => id !== action.id);
-      return changed({ ...state, ids, recipe: null, copied: false, copiedOnce: false, lastAdded: null, swap: null }, `${BY_ID[action.id].kicker} removed`);
+      const toast = action.toast ? toastOf(state, `${BY_ID[action.id].kicker} removed`) : state.toast;
+      return changed({ ...state, ids, recipe: null, copied: false, copiedOnce: false, lastAdded: null, swap: null, toast }, `${BY_ID[action.id].kicker} removed`);
     }
 
     case "clear":
       if (!state.ids.length && !state.built) return state;
       return { ...initialState, generation: state.generation, announce: say(state, "Board cleared, 0 of 4") };
+
+    case "undo": {
+      const t = state.toast;
+      if (!t) return state;
+      const next = { ...state, ids: t.prev.ids.slice(), built: t.prev.built, recipe: t.prev.recipe, copied: false, copiedOnce: false, lastAdded: null, swap: null, toast: null };
+      return changed(next, "Undone");
+    }
+
+    case "toastDone":
+      return state.toast && state.toast.n === action.n ? { ...state, toast: null } : state;
+
+    case "typed":
+      return state.typing ? { ...state, typing: null } : state;
 
     case "build": {
       const result = generate(state.ids);
@@ -128,7 +165,9 @@ export function reducer(state: State, action: Action): State {
         generation: state.generation + 1,
         copied: false,
         swap: null,
-        announce: say(state, `${result.name} built. Copy prompt to use it.`),
+        toast: null,
+        typing: action.animate === false ? null : { n: state.generation + 1, name: result.name },
+        announce: say(state, `App built: ${result.name}. Copy prompt to use it.`),
       };
     }
 
@@ -150,9 +189,12 @@ export function reducer(state: State, action: Action): State {
         copiedOnce: false,
         lastAdded: null,
         swap: null,
+        toast: null,
+        typing: null,
         announce: say(state, `${names(ids)} on the board, ${ids.length} of ${MAX_LEGOS}`),
       };
-      return action.build && ids.length >= MIN_LEGOS ? reducer(next, { type: "build" }) : next;
+      // A shared link shows the built app at once (no boot, no typing); recipes and Surprise me play the Build.
+      return action.build && ids.length >= MIN_LEGOS ? reducer(next, { type: "build", animate: action.source !== "link" }) : next;
     }
 
     case "copied":

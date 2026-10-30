@@ -56,24 +56,18 @@ export function tileStrings(t: Pick<FakeTile, "title" | "value" | "cta" | "chip"
 }
 
 /**
- * How a tile sits in the fake app. One dominant `hero` module (the first balance, checkout, earn,
- * order or swap tile, by that priority; else the first non-status tile), confirmations and notices as
- * slim `status` rows, everything else as compact `row` modules.
+ * How a tile sits in the fake app. The top tile (the top brick) is always the dominant `hero` module,
+ * 112-144px, whatever it is (a status or a badge gets a big hero treatment too), so the app always
+ * opens on its biggest card. Below it, confirmations and notices are `status` rows and everything else
+ * a compact `row` module (both 56px).
  */
 export type TileRole = "hero" | "row" | "status";
 
-const HERO_PRIORITY: readonly UiTemplate[] = ["balance", "checkout", "earn", "order", "swap"];
 const STATUS_TEMPLATES: readonly UiTemplate[] = ["toast", "pill"];
 
 /** One role per tile, in tile order. */
 export function tileRoles(tiles: readonly Pick<FakeTile, "template">[]): TileRole[] {
-  let hero = -1;
-  for (const t of HERO_PRIORITY) {
-    hero = tiles.findIndex((x) => x.template === t);
-    if (hero >= 0) break;
-  }
-  if (hero < 0) hero = tiles.findIndex((x) => !STATUS_TEMPLATES.includes(x.template));
-  return tiles.map((t, i) => (i === hero ? "hero" : STATUS_TEMPLATES.includes(t.template) ? "status" : "row"));
+  return tiles.map((t, i) => (i === 0 ? "hero" : STATUS_TEMPLATES.includes(t.template) ? "status" : "row"));
 }
 
 const WIRE_LABEL: Partial<Record<UiTemplate, string>> = {
@@ -90,4 +84,23 @@ const WIRE_LABEL: Partial<Record<UiTemplate, string>> = {
 /** Short module title for the wireframe shown before Build app ("Checkout", "Balance"...). */
 export function wireLabel(tile: Pick<FakeTile, "template" | "title">): string {
   return WIRE_LABEL[tile.template] ?? tile.title;
+}
+
+const CHIP_LABEL: Partial<Record<UiTemplate, string>> = {
+  balance: "Balance",
+  checkout: "Checkout",
+  toast: "Confirm",
+  earn: "Earn",
+  order: "Order",
+  swap: "Swap",
+  signin: "Sign-in",
+  qr: "QR pay",
+};
+
+/** One-word module name for the compact bar's preview chips ("Balance", "Checkout", "Confirm"...). */
+export function chipLabel(tile: Pick<FakeTile, "template" | "title" | "legoId">): string {
+  const fixed = CHIP_LABEL[tile.template];
+  if (fixed) return fixed;
+  const first = tile.title.split(/\s+/)[0] ?? "";
+  return /^[A-Za-z][A-Za-z-]*$/.test(first) ? first : BY_ID[tile.legoId].verb;
 }

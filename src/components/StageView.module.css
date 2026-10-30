@@ -78,3 +78,24 @@
     transform: scale(1.02, calc(1 - var(--squash)));
   }
 }
+
+/* Board bricks as controls: invisible buttons over each placed brick (the outline is drawn by Connectors). */
+.hits {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.hit {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+.hit:focus-visible {
+  outline: none;
+}

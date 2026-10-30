@@ -23,11 +23,8 @@
   min-width: 24px;
   height: 1px;
   margin: 0 var(--space-4) 0 var(--space-2);
-  background: var(--color-hairline);
-  transition: background var(--dur-base) var(--ease-hover);
-}
-.step[data-state="done"]::after {
-  background: var(--color-step-line);
+  /* Neutral always: only the dot / check turns blue. */
+  background: var(--base-gray-30);
 }
 
 .dot {
@@ -78,7 +75,7 @@
   color: var(--color-fg);
 }
 .step[data-state="done"] .text {
-  color: var(--color-step-active);
+  color: var(--color-fg);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -96,7 +93,7 @@
 
 @media (min-width: 1600px) {
   .rail {
-    max-width: 1100px;
+    max-width: 420px;
   }
   .dot {
     width: 36px;

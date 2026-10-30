@@ -493,18 +493,19 @@ describe("fake app", () => {
     }
   });
 
-  it("gives each app one dominant module, confirmations as status rows, the rest compact", () => {
+  it("makes the top tile the dominant module, confirmations status rows, the rest compact", () => {
     const roles = (ids: string[]) => {
       const app = buildFakeApp(ids);
       return Object.fromEntries(app.tiles.map((t, i) => [t.legoId, tileRoles(app.tiles)[i]]));
     };
-    expect(roles(["b20", "payments", "speed", "validity"])).toEqual({ validity: "row", speed: "status", payments: "row", b20: "hero" });
-    expect(roles(["payments", "financing"])).toEqual({ financing: "row", payments: "hero" });
-    // No balance/checkout/earn/order/swap: the first non-status tile leads.
-    expect(roles(["speed", "verify"])).toEqual({ verify: "hero", speed: "status" });
+    expect(roles(["b20", "payments", "speed", "validity"])).toEqual({ validity: "hero", speed: "status", payments: "row", b20: "row" });
+    expect(roles(["payments", "financing"])).toEqual({ financing: "hero", payments: "row" });
+    // A status on top is the hero too (a big confirmation card).
+    expect(roles(["verify", "speed"])).toEqual({ speed: "hero", verify: "row" });
     for (const ids of sample(rng(7), 300, 1, 4)) {
       const r = tileRoles(buildFakeApp(ids).tiles);
-      expect(r.filter((x) => x === "hero").length, ids.join(",")).toBeLessThanOrEqual(1);
+      expect(r.filter((x) => x === "hero").length, ids.join(",")).toBe(1);
+      expect(r[0], ids.join(",")).toBe("hero");
     }
     expect(wireLabel(BY_ID.payments.ui)).toBe("Checkout");
     expect(wireLabel(BY_ID.b20.ui)).toBe("Balance");

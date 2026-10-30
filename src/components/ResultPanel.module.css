@@ -1,11 +1,11 @@
 /*
- * The column is a size container so the name, the phone and the buttons share the phone's width
- * (the same formula FakePhone uses: about 0.58 x the phone's height, 300-420px).
+ * The column is a size container so the name, the phone and the buttons share the phone's width:
+ * the column's width up to --phone-max (400px laptop, 460px projector, 520px Present).
  */
 .panel {
   container-type: size;
-  --pw: min(100cqw, max(calc((100cqh - var(--chrome)) * 0.58), 300px), 420px);
-  --chrome: 156px;
+  --phone-max: 400px;
+  --pw: min(100cqw, var(--phone-max));
   height: 100%;
   min-height: 0;
   display: flex;
@@ -42,7 +42,11 @@
   color: var(--base-gray-30);
 }
 .typed > span {
-  animation: char-in 90ms var(--ease-hover) calc(220ms + var(--c) * 22ms) both;
+  animation: char-in 90ms var(--ease-hover) calc(300ms + var(--c) * var(--cs, 28ms)) both;
+}
+/* A live edit: the new name crossfades in (no trailing invisible letters). */
+.fade {
+  animation: char-in 120ms var(--ease-hover) both;
 }
 @keyframes char-in {
   from {
@@ -158,7 +162,6 @@
 /* Short screens: the name sits on one line beside nothing else, the chrome shrinks. */
 @media (max-height: 800px) {
   .panel {
-    --chrome: 128px;
     gap: var(--space-2);
   }
   .name {
@@ -172,6 +175,9 @@
 }
 
 @media (min-width: 1600px) {
+  .panel {
+    --phone-max: 460px;
+  }
   .name {
     font-size: 28px;
   }
@@ -184,4 +190,11 @@
     min-height: 60px;
     font-size: 19px;
   }
+}
+
+:global([data-present]) .panel {
+  --phone-max: 520px;
+}
+:global([data-present]) .name {
+  font-size: 32px;
 }

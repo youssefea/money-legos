@@ -1,13 +1,14 @@
 /*
- * The brick bin on ONE stud scale (--stud, px per stud): a hero 2x4 is 4 studs wide, a 2x2 is 2,
- * like real bricks. --stud is ~34px at 1440 (40px on the projector), smaller only when three heroes
- * would not fit across the tray. The small bricks sit on a true stud grid: one cell = 2 studs,
- * bricks wider than 2 studs span two cells, all baseline-aligned.
+ * The brick bin. Top: the 5 heroes on a pinned 5-across shelf (a Gray 10 recess over a hairline).
+ * Below: the other 35 on ONE stud scale (--stud, 16px) in a tight stud grid: a cell is 3 studs wide
+ * (a 2x2 plus its side face), wider bricks span two cells, rows are as tall as the tallest sprite so
+ * no two rows overlap, every brick sits on its row's baseline.
  */
 
 .tray {
-  --gap: 8px;
-  --stud-max: 34px;
+  --gap: 6px;
+  --stud: 16px;
+  container-type: inline-size;
   height: 100%;
   min-height: 0;
   display: flex;
@@ -16,28 +17,20 @@
 
 /* ---------------------------------------------------------------- category chips (shown first, tabbed after the bricks) */
 .chipsWrap {
-  order: -1;
+  order: -2;
   flex: none;
   position: relative;
-  margin: 0 calc(var(--space-4) * -1);
 }
+/* Desktop: all 8 chips in two balanced rows of 4, nothing hidden. */
 .chips {
-  display: flex;
-  flex-wrap: nowrap;
+  display: grid;
+  grid-template-columns: repeat(4, max-content);
   gap: 6px;
-  overflow-x: auto;
-  padding: 4px var(--space-4) var(--space-3);
-  scrollbar-width: none;
-  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--space-4), #000 calc(100% - 40px), transparent);
-  mask-image: linear-gradient(to right, transparent 0, #000 var(--space-4), #000 calc(100% - 40px), transparent);
+  padding: 2px 0 var(--space-3);
 }
-.chips::-webkit-scrollbar {
-  display: none;
-}
-
 .chip {
   flex: none;
-  height: 36px;
+  height: 40px;
   padding: 0 14px;
   border: 1px solid var(--color-hairline);
   border-radius: var(--radius-pill);
@@ -61,50 +54,83 @@
   background: var(--base-gray-100);
   color: var(--base-gray-0);
 }
+@media (pointer: coarse) {
+  .chip {
+    height: 44px;
+  }
+}
+/* The overflow affordance (single-row layouts only): a chevron over the right edge fade. */
+.chipsNext {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  box-shadow:
+    0 0 0 1px var(--color-hairline),
+    -12px 0 12px 4px var(--color-bg);
+  color: var(--color-fg);
+  cursor: pointer;
+}
 
-/* ---------------------------------------------------------------- scroll area */
+/* ---------------------------------------------------------------- hero shelf: 5 across, pinned */
+.heroShelf {
+  order: -1;
+  flex: none;
+  margin: 0 0 var(--space-3);
+  padding: 6px 6px 4px;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  align-items: end;
+  border-radius: var(--radius-md);
+  background: var(--base-gray-10);
+  box-shadow: inset 0 -1px 0 var(--base-gray-15);
+}
+.heroShelf .cell.cell {
+  grid-column: auto;
+  aspect-ratio: var(--hero-aspect);
+}
+.heroShelf .art {
+  width: 100%;
+}
+.heroShelf .sprite,
+.heroShelf .drawn {
+  width: 100%;
+  margin-left: 0;
+}
+
+/* ---------------------------------------------------------------- scroll area (the other 35) */
 .scroll {
-  container-type: inline-size;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   margin: 0 -4px;
-  padding: var(--space-2) 4px var(--space-6);
+  padding: var(--space-1) 4px var(--space-6);
   scrollbar-width: thin;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--space-2), #000 calc(100% - var(--space-6)), transparent 100%);
-  mask-image: linear-gradient(to bottom, transparent 0, #000 var(--space-2), #000 calc(100% - var(--space-6)), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - var(--space-6)), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - var(--space-6)), transparent 100%);
 }
 
-/*
- * One grid on a true stud grid: a cell is 3 studs wide (a 2x2 plus its side face), heroes and wider
- * bricks span 2 cells. Four cells across the tray. Rows are 3 studs tall; the sprites' clear space
- * above the rear studs may overlap the row above.
- */
 .grid {
-  --cols: 4;
-  --stud: min(var(--stud-max), calc((100cqw - (var(--cols) - 1) * var(--gap)) / (var(--cols) * 3)));
   margin: 0;
   padding: 0;
   list-style: none;
   display: grid;
-  grid-template-columns: repeat(var(--cols), calc(var(--stud) * 3));
-  grid-auto-rows: calc(var(--stud) * 3);
+  grid-template-columns: repeat(auto-fill, calc(var(--stud) * 3));
+  grid-auto-rows: calc(var(--stud) * var(--row, 3.33));
   grid-auto-flow: row dense;
   column-gap: var(--gap);
-  row-gap: 6px;
+  row-gap: 4px;
   align-items: end;
-}
-/* Wider bins (tablet, a wide tray) get more cells on the same stud scale. */
-@container (min-width: 600px) {
-  .grid {
-    --cols: 6;
-  }
-}
-@container (min-width: 900px) {
-  .grid {
-    --cols: 8;
-  }
 }
 .cell {
   min-width: 0;
@@ -113,6 +139,28 @@
 }
 .cell[data-span="2"] {
   grid-column: span 2;
+}
+
+/* ---------------------------------------------------------------- strip (Present mode drawer): one row */
+.strip {
+  flex: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  padding-bottom: 4px;
+}
+.stripRow {
+  --stud: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  gap: var(--gap);
+  align-items: flex-end;
+  width: max-content;
+}
+.stripRow .cell {
+  height: calc(var(--stud) * var(--row, 3.33));
 }
 
 /* ---------------------------------------------------------------- a brick */
@@ -153,9 +201,15 @@
 .brick:focus-visible {
   outline-offset: 0;
 }
-/* Hero bricks a filter leaves out stay in place, quieter. */
-.brick[data-dim] {
-  opacity: 0.35;
+/* Hero bricks a filter leaves out stay in place as grey ghosts (never below 0.6). */
+.brick[data-dim] .sprite,
+.brick[data-dim] .drawn {
+  filter: saturate(0.15);
+  opacity: 0.6;
+}
+/* On the board: full colour, a 2px Base Blue ring and the check. */
+.brick[data-placed] {
+  box-shadow: inset 0 0 0 2px var(--base-blue);
 }
 .brick[data-inspect] {
   background: var(--color-panel);
@@ -184,10 +238,6 @@
   transition:
     opacity var(--dur-base) var(--ease-hover),
     filter var(--dur-fast) var(--ease-hover);
-}
-.brick[data-placed] .sprite,
-.brick[data-placed] .drawn {
-  opacity: 0.5;
 }
 .brick[data-dragging] .sprite,
 .brick[data-dragging] .drawn {
@@ -221,11 +271,12 @@
   white-space: nowrap;
 }
 
-/* Placed: a 16px check at the bottom-right of the front face, off the studs and the print. */
+/* Placed: a 16px check at the cell's bottom-right corner (over the side face, never the print). */
 .check {
   position: absolute;
-  left: calc(var(--stud) * (var(--fr) - var(--fl)) - 22px);
-  bottom: calc(var(--stud) * 0.32);
+  right: 3px;
+  bottom: 3px;
+  z-index: 1;
   width: 16px;
   height: 16px;
   display: grid;
@@ -313,8 +364,17 @@
     background: var(--base-gray-0);
     color: var(--base-gray-100);
   }
-  .brick[data-inspect] {
+  .brick[data-inspect],
+  .brick[data-placed] {
     box-shadow: inset 0 0 0 2px var(--base-cerulean);
+  }
+  .check {
+    background: var(--base-cerulean);
+    color: var(--base-gray-100);
+  }
+  .heroShelf {
+    background: var(--base-gray-80);
+    box-shadow: inset 0 -1px 0 var(--base-gray-60);
   }
   .check {
     box-shadow: 0 0 0 2px var(--base-gray-100);
@@ -323,11 +383,7 @@
 
 /* ---------------------------------------------------------------- projector */
 @media (min-width: 1600px) {
-  .tray {
-    --stud-max: 40px;
-  }
   .chip {
-    height: 40px;
     font-size: 16px;
   }
 }
@@ -336,13 +392,37 @@
 @media (max-width: 1023.98px) {
   .tray {
     height: auto;
-    --stud-max: 40px;
+    --stud: 18px;
   }
+  /* One chip row that scrolls sideways, edge fades and a chevron while there is more. */
   .chipsWrap {
     margin: 0 calc(var(--page-pad-x) * -1);
   }
   .chips {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
     padding: 6px var(--page-pad-x) var(--space-3);
+    scrollbar-width: none;
+  }
+  .chips::-webkit-scrollbar {
+    display: none;
+  }
+  .chipsWrap[data-more-right] .chips {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 72px), transparent calc(100% - 24px));
+    mask-image: linear-gradient(to right, #000 calc(100% - 72px), transparent calc(100% - 24px));
+  }
+  .chipsWrap[data-more-left][data-more-right] .chips {
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 32px, #000 calc(100% - 72px), transparent calc(100% - 24px));
+    mask-image: linear-gradient(to right, transparent 0, #000 32px, #000 calc(100% - 72px), transparent calc(100% - 24px));
+  }
+  .chipsNext {
+    top: 6px;
+    right: var(--page-pad-x);
+  }
+  .chip {
+    height: 44px;
+    font-size: 15px;
   }
   .scroll {
     overflow: visible;
@@ -352,4 +432,15 @@
   }
 }
 
-
+/* Present mode drawer: chips in one row with the same fade and chevron. */
+.tray[data-layout="strip"] .chips {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 2px 0 var(--space-2);
+}
+.tray[data-layout="strip"] .chipsWrap[data-more-right] .chips {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 72px), transparent calc(100% - 24px));
+  mask-image: linear-gradient(to right, #000 calc(100% - 72px), transparent calc(100% - 24px));
+}

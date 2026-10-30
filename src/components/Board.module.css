@@ -5,15 +5,6 @@
   height: 100%;
 }
 
-.head {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-3);
-  min-height: 24px;
-}
-
 /* Four studs that fill as bricks land. */
 .studs {
   display: inline-flex;
@@ -41,25 +32,21 @@
   }
 }
 
-.full {
-  margin: 0;
-  font-size: 12px;
-  line-height: 16px;
-  color: var(--color-fg-muted);
-  animation: full-in var(--dur-base) var(--ease-out) both;
-}
-@keyframes full-in {
-  from {
-    opacity: 0;
-    transform: translateY(2px);
-  }
+/* The stud count rides just above the stack (or the ghost); top is set from the board's framing. */
+.count {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  transition: top var(--dur-place) var(--ease-out);
 }
 
 .drop {
   position: relative;
   flex: 1;
   min-height: 240px;
-  margin: var(--space-2) 0 var(--space-4);
+  margin: 0 0 var(--space-4);
   border-radius: var(--radius-md);
   outline: 2px dashed transparent;
   outline-offset: -2px;
@@ -102,17 +89,32 @@
 
 .generate {
   min-width: 144px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
   border: 1px solid var(--base-blue);
   background: var(--base-blue);
   color: var(--base-gray-0);
 }
+/* After the first build the same button replays the boot: quiet, so Copy prompt is the blue action. */
+.generate[data-replay] {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-fg);
+}
+.generate[data-replay]:hover {
+  border-color: var(--color-fg);
+  box-shadow: none;
+}
 .generate:hover:not([aria-disabled="true"]) {
   box-shadow: 0 4px 12px rgb(0 0 255 / 0.24);
 }
+/* Before 2 bricks: a filled Gray 10 slab with Gray 60 text, no border (still the biggest control). */
 .generate[aria-disabled="true"] {
-  background: var(--color-panel);
-  border-color: var(--color-hairline);
-  color: var(--color-fg-muted);
+  background: var(--base-gray-10);
+  border-color: var(--base-gray-10);
+  color: var(--base-gray-60);
   cursor: not-allowed;
 }
 .generate[aria-disabled="true"]:active {
@@ -133,6 +135,9 @@
   border: 0;
   background: transparent;
   color: var(--color-fg-muted);
+}
+.text[data-ink] {
+  color: var(--color-fg);
 }
 .text:hover:not(:disabled) {
   color: var(--color-fg);
@@ -160,7 +165,10 @@
     border-color: var(--base-gray-80);
     color: var(--base-gray-30);
   }
-  .text:hover:not(:disabled) {
+  .text[data-ink] {
+  color: var(--color-fg);
+}
+.text:hover:not(:disabled) {
     background: var(--base-gray-80);
   }
 }

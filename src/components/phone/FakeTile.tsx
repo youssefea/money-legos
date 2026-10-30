@@ -152,8 +152,86 @@ function HeroBody({ t }: { t: Tile }) {
           <Cta>Review swap</Cta>
         </>
       );
+    case "toast":
+    case "pill":
+    case "badge":
+      // A status or badge on top: one big card with a large mark, the title large and its chip.
+      return (
+        <>
+          <div className={styles.heroMark}>
+            {t.template === "toast" ? (
+              <span className={styles.okBig} aria-hidden="true">
+                <Check />
+              </span>
+            ) : (
+              <span className={styles.iconBig} aria-hidden="true">
+                <Icon kind={t.template === "badge" ? "shield" : "spark"} />
+              </span>
+            )}
+            {t.chip && <Chip>{t.chip}</Chip>}
+          </div>
+          <span className={styles.heroTitle}>{t.title}</span>
+          {t.cta && <Cta>{t.cta}</Cta>}
+        </>
+      );
+    case "list":
+    case "rows":
+      return (
+        <>
+          <div className={styles.row}>
+            <span className={styles.titleText}>{t.title}</span>
+            {t.cta && <span className={styles.ctaSmall}>{t.cta}</span>}
+          </div>
+          <span className={styles.lines}>
+            {rows.map(([k, v]) => (
+              <span key={k} className={styles.line}>
+                <span>{k}</span>
+                <span className={isMoney(v) ? styles.lineMoney : styles.strong}>{v}</span>
+              </span>
+            ))}
+          </span>
+        </>
+      );
+    case "qr":
+      return (
+        <div className={styles.hrow}>
+          <span className={styles.qrBig}>
+            <Qr />
+          </span>
+          <span className={styles.stackText}>
+            <span className={styles.label}>{t.title}</span>
+            <Value v={t.value} big />
+          </span>
+        </div>
+      );
+    case "signin":
+      return (
+        <>
+          <span className={styles.iconBig} aria-hidden="true">
+            <Icon kind="key" />
+          </span>
+          <span className={styles.heroTitle}>{t.title}</span>
+          {t.cta && <Cta>{t.cta}</Cta>}
+        </>
+      );
     default:
-      return <RowBody t={t} hero />;
+      // stat, meter, input: the label, the value large, then its bar or button.
+      return (
+        <>
+          <div className={styles.row}>
+            <span className={styles.label}>{t.title}</span>
+            {t.chip && <Chip>{t.chip}</Chip>}
+          </div>
+          {!t.value ? null : t.template === "input" ? <span className={styles.field}>{t.value}</span> : isMoney(t.value) ? <Value v={t.value} big /> : <span className={styles.heroValue}>{t.value}</span>}
+          {t.template === "meter" && (
+            <span className={styles.bar} aria-hidden="true">
+              {rows.length ? rows.map(([k, v]) => <i key={k} style={{ flexBasis: v }} />) : <i style={{ flexBasis: "64%" }} />}
+            </span>
+          )}
+          {t.template === "meter" && rows.length > 0 && <span className={styles.sub}>{rows.map(([k, v]) => `${k} ${v}`).join(" · ")}</span>}
+          {t.cta && <Cta>{t.cta}</Cta>}
+        </>
+      );
   }
 }
 

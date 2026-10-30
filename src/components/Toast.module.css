@@ -1,0 +1,81 @@
+/* Bottom-centre on desktop, under the sticky bar on compact. Never holds layout space. */
+.dock {
+  position: fixed;
+  z-index: 40;
+  left: 50%;
+  bottom: 40px;
+  transform: translateX(-50%);
+  max-width: calc(100vw - 32px);
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  padding: 0 4px 0 var(--space-4);
+  border-radius: 8px;
+  background: var(--base-gray-10);
+  color: var(--base-gray-100);
+  box-shadow:
+    0 0 0 1px var(--base-gray-15),
+    0 8px 24px -8px rgb(10 11 13 / 0.24);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: var(--weight-medium);
+  pointer-events: auto;
+  animation: toast-in var(--dur-base) var(--ease-out) both;
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.text {
+  padding: 6px 0;
+}
+.sep {
+  color: var(--base-gray-60);
+}
+.undo {
+  flex: none;
+  min-height: 40px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--base-blue);
+  font: inherit;
+  font-weight: var(--weight-medium);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.undo:hover {
+  background: var(--base-gray-15);
+}
+
+@media (prefers-color-scheme: dark) {
+  .toast {
+    background: var(--base-gray-80);
+    color: var(--base-gray-0);
+    box-shadow: 0 8px 24px -8px rgb(0 0 0 / 0.6);
+  }
+  .sep {
+    color: var(--base-gray-30);
+  }
+  .undo {
+    color: var(--base-cerulean);
+  }
+  .undo:hover {
+    background: var(--base-gray-60);
+  }
+}
+
+@media (max-width: 1023.98px) {
+  .dock {
+    bottom: calc(16px + env(safe-area-inset-bottom));
+  }
+}

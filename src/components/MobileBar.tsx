@@ -1,13 +1,15 @@
 "use client";
 
 import type { CSSProperties, RefObject } from "react";
-import { MIN_LEGOS, type LegoId } from "@/lib";
+import { BY_ID, MIN_LEGOS, chipLabel, type FakeApp, type LegoId } from "@/lib";
 import { StudCount } from "./Board";
 import StageView from "./StageView";
 import styles from "./MobileBar.module.css";
 
 export type MobileBarProps = {
   ids: readonly LegoId[];
+  /** The app the stack makes: its modules show as tiny chips while bricks are added. */
+  app: FakeApp;
   dark: boolean;
   reducedMotion: boolean;
   generation: number;
@@ -17,14 +19,16 @@ export type MobileBarProps = {
   live: boolean;
   actionRef: RefObject<HTMLButtonElement | null>;
   onAction: () => void;
-  /** One short line under the count (the capacity swap), or null. */
-  note?: string | null;
-  /** Mini stack container size in CSS px (the live board auto-fits inside it). Default 144x88. */
+  /** Mini stack container size in CSS px (the live board auto-fits inside it). Default 96x64. */
   stageSize?: [number, number];
 };
 
-/** Compact layouts (<1024px): sticky bar with the live mini stack, four count studs and Build app / View app. */
-export default function MobileBar({ actionRef, stageSize = [144, 88], ...p }: MobileBarProps) {
+/**
+ * Compact layouts (<1024px): a sticky bar. Top row: the live mini stack, four count studs and
+ * Build app / View app. Bottom row: one tiny chip per module of the app (brick colour dot + one
+ * word), top tile first, so the app previews itself as bricks go on. No sentences in the bar.
+ */
+export default function MobileBar({ actionRef, stageSize = [96, 64], ...p }: MobileBarProps) {
   const count = p.ids.length;
   const ready = count >= MIN_LEGOS;
   return (
@@ -32,11 +36,25 @@ export default function MobileBar({ actionRef, stageSize = [144, 88], ...p }: Mo
       <StageView className={styles.stage} ids={p.ids} dark={p.dark} reducedMotion={p.reducedMotion} generation={p.generation} lastAdded={p.lastAdded} live={p.live} compact />
       <div className={styles.count}>
         <StudCount count={count} />
-        {p.note && <span className={styles.need}>{p.note}</span>}
       </div>
       <button ref={actionRef} type="button" className={styles.generate} aria-disabled={!ready} onClick={p.onAction} data-testid="mobile-action">
         {p.built ? "View app" : "Build app"}
       </button>
+      <ol className={styles.modules} aria-label="App preview" data-testid="mobile-modules">
+        {p.app.tiles.length ? (
+          p.app.tiles.map((t) => (
+            <li key={t.legoId} className={styles.module} data-module={t.legoId}>
+              <i style={{ background: BY_ID[t.legoId].brick.hex }} aria-hidden="true" />
+              {chipLabel(t)}
+            </li>
+          ))
+        ) : (
+          <li className={styles.module} data-empty>
+            <i aria-hidden="true" />
+            Your app
+          </li>
+        )}
+      </ol>
     </div>
   );
 }

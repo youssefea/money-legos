@@ -124,6 +124,8 @@ export type BoardPosterProps = {
   dropClassName?: string;
   settleClassName?: string;
   compact?: boolean;
+  /** Footprint [w, d] of the brick that lands next (sizes the ghost). Default 2x4. */
+  ghostSize?: [number, number];
 };
 
 const PLATE: [number, number] = [12, 8];
@@ -133,7 +135,7 @@ const MAX = 4;
  * The board drawn in SVG: baseplate, the stack (slot 1 at the bottom) and the dashed ghost
  * where the next brick lands. Fixed viewBox sized for a full stack, so nothing shifts.
  */
-export function BoardPoster({ bricks, next, dark, dropId, settle = 0, className, dropClassName, settleClassName, compact }: BoardPosterProps) {
+export function BoardPoster({ bricks, next, dark, dropId, settle = 0, className, dropClassName, settleClassName, compact, ghostSize = [4, 2] }: BoardPosterProps) {
   const plate = PLATE;
   const PW = plate[0] * PITCH;
   const PD = plate[1] * PITCH;
@@ -185,10 +187,10 @@ export function BoardPoster({ bricks, next, dark, dropId, settle = 0, className,
 
   let ghostEl: ReactNode = null;
   if (next !== null && next < MAX) {
-    const W = 32;
-    const D = 16;
-    const x = (PW - W) / 2;
-    const z = (PD - D) / 2;
+    const W = ghostSize[0] * PITCH;
+    const D = ghostSize[1] * PITCH;
+    const x = Math.round((PW - W) / 2 / PITCH) * PITCH;
+    const z = Math.round((PD - D) / 2 / PITCH) * PITCH;
     const y = PLATE_H + next * BRICK_H + next * 0.12;
     const face = [P(x, y, z), P(x + W, y, z), P(x + W, y + BRICK_H, z), P(x, y + BRICK_H, z)];
     const topFace = [P(x, y + BRICK_H, z), P(x + W, y + BRICK_H, z), P(x + W, y + BRICK_H, z + D), P(x, y + BRICK_H, z + D)];

@@ -12,6 +12,8 @@ export type FakePhoneProps = {
   phase: PhonePhase;
   /** Bumps on every Build: the screen boots again (dark flash, app bar, tiles top to bottom). */
   boot: number;
+  /** Play the boot (dark hold, app bar, tiles one by one). False: show the built app at once (a shared link). */
+  play?: boolean;
   /** Faint empty wireframe slots under the tiles, waiting for more bricks. */
   slots: number;
   /** Tile elements by brick id, for the connector lines. */
@@ -48,7 +50,7 @@ const TAB_ICONS = [
  * (brick strip and studs, a short title, grey bars); after it the screen boots into the real fake app.
  * The phone is a labelled region; tiles are real text; the frame, studs and fake buttons are inert.
  */
-export default function FakePhone({ app, phase, boot, slots, tileRef, inspect = null, onInspect, frameless, className }: FakePhoneProps) {
+export default function FakePhone({ app, phase, boot, play = true, slots, tileRef, inspect = null, onInspect, frameless, className }: FakePhoneProps) {
   const empty = app.tiles.length === 0;
   const live = phase === "live" && !empty;
   const roles = tileRoles(app.tiles);
@@ -57,7 +59,7 @@ export default function FakePhone({ app, phase, boot, slots, tileRef, inspect = 
     <div className={[styles.slot, frameless ? styles.frameless : undefined, className].filter(Boolean).join(" ")}>
       <section className={styles.device} role="region" aria-label={label} data-testid="phone" data-phase={live ? "live" : empty ? "empty" : "wire"}>
         {/* A new key per build restarts the boot animation. */}
-        <div key={live ? `live-${boot}` : "wire"} className={styles.screen} data-boot={live && boot > 0 ? "true" : undefined}>
+        <div key={live ? `live-${boot}` : "wire"} className={styles.screen} data-boot={live && boot > 0 && play ? "true" : undefined}>
           {!frameless && (
             <>
               <div className={styles.island} aria-hidden="true" />

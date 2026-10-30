@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { FakeApp, LegoId } from "@/lib";
+import type { Typing } from "@/state/store";
 import FakePhone from "./phone/FakePhone";
 import { AppName, CopyButton, DemoLabel } from "./ResultPanel";
 import styles from "./ResultSheet.module.css";
@@ -10,8 +11,8 @@ export type ResultSheetProps = {
   open: boolean;
   app: FakeApp;
   name: string;
-  /** Bumps on Build: the name types in again. */
-  boot: number;
+  /** Set right after a Build that types the name in; null when reopening (the name shows at once). */
+  typing: Typing | null;
   copied: boolean;
   onCopy: () => void;
   onDetails: () => void;
@@ -25,7 +26,7 @@ export type ResultSheetProps = {
  * pinned in a 72px action bar with "Back to bricks". Tapping a tile shows "Made with <brick>".
  * Native modal <dialog>: focus trapped, Escape closes.
  */
-export default function ResultSheet({ open, app, name, boot, copied, onCopy, onDetails, onClose }: ResultSheetProps) {
+export default function ResultSheet({ open, app, name, typing, copied, onCopy, onDetails, onClose }: ResultSheetProps) {
   const [inspect, setInspect] = useState<LegoId | null>(null);
   const ref = useRef<HTMLDialogElement>(null);
   const onCloseRef = useRef(onClose);
@@ -65,7 +66,7 @@ export default function ResultSheet({ open, app, name, boot, copied, onCopy, onD
       <div className={styles.grip} aria-hidden="true" />
       <header className={styles.head}>
         <div className={styles.heading}>
-          <AppName id="sheet-h" name={name} boot={boot} className={styles.title} />
+          <AppName id="sheet-h" name={name} typing={typing} className={styles.title} />
           <DemoLabel className={styles.demo} />
         </div>
         <button type="button" className={styles.details} onClick={onDetails} aria-haspopup="dialog">

@@ -25,9 +25,31 @@ export type StageViewProps = {
   className?: string;
   /** Brick positions for connector lines: the stage's own report when it sends one, else an estimate. */
   onLayout?: (layout: StageLayout | null) => void;
+  /** Framing readout (top of the stack or ghost as a fraction of the height, plate width in px). */
+  onFrame?: (frame: Frame) => void;
+  /** Footprint of the brick about to be added (hovered or dragged in the tray): sizes the ghost. */
+  ghostSize?: [number, number];
+  /**
+   * Board bricks as controls: an invisible button over each placed brick. Hover or focus inspects it
+   * (its tile and outline light up); click or Enter removes it. On touch the first tap selects, the
+   * second removes.
+   */
+  hits?: { inspect: LegoId | null; onInspect: (id: LegoId | null) => void; onRemove: (id: LegoId) => void };
 };
 
-type Frame = { stackTop: number; platePx: number };
+export type Frame = { stackTop: number; platePx: number };
+
+/** Bounding box (fractions) of a layout item: its silhouette when the stage sent one, else the front face. */
+export function itemBox(it: BrickLayoutItem): { x: number; y: number; w: number; h: number } {
+  if (it.hull && it.hull.length >= 3) {
+    const xs = it.hull.map((p) => p[0]);
+    const ys = it.hull.map((p) => p[1]);
+    const x = Math.min(...xs);
+    const y = Math.min(...ys);
+    return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
+  }
+  return { x: it.cx - it.w / 2, y: it.cy - it.h / 2, w: it.w, h: it.h };
+}
 
 /**
  * Estimated front-face boxes for a centred stack, from the board camera (28° up, 32° round), until the
@@ -56,7 +78,7 @@ export function estimateLayout(ids: readonly LegoId[], width: number, height: nu
  * The baseplate. Always draws the SVG poster; once the live board renders something visible
  * (a canvas, or its own SVG fallback) the poster fades out. The box size never changes.
  */
-export default function StageView({ ids, dark, reducedMotion, generation, lastAdded, live, compact, className, onLayout }: StageViewProps) {
+export default function StageView({ ids, dark, reducedMotion, generation, lastAdded, live, compact, className, onLayout, onFrame: onFrameOut, ghostSize, hits }: StageViewProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const liveRef = useRef<HTMLDivElement>(null);
   const [liveVisible, setLiveVisible] = useState(false);
@@ -77,13 +99,14 @@ export default function StageView({ ids, dark, reducedMotion, generation, lastAd
     };
   }, [live]);
 
+  const measure = !!(onLayout || hits);
   useEffect(() => {
     const el = rootRef.current;
-    if (!el || !onLayout) return;
+    if (!el || !measure) return;
     const ro = new ResizeObserver(() => setSize([el.clientWidth, el.clientHeight]));
     ro.observe(el);
     return () => ro.disconnect();
-  }, [onLayout]);
+  }, [measure]);
 
   // Real layout from the stage wins once it matches the stack; otherwise estimate.
   const realOk = !!real && real.length === ids.length && real.every((r, i) => r.id === ids[i]);
@@ -99,6 +122,29 @@ export default function StageView({ ids, dark, reducedMotion, generation, lastAd
 
   const onFrame = useCallback((f: Frame) => setFrame((p) => (p && p.stackTop === f.stackTop && p.platePx === f.platePx ? p : { stackTop: f.stackTop, platePx: f.platePx })), []);
   const onStageLayout = useCallback((items: BrickLayoutItem[]) => setReal(items.slice()), []);
+  useEffect(() => {
+    if (frame) onFrameOut?.(frame);
+  }, [frame, onFrameOut]);
+  const wantsFrame = !!(onLayout || onFrameOut);
+  const wantsLayout = !!(onLayout || hits);
+  const items = realOk ? real! : estimateLayout(ids, size[0], size[1], frame);
+
+  // Touch: the first tap on a board brick selects it, the second removes it; a tap elsewhere clears.
+  const touchSel = useRef<LegoId | null>(null);
+  const lastPointer = useRef<string>("mouse");
+  const onHitsInspect = hits?.onInspect;
+  const selected = hits?.inspect ?? null;
+  useEffect(() => {
+    if (!onHitsInspect || !selected || touchSel.current !== selected) return;
+    const away = (e: PointerEvent) => {
+      if (!(e.target instanceof Element) || !e.target.closest("[data-board-brick]")) {
+        touchSel.current = null;
+        onHitsInspect(null);
+      }
+    };
+    document.addEventListener("pointerdown", away);
+    return () => document.removeEventListener("pointerdown", away);
+  }, [onHitsInspect, selected]);
 
   const bricks = toPlacedBricks(ids);
   const next = nextLevel(ids.length);
@@ -119,6 +165,7 @@ export default function StageView({ ids, dark, reducedMotion, generation, lastAd
         dropClassName={styles.drop}
         settleClassName={generation % 2 ? styles.settleA : styles.settleB}
         compact={compact}
+        ghostSize={ghostSize}
       />
       {live && (
         <div ref={liveRef} className={styles.live}>
@@ -129,9 +176,53 @@ export default function StageView({ ids, dark, reducedMotion, generation, lastAd
             reducedMotion={reducedMotion}
             settledSignal={generation}
             className={styles.canvas}
-            onFrame={onLayout ? onFrame : undefined}
-            onLayout={onLayout ? onStageLayout : undefined}
+            ghostSize={ghostSize}
+            onFrame={wantsFrame ? onFrame : undefined}
+            onLayout={wantsLayout ? onStageLayout : undefined}
           />
+        </div>
+      )}
+      {hits && live && (
+        <div className={styles.hits}>
+          {items.map((it) => {
+            const id = it.id as LegoId;
+            const b = itemBox(it);
+            const lego = BY_ID[id];
+            if (!lego) return null;
+            return (
+              <button
+                key={id}
+                type="button"
+                className={styles.hit}
+                data-board-brick={id}
+                data-on={selected === id || undefined}
+                aria-label={`${lego.kicker} — remove`}
+                style={{ left: `${b.x * 100}%`, top: `${b.y * 100}%`, width: `${b.w * 100}%`, height: `${b.h * 100}%` }}
+                onPointerDown={(e) => {
+                  lastPointer.current = e.pointerType;
+                }}
+                onMouseEnter={() => hits.onInspect(id)}
+                onMouseLeave={() => {
+                  if (touchSel.current !== id) hits.onInspect(null);
+                }}
+                onFocus={() => hits.onInspect(id)}
+                onBlur={() => {
+                  if (touchSel.current !== id) hits.onInspect(null);
+                }}
+                onClick={() => {
+                  if (lastPointer.current === "touch" && touchSel.current !== id) {
+                    touchSel.current = id;
+                    hits.onInspect(id);
+                    return;
+                  }
+                  lastPointer.current = "mouse";
+                  touchSel.current = null;
+                  hits.onInspect(null);
+                  hits.onRemove(id);
+                }}
+              />
+            );
+          })}
         </div>
       )}
     </div>

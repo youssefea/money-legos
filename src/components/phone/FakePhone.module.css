@@ -1,7 +1,8 @@
 /*
- * The fake phone. The device fills its slot's height and takes a phone-like width
- * (min(slot width, 0.56 x height, 420px), never under 300px), so it never shrinks its text: tiles use
- * fixed type (14px body, 12px secondary, 22px+ money) and the screen scrolls when the slot is short.
+ * The fake phone. Its width comes from the column (up to --phone-max: 400px on a laptop, 460px on the
+ * projector, 520px in Present mode) and it fills the slot's height (never taller than a real phone).
+ * Text never shrinks: tiles use fixed type (14px body, 12px secondary, 22px+ money). The chrome is
+ * slim so a 4-brick app (one hero + three 56px rows) fits without scrolling.
  */
 
 .slot {
@@ -18,12 +19,12 @@
   --fs-sm: 12px;
   --fs-money: 22px;
   --fs-huge: 34px;
-  --pw: min(100cqw, max(calc(100cqh * 0.58), 300px), 420px);
+  --pw: min(100cqw, var(--phone-max, 400px));
   position: relative;
   width: var(--pw);
   height: min(100cqh, calc(var(--pw) * 2.06));
-  padding: 9px;
-  border-radius: 48px;
+  padding: 8px;
+  border-radius: 46px;
   background: var(--base-gray-100);
   box-shadow:
     0 0 0 1px var(--base-gray-80),
@@ -61,17 +62,17 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  border-radius: 39px;
+  border-radius: 38px;
   background: var(--base-gray-10);
 }
 
 .island {
   position: absolute;
   z-index: 2;
-  top: 9px;
+  top: 8px;
   left: 50%;
-  width: 84px;
-  height: 24px;
+  width: 80px;
+  height: 22px;
   transform: translateX(-50%);
   border-radius: 999px;
   background: var(--base-gray-100);
@@ -82,7 +83,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 40px;
+  height: 32px;
   padding: 2px 26px 0 30px;
   font-size: 13px;
   font-weight: var(--weight-medium);
@@ -99,7 +100,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  height: 44px;
+  height: 40px;
   padding: 0 16px;
 }
 .logo,
@@ -145,11 +146,11 @@
   flex: 1;
   min-height: 0;
   margin: 0;
-  padding: 2px 10px 12px;
+  padding: 8px 10px 10px;
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: none;
@@ -166,7 +167,6 @@
   display: flex;
   flex-direction: column;
   border-radius: 14px;
-  overflow: hidden;
   background: var(--base-gray-0);
   box-shadow:
     0 0 0 1px var(--base-gray-15),
@@ -194,6 +194,7 @@
   align-items: center;
   gap: 6px;
   padding: 0 12px;
+  border-radius: 14px 14px 0 0;
   background: var(--accent);
 }
 .strip i {
@@ -220,31 +221,32 @@
   gap: 8px;
   padding: 10px 14px 12px;
 }
+/* The top tile is the hero: 112-144px. Every other tile is a compact 56px row (12px strip + 44px body). */
+.tile[data-role="hero"] .strip {
+  height: 16px;
+}
+.tile[data-role="hero"] .strip i {
+  width: 10px;
+  height: 10px;
+}
 .tile[data-role="hero"] .body {
-  min-height: 100px;
+  min-height: 96px;
   gap: 8px;
   padding: 10px 14px 12px;
 }
-.tile[data-role="row"] .strip {
-  height: 11px;
-}
-.tile[data-role="row"] .strip i {
-  width: 7px;
-  height: 7px;
-}
-.tile[data-role="row"] .body {
-  min-height: 40px;
-  padding: 7px 12px 8px;
-}
+.tile[data-role="row"] .strip,
 .tile[data-role="status"] .strip {
+  height: 12px;
+}
+.tile[data-role="row"] .strip i,
+.tile[data-role="status"] .strip i {
+  width: 8px;
   height: 8px;
 }
-.tile[data-role="status"] .strip i {
-  width: 6px;
-  height: 6px;
-}
+.tile[data-role="row"] .body,
 .tile[data-role="status"] .body {
-  padding: 6px 12px 7px;
+  min-height: 44px;
+  padding: 5px 12px 6px;
 }
 .tile[data-role="status"] .hrow {
   gap: 8px;
@@ -312,6 +314,70 @@
   flex: none;
   font-weight: var(--weight-medium);
   font-variant-numeric: tabular-nums;
+}
+
+/* Hero treatments for a status, badge, sign-in, list or stat on top. */
+.heroMark {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.heroTitle {
+  font-size: calc(var(--fs) + 6px);
+  font-weight: var(--weight-medium);
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+.heroValue {
+  font-size: calc(var(--fs) + 10px);
+  font-weight: var(--weight-medium);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.okBig,
+.iconBig {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 10px;
+  border-radius: 50%;
+}
+.okBig {
+  background: var(--base-green);
+  color: var(--base-gray-100);
+}
+.iconBig {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: inset 0 0 0 1px var(--accent-line);
+}
+.okBig svg,
+.iconBig svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.lines {
+  display: grid;
+  gap: 4px;
+}
+.line {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--base-gray-10);
+}
+.lineMoney {
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+.qrBig .qr {
+  width: 72px;
+  height: 72px;
 }
 
 .coin {
@@ -506,16 +572,20 @@
   fill: var(--base-gray-100);
 }
 
-/* "Made with Pay": shown while a tile is inspected (hover, focus or tap). */
+/*
+ * "Made with Pay": shown while a tile is inspected (hover, focus or tap). It sits on the brick's
+ * colour strip (straddling the tile's top edge), never over the tile's content.
+ */
 .madeWith {
   position: absolute;
-  top: 2px;
+  top: -6px;
   right: 10px;
-  z-index: 1;
+  z-index: 3;
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 4px 3px 10px;
+  height: 20px;
+  padding: 0 2px 0 8px;
   border-radius: 999px;
   background: var(--base-gray-100);
   color: var(--base-gray-0);
@@ -534,13 +604,10 @@
   transform: none;
 }
 .madeWith b {
-  padding: 1px 8px;
+  padding: 0 7px;
   border-radius: 999px;
   font-weight: var(--weight-medium);
-}
-.tile[data-role="status"] .madeWith {
-  top: 50%;
-  transform: translateY(-50%);
+  line-height: 16px;
 }
 
 /* The whole tile is one inspect target (no fake actionable controls inside). */
@@ -553,7 +620,7 @@
   border: 0;
   border-radius: inherit;
   background: transparent;
-  cursor: default;
+  cursor: pointer;
 }
 .inspect:focus-visible {
   outline: 2px solid var(--ring);
@@ -595,15 +662,15 @@
   display: flex;
   justify-content: space-around;
   align-items: center;
-  height: 50px;
-  padding: 0 18px 8px;
+  height: 40px;
+  padding: 0 18px 4px;
   border-top: 1px solid var(--base-gray-15);
   background: var(--base-gray-0);
   color: var(--base-gray-15);
 }
 .tabbar svg {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
 }
 .tabbar[data-live] {
   color: var(--base-gray-30);
@@ -614,7 +681,7 @@
 
 .home {
   position: absolute;
-  bottom: 7px;
+  bottom: 5px;
   left: 50%;
   width: 34%;
   height: 4px;
@@ -631,11 +698,12 @@
   z-index: 3;
   background: var(--base-gray-100);
   pointer-events: none;
-  animation: boot-dark 300ms linear both;
+  animation: boot-dark 360ms linear both;
 }
+/* Paced for a room: a visible 200ms dark hold, the app bar, then the tiles 90ms apart. */
 @keyframes boot-dark {
   0%,
-  40% {
+  55% {
     opacity: 1;
   }
   100% {
@@ -643,10 +711,10 @@
   }
 }
 .screen[data-boot] .appbar {
-  animation: fade-in 200ms var(--ease-hover) 120ms both;
+  animation: fade-in 200ms var(--ease-hover) 200ms both;
 }
 .screen[data-boot] .tile {
-  animation-delay: calc(180ms + var(--i) * var(--dur-stagger));
+  animation-delay: calc(260ms + var(--i) * 90ms);
 }
 @keyframes fade-in {
   from {
@@ -717,13 +785,20 @@
 }
 
 /* ---------------------------------------------------------------- projector */
-@media (min-width: 1600px) and (min-height: 1000px) {
+@media (min-width: 1600px) {
   .device {
     --fs: 16px;
     --fs-sm: 13px;
     --fs-money: 24px;
     --fs-huge: 38px;
   }
+}
+/* Present mode: read from the back of the room. */
+:global([data-present]) .device {
+  --fs: 18px;
+  --fs-sm: 16px;
+  --fs-money: 28px;
+  --fs-huge: 44px;
 }
 
 /* ---------------------------------------------------------------- dark */

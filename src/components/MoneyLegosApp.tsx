@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore, type MouseEvent } from "react";
 import {
   BY_ID,
+  MAX_LEGOS,
   MIN_LEGOS,
   RECIPES,
   RISK_FOOTER,
@@ -21,21 +22,51 @@ import { copyText, useCopiedReset } from "@/hooks/useCopy";
 import { useDark, useIsMobile, useReducedMotion } from "@/hooks/useMediaQuery";
 import { buzz, useSound } from "@/hooks/useSound";
 import { initialState, reducer, resultOf, stepStates, type LoadSource } from "@/state/store";
-import Board, { boardNote } from "./Board";
+import Board from "./Board";
 import { BrickGlyph } from "./BrickArt";
 import Connectors from "./Connectors";
 import DetailsDrawer from "./DetailsDrawer";
-import Header from "./Header";
+import Header, { SoundToggle } from "./Header";
 import MobileBar from "./MobileBar";
 import RecipesMenu from "./RecipesMenu";
 import ResultPanel from "./ResultPanel";
 import ResultSheet from "./ResultSheet";
 import type { StageLayout } from "./StageView";
 import StepsRail from "./StepsRail";
+import Toast from "./Toast";
 import Tray from "./Tray";
 import styles from "@/app/page.module.css";
 
 const COMPACT_QUERY = "(max-width: 1023.98px)";
+const PRESENT_KEY = "money-legos:present";
+/** How long the app name may take to type in before it is shown plainly (live edits then crossfade). */
+const TYPE_MS = 1800;
+
+// Present mode lives in sessionStorage (this tab only, never the URL); a tiny external store over it.
+const presentListeners = new Set<() => void>();
+let presentMemory = false;
+function readPresent(): boolean {
+  try {
+    return window.sessionStorage.getItem(PRESENT_KEY) === "1";
+  } catch {
+    return presentMemory;
+  }
+}
+function writePresent(on: boolean) {
+  presentMemory = on;
+  try {
+    window.sessionStorage.setItem(PRESENT_KEY, on ? "1" : "0");
+  } catch {
+    // private mode: kept in memory only
+  }
+  presentListeners.forEach((l) => l());
+}
+function subscribePresent(l: () => void) {
+  presentListeners.add(l);
+  return () => {
+    presentListeners.delete(l);
+  };
+}
 
 /**
  * The whole playground: pick bricks (the phone shows them as wireframes), Build app (the phone boots
@@ -52,6 +83,12 @@ export default function MoneyLegosApp() {
   const [selectSignal, setSelectSignal] = useState(0);
   const [layout, setLayout] = useState<StageLayout | null>(null);
   const [inspect, setInspect] = useState<LegoId | null>(null);
+  const [hoverId, setHoverId] = useState<LegoId | null>(null);
+  // Present mode (P or the header toggle): board + phone fill the screen, bricks in a bottom drawer.
+  // Remembered for the tab (sessionStorage), never in the URL.
+  const present = useSyncExternalStore(subscribePresent, readPresent, () => false);
+  const setPresent = writePresent;
+  const copyRef = useRef<HTMLButtonElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLElement>(null);
   const actionRef = useRef<HTMLButtonElement>(null);
@@ -64,6 +101,7 @@ export default function MoneyLegosApp() {
   const result = useMemo(() => resultOf({ built: state.built, ids: state.ids }), [state.built, state.ids]);
   const live = !!result;
   const slots = Math.max(0, 3 - count);
+  const play = !!state.typing && state.typing.n === state.generation;
   const inspected = inspect && state.ids.includes(inspect) ? inspect : null;
   const tileRef = useCallback((id: string, el: HTMLElement | null) => {
     if (el) tiles.current.set(id, el);
@@ -87,6 +125,8 @@ export default function MoneyLegosApp() {
   const { drag, onPointerDown, wasDrag } = useBrickDrag([dropRef], (id) => {
     if (!state.ids.includes(id)) place(id, state.ids);
   });
+  const nextId = drag?.id ?? hoverId;
+  const ghostSize = nextId && !state.ids.includes(nextId) && count < MAX_LEGOS ? BY_ID[nextId].size : undefined;
 
   const opened = () => {
     sound.play("open");
@@ -98,9 +138,19 @@ export default function MoneyLegosApp() {
     if (ids.length >= MIN_LEGOS) opened();
   };
 
-  const onBuild = () => {
+  // Build app, then (same button, same place) Replay: plays the boot again. A keyboard Build hands
+  // focus to Copy prompt (the next step); a click leaves focus where it is.
+  const onBuild = (e?: MouseEvent<HTMLButtonElement>) => {
     dispatch({ type: "build" }); // with fewer than 2 bricks this only announces what is missing
-    if (ready) opened();
+    if (!ready) return;
+    opened();
+    const keyboard = !!e && e.detail === 0 && !live;
+    if (keyboard && !compactNow()) requestAnimationFrame(() => copyRef.current?.focus({ preventScroll: true }));
+  };
+
+  const onRemoveBoard = (id: LegoId) => {
+    dispatch({ type: "remove", id, toast: true });
+    setInspect(null);
   };
 
   // Compact bar: Build app, then View app (the live app in the sheet).
@@ -144,6 +194,32 @@ export default function MoneyLegosApp() {
   };
 
   useCopiedReset(state.copied, () => dispatch({ type: "copyReset" }));
+
+  // The name types in once per Build; after that it is plain text (so reopening never retypes it).
+  useEffect(() => {
+    if (!state.typing) return;
+    const t = window.setTimeout(() => dispatch({ type: "typed" }), TYPE_MS);
+    return () => window.clearTimeout(t);
+  }, [state.typing]);
+
+  // Present mode: P toggles it and Escape leaves it.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      if (document.querySelector("dialog[open]")) return;
+      if (e.key === "p" || e.key === "P") {
+        if (compactNow()) return;
+        e.preventDefault();
+        writePresent(!present);
+      } else if (e.key === "Escape" && present) {
+        writePresent(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [present]);
 
   // Deep links: #b20,payments,speed or #recipe=neobroker load the stack and build it. An empty hash
   // (Back to the start) or a link with no known bricks clears the board, so URL and screen agree.
@@ -205,56 +281,63 @@ export default function MoneyLegosApp() {
   const steps = stepStates(state);
   const announce = state.announce.text + (state.announce.n % 2 ? "\u200b" : "");
   const dragLego = drag ? BY_ID[drag.id] : null;
-  const note = boardNote(count, state.swap);
+  const presenting = present && !isMobile;
+  const tray = (
+    <Tray
+      ids={state.ids}
+      onToggle={(id) => place(id, state.ids)}
+      onPointerDown={onPointerDown}
+      wasDrag={wasDrag}
+      dragging={drag?.id ?? null}
+      inspect={inspected}
+      onInspect={setInspect}
+      onHover={setHoverId}
+      layout={presenting ? "strip" : "bin"}
+    />
+  );
 
   return (
-    <div className={styles.page} data-dragging={drag ? "true" : undefined}>
-      <Header soundOn={sound.on} onSound={sound.setOn} />
+    <div className={styles.page} data-dragging={drag ? "true" : undefined} data-present={presenting || undefined}>
+      <div className={styles.top}>
+        <Header present={presenting} onPresent={isMobile ? undefined : setPresent} />
 
-      <div className={styles.hero}>
-        <h1 className={styles.h1}>Snap together a money app.</h1>
-        <p className={styles.subline}>Snap bricks. Preview an app. Copy the prompt.</p>
-        <div className={styles.rail}>
-          <StepsRail states={steps} />
+        <div className={styles.hero}>
+          <h1 className={styles.h1}>Snap together a money app.</h1>
+          <p className={styles.subline}>Snap bricks. Preview an app. Copy the prompt.</p>
+          <div className={styles.rail}>
+            <StepsRail states={steps} />
+          </div>
         </div>
       </div>
 
-      <div className={styles.mobileOnly}>
-        <MobileBar
-          ids={state.ids}
-          dark={dark}
-          reducedMotion={reducedMotion}
-          generation={state.generation}
-          built={live}
-          lastAdded={state.lastAdded}
-          live={isMobile}
-          actionRef={actionRef}
-          onAction={onMobileAction}
-          note={note}
-        />
-        <div className={styles.mobileTools}>
-          <RecipesMenu active={state.recipe} onPick={onRecipe} placement="down" />
-          <button type="button" className={styles.smallButton} onClick={onSurprise}>
-            Surprise me
-          </button>
-          <button type="button" className={styles.smallButton} onClick={onClear} disabled={count === 0}>
-            Clear
-          </button>
-        </div>
-      </div>
+      {isMobile && (
+        <>
+          <MobileBar
+            ids={state.ids}
+            app={app}
+            dark={dark}
+            reducedMotion={reducedMotion}
+            generation={state.generation}
+            built={live}
+            lastAdded={state.lastAdded}
+            live={isMobile}
+            actionRef={actionRef}
+            onAction={onMobileAction}
+          />
+          <div className={styles.mobileTools}>
+            <RecipesMenu active={state.recipe} onPick={onRecipe} placement="down" />
+            <button type="button" className={styles.smallButton} onClick={onSurprise}>
+              Surprise me
+            </button>
+            <button type="button" className={styles.smallButton} onClick={onClear} disabled={count === 0}>
+              Clear
+            </button>
+          </div>
+        </>
+      )}
 
       <main ref={mainRef} className={styles.main}>
-        <div className={`${styles.panel} ${styles.trayPanel}`}>
-          <Tray
-            ids={state.ids}
-            onToggle={(id) => place(id, state.ids)}
-            onPointerDown={onPointerDown}
-            wasDrag={wasDrag}
-            dragging={drag?.id ?? null}
-            inspect={inspected}
-            onInspect={setInspect}
-          />
-        </div>
+        {!presenting && <div className={`${styles.panel} ${styles.trayPanel}`}>{tray}</div>}
         <div className={`${styles.panel} ${styles.boardPanel}`}>
           <Board
             ids={state.ids}
@@ -262,13 +345,16 @@ export default function MoneyLegosApp() {
             dark={dark}
             reducedMotion={reducedMotion}
             generation={state.generation}
-            built={state.built}
+            appLive={live}
             lastAdded={state.lastAdded}
-            swap={state.swap}
             live={!isMobile}
             dropRef={dropRef}
             dragOver={!!drag?.over}
             dragging={!!drag}
+            ghostSize={ghostSize}
+            inspect={inspected}
+            onInspect={setInspect}
+            onRemove={onRemoveBoard}
             onBuild={onBuild}
             onSurprise={onSurprise}
             onClear={onClear}
@@ -282,6 +368,9 @@ export default function MoneyLegosApp() {
               app={app}
               phase={live ? "live" : "wire"}
               boot={state.generation}
+              play={play}
+              typing={state.typing}
+              copyRef={copyRef}
               slots={slots}
               tileRef={tileRef}
               name={result?.name ?? null}
@@ -294,19 +383,28 @@ export default function MoneyLegosApp() {
             />
           </div>
         )}
-        {!isMobile && <Connectors hostRef={mainRef} ids={state.ids} layout={layout} tiles={tiles} dark={dark} boot={state.generation} inspect={inspected} />}
+        {!isMobile && <Connectors hostRef={mainRef} ids={state.ids} layout={layout} tiles={tiles} dark={dark} boot={state.generation} inspect={inspected} play={play} />}
       </main>
+
+      {presenting && (
+        <div className={styles.drawer} data-testid="present-drawer">
+          {tray}
+        </div>
+      )}
 
       <footer className={styles.footer}>
         <p>{RISK_FOOTER}</p>
+        <SoundToggle on={sound.on} onChange={sound.setOn} />
       </footer>
+
+      <Toast toast={state.toast} onUndo={() => dispatch({ type: "undo" })} onDone={(n) => dispatch({ type: "toastDone", n })} />
 
       {isMobile && result && (
         <ResultSheet
           open={sheetOpen}
           app={app}
           name={result.name}
-          boot={state.generation}
+          typing={state.typing}
           copied={state.copied}
           onCopy={() => void onCopy()}
           onDetails={openDetails}
