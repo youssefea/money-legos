@@ -758,7 +758,6 @@
 /* ---------------------------------------------------------------- frameless (the phone sheet) */
 .frameless {
   container-type: normal;
-  display: block;
 }
 .frameless .device {
   width: 100%;
@@ -772,20 +771,39 @@
 .frameless .device::after {
   display: none;
 }
+/* The sheet is the app's screen: one screen colour edge to edge, the tab bar pinned at the end of the scroll. */
+.frameless,
+.frameless .device {
+  display: flex;
+  flex-direction: column;
+}
+.frameless .device,
+.frameless .screen {
+  flex: 1 0 auto;
+}
 .frameless .screen {
   height: auto;
   overflow: visible;
-  border-radius: 20px;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 .frameless .appbar {
   height: 56px;
+  padding: 0;
 }
 .frameless .tiles {
+  flex: 1 0 auto;
   overflow: visible;
-  padding-bottom: 16px;
+  padding: 4px 0 16px;
 }
 .frameless .tabbar {
-  display: none;
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  height: 52px;
+  margin: 0 calc(var(--space-4) * -1);
+  padding: 0 28px;
 }
 
 /* ---------------------------------------------------------------- short screens (<=800px tall) */
