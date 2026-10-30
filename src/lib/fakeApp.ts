@@ -68,16 +68,28 @@ export type TileRole = "hero" | "row" | "status";
 const STATUS_TEMPLATES: readonly UiTemplate[] = ["toast", "pill"];
 export const HERO_TEMPLATES: readonly UiTemplate[] = ["balance", "checkout", "order", "swap", "earn", "qr", "rows", "list", "signin", "input", "meter"];
 
-/** Index of the hero tile: the lowest-prio task tile, else the lowest-prio tile (never -1 for 1+ tiles). */
+/**
+ * Index of the hero tile: the lowest-prio task tile. With no task tile at all (a status-only stack such
+ * as Speed + Verify + Sponsor), the most prominent tile is the hero instead: the largest brick footprint,
+ * then the lowest prio, so the screen never shows only identical thin rows. Never -1 for 1+ tiles.
+ */
 export function heroIndex(tiles: readonly Pick<FakeTile, "template" | "legoId">[]): number {
   let best = -1;
-  for (const pass of [true, false]) {
-    tiles.forEach((t, i) => {
-      if (pass && !HERO_TEMPLATES.includes(t.template)) return;
-      if (best < 0 || BY_ID[t.legoId].prio < BY_ID[tiles[best]!.legoId].prio) best = i;
-    });
-    if (best >= 0) break;
-  }
+  tiles.forEach((t, i) => {
+    if (!HERO_TEMPLATES.includes(t.template)) return;
+    if (best < 0 || BY_ID[t.legoId].prio < BY_ID[tiles[best]!.legoId].prio) best = i;
+  });
+  if (best >= 0) return best;
+  const area = (id: LegoId) => BY_ID[id].size[0] * BY_ID[id].size[1];
+  tiles.forEach((t, i) => {
+    if (best < 0) {
+      best = i;
+      return;
+    }
+    const b = tiles[best]!.legoId;
+    const d = area(t.legoId) - area(b);
+    if (d > 0 || (d === 0 && BY_ID[t.legoId].prio < BY_ID[b].prio)) best = i;
+  });
   return best;
 }
 

@@ -505,8 +505,12 @@ describe("fake app", () => {
     expect(roles(["b20", "payments", "speed", "validity"])).toEqual({ validity: "row", speed: "status", payments: "hero", b20: "row" });
     expect(roles(["payments", "financing"])).toEqual({ financing: "row", payments: "hero" });
     // A toast or badge on top stays a compact row; the task below is the hero. With no task tile at all,
-    // the lowest-prio tile is the hero (Verify's badge over Speed's toast).
-    expect(roles(["verify", "speed"])).toEqual({ speed: "status", verify: "hero" });
+    // the most prominent tile is the hero: the largest footprint (Speed's 4x2 toast over Verify's 2x2 badge),
+    // then the lowest prio.
+    expect(roles(["verify", "speed"])).toEqual({ speed: "hero", verify: "row" });
+    expect(roles(["speed", "verify", "sponsored-gas"])).toEqual({ "sponsored-gas": "status", verify: "row", speed: "hero" });
+    expect(roles(["verify", "escrow"])).toEqual({ escrow: "hero", verify: "row" });
+    expect(roles(["verify", "allowlist"])).toEqual({ allowlist: "hero", verify: "row" });
     expect(roles(["b20", "speed"])).toEqual({ speed: "status", b20: "hero" });
     for (const ids of sample(rng(7), 300, 1, 4)) {
       const tiles = buildFakeApp(ids).tiles;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Toast as ToastData } from "@/state/store";
 import styles from "./Toast.module.css";
 
@@ -11,7 +11,7 @@ export type ToastProps = {
   onUndo: () => void;
   /** Called when the toast has been on screen for 6s (paused while hovered or focused). */
   onDone: (n: number) => void;
-  /** board = inside the board column, just above its controls (desktop: clear of the footer); page = fixed at the bottom (compact). */
+  /** board = inside the board column, just above its controls (desktop: clear of the footer); page = fixed just under the compact bar. */
   placement?: "board" | "page";
 };
 
@@ -34,8 +34,41 @@ export default function Toast({ toast, onUndo, onDone, placement = "page" }: Toa
     return () => window.clearTimeout(t);
   }, [n, held]);
 
+  // Compact: docked just under the sticky compact bar (which is always on screen), so it never covers
+  // the footer risk line at the end of the page or the sheet's pinned action bar.
+  const dockRef = useRef<HTMLDivElement>(null);
+  const shown = !!toast;
+  useLayoutEffect(() => {
+    const dock = dockRef.current;
+    if (!dock || placement !== "page" || !shown) return;
+    let raf = 0;
+    const place = () => {
+      raf = 0;
+      const bar = document.querySelector<HTMLElement>('[data-testid="mobile-bar"]');
+      const r = bar?.getBoundingClientRect();
+      if (r && r.height > 0) {
+        dock.style.top = `${Math.max(8, r.bottom + 8)}px`;
+        dock.style.bottom = "auto";
+      } else {
+        dock.style.top = "";
+        dock.style.bottom = "";
+      }
+    };
+    const later = () => {
+      if (!raf) raf = requestAnimationFrame(place);
+    };
+    place();
+    window.addEventListener("scroll", later, { passive: true });
+    window.addEventListener("resize", later);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", later);
+      window.removeEventListener("resize", later);
+    };
+  }, [placement, shown]);
+
   return (
-    <div className={styles.dock} data-place={placement}>
+    <div ref={dockRef} className={styles.dock} data-place={placement}>
       {toast && (
         <div
           key={toast.n}

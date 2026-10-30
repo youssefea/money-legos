@@ -89,7 +89,7 @@
   justify-content: center;
   gap: var(--space-2);
   width: 100%;
-  min-height: var(--act-h);
+  min-height: var(--act-h, 52px);
   padding: 0 var(--space-4);
   border: 1px solid var(--base-blue);
   border-radius: var(--radius-md);
@@ -134,7 +134,7 @@
 
 .details {
   flex: none;
-  min-height: var(--act-h);
+  min-height: var(--act-h, 52px);
   padding: 0 var(--space-4);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);

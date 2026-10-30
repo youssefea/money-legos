@@ -857,6 +857,16 @@
   }
 }
 
+/* A status hero (a status-only stack: Speed + Verify + Sponsor): the big mark keeps a real card's height. */
+.tile[data-role="hero"]:is([data-template="toast"], [data-template="pill"], [data-template="badge"], [data-template="stat"]) .body {
+  min-height: 104px;
+}
+@container (max-height: 539.98px) {
+  .tile[data-role="hero"]:is([data-template="toast"], [data-template="pill"], [data-template="badge"], [data-template="stat"]) .body {
+    min-height: 84px;
+  }
+}
+
 /* ---------------------------------------------------------------- projector */
 @media (min-width: 1600px) {
   .device {

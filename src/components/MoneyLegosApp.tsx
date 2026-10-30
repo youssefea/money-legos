@@ -74,26 +74,48 @@ function boardBrick(id: LegoId | undefined): string {
   return id ? `button[data-board-brick="${id}"]` : '[data-testid="build"]';
 }
 
+/** Shown and focusable: laid out, not inside a hidden or inert subtree. */
+function focusable(el: HTMLElement | null): el is HTMLElement {
+  if (!el || !el.isConnected || el.closest("[inert], [hidden], [aria-hidden='true']")) return false;
+  const r = el.getBoundingClientRect();
+  return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== "hidden";
+}
+
 /**
- * Focus the element once it exists (board hit targets appear after the stage measures the new stack),
- * falling back to Build app, then the board region. Gives up after ~0.5s.
+ * Focus the first of `selectors` that is visible and takes the focus (board hit targets appear after
+ * the stage measures the new stack), checking that it really did. Gives up after ~0.5s, then falls back
+ * to Build app (desktop) or the compact bar's action, never leaving focus on <body>.
  */
-function focusSoon(selector: string) {
+function focusSoon(...selectors: string[]) {
   let tries = 0;
-  const step = () => {
-    const el = document.querySelector<HTMLElement>(selector);
-    if (el) {
+  const attempt = (list: string[]) => {
+    for (const sel of list) {
+      const el = document.querySelector<HTMLElement>(sel);
+      if (!focusable(el)) continue;
       el.focus({ preventScroll: true });
-      return;
+      if (document.activeElement === el) return true;
     }
+    return false;
+  };
+  const step = () => {
+    if (attempt(selectors)) return;
     if (++tries < 30) {
       requestAnimationFrame(step);
       return;
     }
-    const fallback = document.querySelector<HTMLElement>('[data-testid="build"]');
-    fallback?.focus({ preventScroll: true });
+    attempt(['[data-testid="build"]', '[data-testid="mobile-action"]', '[data-testid="present-toggle"]']);
   };
   requestAnimationFrame(step);
+}
+
+/** A global single-key shortcut (P) only fires when nothing that takes typing or a menu has focus. */
+function shortcutBlocked(t: EventTarget | null): boolean {
+  if (document.querySelector("dialog[open], [popover]:popover-open")) return true;
+  if (!(t instanceof HTMLElement)) return false;
+  if (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return true;
+  return !!t.closest(
+    '[role="textbox"], [role="searchbox"], [role="combobox"], [role="menu"], [role="menubar"], [role="listbox"], [role="dialog"], [role="tooltip"], [data-typeahead]',
+  );
 }
 
 /**
@@ -196,7 +218,7 @@ export default function MoneyLegosApp() {
     const rest = state.ids.filter((x) => x !== id);
     dispatch({ type: "remove", id, toast: true });
     setInspect(null);
-    focusSoon(keyboard ? boardBrick(rest[i] ?? rest[i - 1]) : '[data-testid="board"]');
+    focusSoon(keyboard ? boardBrick(rest[i] ?? rest[i - 1]) : '[data-testid="board"]', '[data-testid="board"]');
   };
 
   // Undo from the toast unmounts its button: focus moves to the brick that came back. Ctrl/Cmd+Z leaves
@@ -208,7 +230,10 @@ export default function MoneyLegosApp() {
     const a = document.activeElement;
     const move = fromToast || !a || a === document.body || !!a.closest("[data-testid='toast']");
     dispatch({ type: "undo" });
-    if (move) focusSoon(boardBrick(back));
+    if (!move) return;
+    // Compact: the restored brick's tray button (the board is not on screen), else the bar's action.
+    if (compactNow()) focusSoon(...(back ? [`button[data-lego="${back}"]`] : []), '[data-testid="mobile-action"]');
+    else focusSoon(boardBrick(back), '[data-testid="board"]');
   };
 
   // Compact bar: Build app, then View app (the live app in the sheet).
@@ -269,9 +294,7 @@ export default function MoneyLegosApp() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.altKey) return;
-      const t = e.target as HTMLElement | null;
-      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
-      if (document.querySelector("dialog[open]")) return;
+      if (shortcutBlocked(e.target)) return;
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && (e.key === "z" || e.key === "Z")) {
         if (!hasToast) return;
         e.preventDefault();
@@ -280,7 +303,7 @@ export default function MoneyLegosApp() {
       }
       if (e.metaKey || e.ctrlKey) return;
       if (e.key === "p" || e.key === "P") {
-        if (compactNow()) return;
+        if (compactNow() || e.shiftKey || e.repeat) return;
         e.preventDefault();
         setPresent(!present);
       } else if (e.key === "Escape" && present) {
@@ -360,6 +383,42 @@ export default function MoneyLegosApp() {
       (want.lego && document.querySelector<HTMLElement>(`button[data-lego="${want.lego}"]`)) || document.querySelector<HTMLElement>('[data-testid="present-toggle"]');
     target?.focus({ preventScroll: true });
   }, [presenting]);
+  // Crossing the compact breakpoint unmounts what had focus (the sheet, the board, the bar): when focus
+  // fell to <body>, it goes to the layout's next step (desktop Copy prompt or the first brick; compact:
+  // the bar's action). Never <body>.
+  const prevMobile = useRef(isMobile);
+  const lastFocus = useRef<Element | null>(null);
+  useEffect(() => {
+    const on = (e: FocusEvent) => {
+      lastFocus.current = e.target instanceof Element ? e.target : null;
+    };
+    document.addEventListener("focusin", on);
+    return () => document.removeEventListener("focusin", on);
+  }, []);
+  useEffect(() => {
+    if (prevMobile.current === isMobile) return;
+    prevMobile.current = isMobile;
+    // Only when something had focus and the switch took it away (never on page load).
+    if (!lastFocus.current) return;
+    let raf = 0;
+    let tries = 0;
+    const step = () => {
+      const a = document.activeElement;
+      if (a instanceof HTMLElement && a !== document.body && focusable(a)) return;
+      const list = isMobile
+        ? ['[data-testid="mobile-action"]']
+        : ['[data-testid="copy"]:not([aria-disabled="true"])', 'button[data-lego][tabindex="0"]', '[data-testid="build"]'];
+      for (const sel of list) {
+        const el = document.querySelector<HTMLElement>(sel);
+        if (!focusable(el)) continue;
+        el.focus({ preventScroll: true });
+        if (document.activeElement === el) return;
+      }
+      if (++tries < 30) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [isMobile]);
   const tray = (
     <Tray
       ids={state.ids}

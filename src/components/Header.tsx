@@ -30,7 +30,7 @@ export default function Header({ present = false, onPresent }: HeaderProps) {
             className={styles.present}
             aria-pressed={present}
             aria-keyshortcuts="P"
-            title={present ? "Leave Present mode (P or Esc)" : "Present mode (P)"}
+            title={present ? "Leave Present (P or Esc)" : "Present (P)"}
             onClick={() => onPresent(!present)}
             data-testid="present-toggle"
           >
