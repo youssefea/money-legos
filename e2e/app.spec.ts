@@ -1059,3 +1059,279 @@ for (const w of [320, 360, 390, 430]) {
     });
   });
 }
+
+// ---------------------------------------------------------------- v8 cleanup pass
+const focusedOn = (page: Page) =>
+  page.evaluate(() => {
+    const a = document.activeElement as HTMLElement | null;
+    if (!a || a === document.body) return "BODY";
+    return a.dataset.lego ?? a.dataset.testid ?? a.tagName;
+  });
+
+/** Every visible button / role=button (not inside an aria-hidden subtree): its box, rounded. */
+const targets = (page: Page) =>
+  page.evaluate(() =>
+    [...document.querySelectorAll<HTMLElement>("button, [role='button'], summary")]
+      .filter((e) => {
+        const r = e.getBoundingClientRect();
+        if (r.width === 0 || r.height === 0 || getComputedStyle(e).visibility === "hidden" || e.closest("[aria-hidden='true'], .visually-hidden")) return false;
+        // Inside the open modal only, when there is one (the page behind is inert).
+        const d = document.querySelector("dialog[open]");
+        return !d || d.contains(e);
+      })
+      .map((e) => ({ name: (e.getAttribute("aria-label") ?? e.textContent ?? "").trim().slice(0, 24), w: e.getBoundingClientRect().width, h: e.getBoundingClientRect().height })),
+  );
+
+test.describe("v8: compact focus, toast docking, targets", () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: "reduce" });
+
+  test("compact Undo (tap or Ctrl+Z) focuses the restored brick's tray button, never <body>", async ({ page }) => {
+    await page.goto("/#b20,payments,speed,financing");
+    await expect(page.getByTestId("result-sheet")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await brick(page, "validity").tap();
+    await expect(page.getByTestId("toast")).toBeVisible();
+    await page.getByTestId("toast-undo").tap();
+    await expect(page.getByTestId("toast")).toHaveCount(0);
+    await expect.poll(() => focusedOn(page)).toBe("b20");
+    await expect(brick(page, "b20")).toHaveAttribute("aria-pressed", "true");
+    // Keyboard: Ctrl+Z with focus nowhere also lands on the restored brick.
+    await brick(page, "validity").tap();
+    await expect(page.getByTestId("toast")).toBeVisible();
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    await page.keyboard.press("Control+z");
+    await expect(page.getByTestId("toast")).toHaveCount(0);
+    await expect.poll(() => focusedOn(page)).toBe("b20");
+  });
+
+  test("resizing an open sheet to desktop moves focus to Copy prompt, not <body>", async ({ page }) => {
+    await page.goto("/#b20,payments,speed");
+    await expect(page.getByTestId("result-sheet")).toBeVisible();
+    await page.getByTestId("sheet-copy").focus();
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await expect(page.getByTestId("result-sheet")).toHaveCount(0);
+    await expect.poll(() => focusedOn(page)).toBe("copy");
+  });
+
+  test("touch targets are >= 44px: page, sheet (Copy prompt, Back to bricks) and Details", async ({ page }) => {
+    await page.goto("/#b20,payments,speed,financing");
+    const sheet = page.getByTestId("result-sheet");
+    await expect(sheet).toBeVisible();
+    for (const t of await targets(page)) expect(t.h, t.name).toBeGreaterThanOrEqual(44);
+    expect((await sheet.getByTestId("sheet-copy").boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await sheet.getByRole("button", { name: "Details" }).tap();
+    await expect(page.getByRole("dialog", { name: /./ }).last()).toBeVisible();
+    for (const t of await targets(page)) expect(t.h, t.name).toBeGreaterThanOrEqual(44);
+    await page.keyboard.press("Escape");
+    await page.keyboard.press("Escape");
+    await expect(sheet).toBeHidden();
+    for (const t of await targets(page)) expect(t.h, t.name).toBeGreaterThanOrEqual(44);
+  });
+
+  for (const [w, h] of [
+    [320, 640],
+    [390, 844],
+  ] as const) {
+    test(`${w}x${h}: the toast docks under the compact bar, clear of the footer risk line at the end of the page`, async ({ page }) => {
+      await page.setViewportSize({ width: w, height: h });
+      await page.goto("/#b20,payments,speed,financing");
+      await page.keyboard.press("Escape");
+      await brick(page, "validity").tap();
+      const toast = page.getByTestId("toast");
+      await expect(toast).toBeVisible();
+      const hit = (a: { y: number; height: number }, b: { y: number; height: number }) => a.y < b.y + b.height && b.y < a.y + a.height;
+      for (const end of [false, true]) {
+        if (end) await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+        await page.waitForTimeout(150);
+        const t = (await toast.boundingBox())!;
+        const bar = (await page.getByTestId("mobile-bar").boundingBox())!;
+        const foot = (await page.locator("footer p").boundingBox())!;
+        expect(hit(t, bar)).toBe(false);
+        expect(hit(t, foot)).toBe(false);
+        expect(t.y).toBeGreaterThanOrEqual(0);
+        expect(t.y + t.height).toBeLessThanOrEqual(h);
+      }
+      expect((await page.getByTestId("toast-undo").boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    });
+  }
+});
+
+test.describe("v8: desktop", () => {
+  test.use({ reducedMotion: "reduce" });
+
+  test("desktop targets are >= 32px: empty, built, Details, Present", async ({ page }) => {
+    await page.goto("/#recipe=neobank");
+    await expect(phone(page).locator("[data-tile]")).toHaveCount(4);
+    for (const t of await targets(page)) expect(t.h, t.name).toBeGreaterThanOrEqual(32);
+    await page.getByRole("button", { name: "Details" }).click();
+    for (const t of await targets(page)) expect(t.h, t.name).toBeGreaterThanOrEqual(32);
+    await page.keyboard.press("Escape");
+    await page.getByTestId("present-toggle").click();
+    await expect(page.getByTestId("present-drawer")).toBeVisible();
+    for (const t of await targets(page)) expect(t.h, t.name).toBeGreaterThanOrEqual(32);
+  });
+
+  test("P only fires with no field, dialog, menu or popover focused; the toggle documents it", async ({ page }) => {
+    await page.goto("/");
+    await page.getByTestId("brick-stage").waitFor();
+    const toggle = page.getByTestId("present-toggle");
+    await expect(toggle).toHaveAttribute("title", "Present (P)");
+    await expect(toggle).toHaveAttribute("aria-keyshortcuts", "P");
+    // Inside the Recipes popover (role=dialog): P does nothing.
+    await page.getByTestId("recipes").locator("visible=true").click();
+    const pop = page.getByRole("dialog", { name: "Recipes" });
+    await expect(pop).toBeVisible();
+    await pop.locator("button").first().focus();
+    await page.keyboard.press("p");
+    await expect(page.getByTestId("present-drawer")).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    // Inside the Details dialog: nothing.
+    await brick(page, "b20").click();
+    await brick(page, "payments").click();
+    await page.getByRole("button", { name: "Details" }).click();
+    await page.keyboard.press("p");
+    await expect(page.getByTestId("present-drawer")).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    // A tray brick (a button, not a text field): P works.
+    await brick(page, "speed").focus();
+    await page.keyboard.press("p");
+    await expect(page.getByTestId("present-drawer")).toBeVisible();
+    await expect(toggle).toHaveAttribute("title", "Leave Present (P or Esc)");
+  });
+
+  test("status-only stack (Speed + Verify + Sponsor): the most prominent status is a hero card, never 3 identical rows", async ({ page }) => {
+    await page.goto("/#sponsored-gas,verify,speed");
+    const tiles = phone(page).locator("[data-tile]");
+    await expect(tiles).toHaveCount(3);
+    await expect(phone(page).locator('[data-tile="speed"]')).toHaveAttribute("data-role", "hero");
+    const hs = await tiles.evaluateAll((els) => els.map((e) => e.getBoundingClientRect().height));
+    expect(hs[0]!).toBeGreaterThanOrEqual(110);
+    expect(hs[0]!).toBeGreaterThan(hs[1]! * 1.6);
+  });
+
+  test("the bottom tile fills the phone: no empty band under a 2- or 3-tile app", async ({ page }) => {
+    for (const hash of ["#b20,payments", "#b20,payments,speed", "#recipe=pay-a-name"]) {
+      await page.goto("/" + hash);
+      await expect(phone(page)).toHaveAttribute("data-phase", "live");
+      await page.waitForTimeout(100);
+      const gap = await phone(page).evaluate((ph) => {
+        const ol = ph.querySelector("ol")!;
+        const tiles = [...ol.querySelectorAll("[data-tile]")];
+        const last = tiles[tiles.length - 1]!.getBoundingClientRect();
+        const slots = [...ol.querySelectorAll("[data-slot]")].map((s) => s.getBoundingClientRect().bottom);
+        return (ol.getBoundingClientRect().bottom - Math.max(last.bottom, ...slots)) / ph.getBoundingClientRect().height;
+      });
+      expect(gap, hash).toBeLessThanOrEqual(0.04);
+    }
+  });
+
+  test("the bin is packed: no hole wider than a gap between neighbouring bricks in a row", async ({ page }) => {
+    await page.goto("/");
+    const rows = await page.locator('[data-testid="tray-scroll"] li').evaluateAll((els) => {
+      const byRow = new Map<number, { l: number; r: number }[]>();
+      for (const e of els) {
+        const b = e.getBoundingClientRect();
+        const k = Math.round(b.bottom);
+        byRow.set(k, [...(byRow.get(k) ?? []), { l: b.left, r: b.right }]);
+      }
+      return [...byRow.values()].map((r) => r.sort((a, b) => a.l - b.l));
+    });
+    expect(rows.length).toBeGreaterThan(3);
+    for (const r of rows) for (let i = 1; i < r.length; i++) expect(r[i]!.l - r[i - 1]!.r).toBeLessThanOrEqual(12);
+  });
+
+  test("pale grey and white bricks carry a contact shadow on the white surface", async ({ page }) => {
+    await page.goto("/");
+    const pale = page.locator("button[data-lego][data-pale] [data-sprite]");
+    expect(await pale.count()).toBeGreaterThan(2);
+    for (const f of await pale.evaluateAll((els) => els.map((e) => getComputedStyle(e).filter))) expect(f).toContain("drop-shadow");
+  });
+
+  test("the ghost hides over a built 3-brick app until the next brick is hovered", async ({ page }) => {
+    await page.goto("/#b20,payments,speed");
+    await expect(phone(page)).toHaveAttribute("data-phase", "live");
+    // (The board's live layer and its poster each draw one; only visible ones count.)
+    const ghost = page.locator('[data-testid="board"] [data-ghost-slot]');
+    const shown = ghost.locator("visible=true");
+    await expect(ghost.first()).toBeAttached();
+    await expect(shown).toHaveCount(0);
+    await brick(page, "financing").hover();
+    await expect(shown.first()).toBeVisible();
+    await page.mouse.move(5, 5);
+    await expect(shown).toHaveCount(0);
+    // Two bricks: the ghost still invites the next one.
+    await page.goto("/#b20,payments");
+    await page.reload();
+    await expect(phone(page)).toHaveAttribute("data-phase", "live");
+    await expect(page.locator('[data-testid="board"] [data-ghost-slot]').locator("visible=true").first()).toBeVisible();
+  });
+});
+
+test.describe("v8: Present uses the screen", () => {
+  test.use({ reducedMotion: "reduce" });
+  for (const [w, h] of [
+    [1280, 720],
+    [1440, 900],
+    [1920, 1080],
+  ] as const) {
+    test(`${w}x${h}: no header row, a one-line name, a bigger phone, a toolbar on one row`, async ({ page }) => {
+      await page.setViewportSize({ width: w, height: h });
+      await page.goto("/#recipe=neobank");
+      await expect(phone(page).locator("[data-tile]")).toHaveCount(4);
+      const normal = (await phone(page).boundingBox())!;
+      await page.keyboard.press("p");
+      await expect(page.getByTestId("present-drawer")).toBeVisible();
+      await page.waitForTimeout(400);
+      const pres = (await phone(page).boundingBox())!;
+      expect(pres.width).toBeGreaterThanOrEqual(Math.min(normal.width + 20, 460));
+      expect(pres.height / pres.width).toBeGreaterThanOrEqual(1.6 - 0.01);
+      expect(await page.evaluate(() => document.documentElement.scrollHeight - innerHeight)).toBeLessThanOrEqual(0);
+      for (const t of await phone(page).locator("[data-tile]").all()) await expect(t).toBeInViewport({ ratio: 1 });
+      // The toolbar (lockup, Docs, Present) is one row and sits above the stage, not in a header row.
+      const bar = await page.locator("header:has([data-testid=present-toggle])").evaluate((el) => {
+        const kids = [...el.querySelectorAll("a, button, svg")].map((k) => k.getBoundingClientRect()).filter((r) => r.width > 0);
+        return { h: el.getBoundingClientRect().height, spread: Math.max(...kids.map((r) => r.top + r.height / 2)) - Math.min(...kids.map((r) => r.top + r.height / 2)) };
+      });
+      expect(bar.h).toBeLessThanOrEqual(48);
+      expect(bar.spread).toBeLessThanOrEqual(4);
+      const main = (await page.locator("main").boundingBox())!;
+      // The stage starts at the top of the page (no header row above it); the phone near its top.
+      expect(main.y).toBeLessThanOrEqual(40);
+      expect(pres.y - main.y).toBeLessThanOrEqual(100);
+      // The name is one line.
+      const name = await page.locator("#app-name").evaluate((el) => el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).fontSize));
+      expect(name).toBeLessThan(1.5);
+      // A long name shrinks to fit on that line rather than being cut.
+      await page.goto("/#b20,payments,speed,financing");
+      await expect(page.locator("#app-name")).toHaveText("Instant tokenized checkout");
+      const fit = await page.locator("#app-name").evaluate((el) => ({ cut: el.scrollWidth > el.clientWidth + 1, lines: el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).fontSize), fs: parseFloat(getComputedStyle(el).fontSize) }));
+      expect(fit.cut).toBe(false);
+      expect(fit.lines).toBeLessThan(1.5);
+      expect(fit.fs).toBeGreaterThanOrEqual(18);
+    });
+  }
+
+  test("the drawer never hard-clips a brick: edge fade, snap to whole bricks, a visible ›", async ({ page }) => {
+    await page.addInitScript(() => sessionStorage.setItem("money-legos:present", "1"));
+    await page.goto("/");
+    const drawer = page.getByTestId("present-drawer");
+    await expect(drawer).toBeVisible();
+    const strip = drawer.getByTestId("tray-scroll");
+    const st = await strip.evaluate((el) => ({ snap: getComputedStyle(el).scrollSnapType, mask: getComputedStyle(el).maskImage || getComputedStyle(el).webkitMaskImage }));
+    expect(st.snap).toContain("mandatory");
+    expect(st.mask).toContain("gradient");
+    const next = drawer.getByTestId("strip-next");
+    await expect(next).toBeVisible();
+    await next.click();
+    await expect(drawer.getByTestId("strip-prev")).toBeVisible();
+    // Comes to rest on a whole brick's left edge.
+    await expect
+      .poll(() =>
+        strip.evaluate((el) => {
+          const x = el.getBoundingClientRect().left;
+          return [...el.querySelectorAll("li")].some((li) => Math.abs(li.getBoundingClientRect().left - x) < 2);
+        }),
+      )
+      .toBe(true);
+  });
+});

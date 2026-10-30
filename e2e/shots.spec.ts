@@ -4,29 +4,18 @@ import { join } from "node:path";
 /**
  * Design QA screenshots (not a test). Run with:
  *   SHOTS=1 npx playwright test shots
- * Writes PNGs to SHOTS_DIR (default ../design/ui-shots-v7).
+ * Writes PNGs to SHOTS_DIR (default ../design/ui-shots-v8).
  */
-const DIR = process.env.SHOTS_DIR ?? join(process.cwd(), "..", "design", "ui-shots-v7");
-const SIZES = [
-  [320, 640],
-  [390, 844],
-  [768, 1024],
-  [1280, 720],
-  [1440, 900],
-  [1920, 1080],
-] as const;
+const DIR = process.env.SHOTS_DIR ?? join(process.cwd(), "..", "design", "ui-shots-v8");
 const SCHEMES = ["light", "dark"] as const;
-/** empty; wire = 2 bricks placed, not built (wireframe tiles); built = a 4-brick link (the phone sheet on compact). */
-const STATES = ["empty", "wire", "built"] as const;
-
 test.skip(!process.env.SHOTS, "set SHOTS=1 to take design screenshots");
 
 async function open(page: Page, w: number, state: string) {
   const compact = w < 1024;
-  const built = ["built", "details", "inspect", "full", "toast", "present"].includes(state);
+  const built = ["built", "sheet", "details", "inspect", "full", "toast", "present"].includes(state);
   // recipe-<slug>: a curated recipe link (largest bricks at the bottom, the anchor task as the hero card).
   const recipe = state.startsWith("recipe-") ? state.slice(7) : null;
-  await page.goto(recipe ? `/#recipe=${recipe}` : built ? "/#b20,payments,speed,financing" : "/");
+  await page.goto(recipe ? `/#recipe=${recipe}` : state === "status-only" ? "/#sponsored-gas,verify,speed" : built ? "/#b20,payments,speed,financing" : "/");
   await page.waitForTimeout(1200);
   if (state === "wire") {
     await page.locator('button[data-lego="b20"]').click();
@@ -46,46 +35,31 @@ async function open(page: Page, w: number, state: string) {
     if (compact) await page.getByTestId("result-sheet").locator('[data-tile="payments"] button').click();
     else await page.locator('[data-board-brick="payments"]').hover();
   }
-  if (compact && (state === "full" || state === "toast")) await page.keyboard.press("Escape");
+  // Compact: "built" is the bricks screen with the built app in the bar; "sheet" keeps the app sheet open.
+  if (compact && (state === "full" || state === "toast" || state === "built")) await page.keyboard.press("Escape");
   if (state === "full" || state === "toast") await page.locator('button[data-lego="validity"]').click();
   if (state === "present") await page.locator("body").press("p");
   await page.waitForTimeout(1000);
 }
 
-const EXTRA: [number, number, string, string][] = [
-  [1440, 900, "light", "filter"],
-  [1440, 900, "dark", "filter"],
-  [1440, 900, "light", "recipes"],
-  [1440, 900, "light", "details"],
-  [1440, 900, "light", "inspect"],
-  [1440, 900, "dark", "inspect"],
-  [1440, 900, "light", "toast"],
-  [1440, 900, "dark", "toast"],
+const DESK: [number, number][] = [
+  [1440, 900],
+  [1920, 1080],
+];
+const PHONES: [number, number][] = [
+  [390, 844],
+  [320, 640],
+];
+const ALL: [number, number, string, string][] = [
+  ...DESK.flatMap(([w, h]) => SCHEMES.flatMap((s) => (["empty", "built", "present"] as const).map((st): [number, number, string, string] => [w, h, s, st]))),
+  ...PHONES.flatMap(([w, h]) => SCHEMES.flatMap((s) => (["built", "sheet", "toast"] as const).map((st): [number, number, string, string] => [w, h, s, st]))),
   [1280, 720, "light", "present"],
   [1280, 720, "dark", "present"],
-  [1440, 900, "light", "present"],
-  [1440, 900, "dark", "present"],
-  [1280, 720, "light", "toast"],
-  [1920, 1080, "light", "toast"],
-  [1440, 900, "light", "recipe-stablecoin-checkout"],
-  [1440, 900, "light", "recipe-creator-payouts"],
-  [1440, 900, "dark", "recipe-neobroker"],
-  [1920, 1080, "light", "recipe-pay-a-name"],
-  [390, 844, "light", "recipe-neobank"],
-  [320, 640, "light", "toast"],
-  [320, 640, "light", "inspect"],
-  [1920, 1080, "light", "present"],
-  [1920, 1080, "dark", "present"],
-  [1920, 1080, "dark", "details"],
-  [390, 844, "light", "inspect"],
-  [390, 844, "light", "details"],
-  [390, 844, "dark", "details"],
-  [390, 844, "light", "toast"],
-];
-
-const ALL: [number, number, string, string][] = [
-  ...SIZES.flatMap(([w, h]) => SCHEMES.flatMap((s) => STATES.map((st): [number, number, string, string] => [w, h, s, st]))),
-  ...EXTRA,
+  [1280, 720, "light", "built"],
+  [1440, 900, "light", "toast"],
+  [1440, 900, "light", "recipe-pay-a-name"],
+  [1440, 900, "light", "status-only"],
+  [390, 844, "light", "recipe-pay-a-name"],
 ];
 
 for (const [w, h, scheme, state] of ALL) {
