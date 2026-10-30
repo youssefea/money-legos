@@ -6,3 +6,4 @@ export * from "./prompt";
 export * from "./hash";
 export * from "./contract";
 export * from "./bricks";
+export * from "./fakeApp";

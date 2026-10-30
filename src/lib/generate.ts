@@ -1,5 +1,5 @@
 import { COMBOS, COMBO_BY_KEY, keyOf } from "./combos";
-import { BY_ID, DOCS, isLegoId } from "./legos";
+import { BY_ID, resolveId } from "./legos";
 import { buildPrompt } from "./prompt";
 import type { DocLink, GenerateResult, LegoId } from "./types";
 
@@ -21,16 +21,29 @@ export function flowOrder(ids: readonly LegoId[]): LegoId[] {
   return ids.slice().sort((a, b) => BY_ID[a].flow - BY_ID[b].flow);
 }
 
-/** Fallback name and pitch: the highest-priority Lego is the noun, the next one lends an adjective. */
+function words(s: string): string[] {
+  return s.toLowerCase().split(/[\s-]+/);
+}
+
+/**
+ * Fallback name and pitch: the highest-priority Lego is the noun, the next one that does not repeat
+ * a word of the noun lends an adjective, and 200ms blocks add "instant".
+ */
 export function fallback(ids: readonly LegoId[]): { name: string; pitch: string; why: Partial<Record<LegoId, string>> } {
   const byPrio = ids.slice().sort((a, b) => BY_ID[a].prio - BY_ID[b].prio);
   const anchor = BY_ID[byPrio[0]!];
-  const mods = byPrio.slice(1);
+  const nounWords = words(anchor.noun);
+  const mod = byPrio
+    .slice(1)
+    .map((id) => BY_ID[id])
+    .find((l) => !words(l.adj).some((w) => nounWords.includes(w)));
   const parts: string[] = [];
-  if (mods.length) parts.push(BY_ID[mods[0]!].adj);
-  if (anchor.id !== "speed" && mods[0] !== "speed" && ids.includes("speed")) parts.unshift(BY_ID.speed.adj);
+  if (mod) parts.push(mod.adj);
+  if (anchor.id !== "speed" && mod?.id !== "speed" && ids.includes("speed") && !parts.includes(BY_ID.speed.adj)) {
+    parts.unshift(BY_ID.speed.adj);
+  }
   const name = capFirst(parts.concat([anchor.noun]).join(" "));
-  const verbs = flowOrder(ids).map((id) => BY_ID[id].verb);
+  const verbs = flowOrder(ids).map((id) => BY_ID[id].does);
   const pitch = `An app that ${joinList(verbs)}.`;
   return { name, pitch, why: {} };
 }
@@ -39,20 +52,23 @@ function dedupeDocs(ids: readonly LegoId[]): DocLink[] {
   const seen = new Set<string>();
   const out: DocLink[] = [];
   for (const id of ids) {
-    for (const d of BY_ID[id].docs) {
-      if (!seen.has(d)) {
-        seen.add(d);
-        out.push(DOCS[d]);
+    for (const d of BY_ID[id].links) {
+      if (!seen.has(d.url)) {
+        seen.add(d.url);
+        out.push(d);
       }
     }
   }
   return out;
 }
 
-/** Keeps known ids, drops duplicates, preserves order. */
+/** Keeps known ids (and aliases, mapped to their id), drops duplicates, preserves order. */
 export function cleanIds(ids: readonly string[] | null | undefined): LegoId[] {
   const clean: LegoId[] = [];
-  for (const id of ids ?? []) if (isLegoId(id) && !clean.includes(id)) clean.push(id);
+  for (const raw of ids ?? []) {
+    const id = resolveId(raw);
+    if (id && !clean.includes(id)) clean.push(id);
+  }
   return clean;
 }
 
@@ -66,7 +82,7 @@ export function generate(ids: readonly string[] | null | undefined): GenerateRes
   const why = base.why ?? {};
   const steps = order.map((id) => {
     const lego = BY_ID[id];
-    return { lego, why: why[id] ?? lego.role, docs: lego.docs.map((d) => DOCS[d]) };
+    return { lego, why: why[id] ?? lego.role, docs: lego.links };
   });
   const r: Omit<GenerateResult, "prompt"> = {
     ids: order,

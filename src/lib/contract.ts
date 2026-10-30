@@ -8,6 +8,7 @@ export type PlacedBrick = {
   legoId: string;
   color: string;
   labelColor: string;
+  /** Studs [w, d], w facing the viewer: 2x4 = [4, 2], 2x3 = [3, 2], 2x2 = [2, 2], 1x4 = [4, 1], 2x1 = [2, 1]. */
   size: [number, number];
   kind: "brick" | "plate";
   level: number;

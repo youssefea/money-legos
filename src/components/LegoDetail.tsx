@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { DOCS, type Lego, type StatusKind } from "@/lib";
 import styles from "./LegoDetail.module.css";
 
-const STATUS_LABEL: Record<StatusKind, string> = { live: "Live", testnet: "Testnet", available: "Available" };
+const STATUS_LABEL: Record<StatusKind, string> = { live: "Live", testnet: "Testnet", available: "Available", announced: "Announced" };
 
 export type LegoDetailProps = {
   lego: Lego;
@@ -81,7 +81,7 @@ export default function LegoDetail({ lego, pos, onClose, anchor }: LegoDetailPro
         <span className={styles.chip} data-kind={lego.statusKind}>
           {STATUS_LABEL[lego.statusKind]}
         </span>
-        <span>{lego.status}</span>
+        <span>{lego.status.label}</span>
       </p>
       <p className={styles.what}>{lego.what}</p>
       <p className={styles.label}>Example</p>

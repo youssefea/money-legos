@@ -58,7 +58,7 @@ export default function Tray({ ids, fullHint, onToggle, onPointerDown, wasDrag, 
 
   const item = (lego: Lego, index: number) => {
     const placed = ids.includes(lego.id);
-    const hero = lego.tier === "featured";
+    const hero = lego.tier === "hero";
     const slot = ids.indexOf(lego.id) + 1;
     const tagId = `${moreId}-${lego.id}-tag`;
     const start = hero && index === 0 && ids.length === 0;

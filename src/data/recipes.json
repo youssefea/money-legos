@@ -1,0 +1,128 @@
+[
+  {
+    "id": "creator-payouts",
+    "name": "Creator payouts",
+    "bricks": [
+      "payouts",
+      "splits",
+      "builder",
+      "memos"
+    ],
+    "idea": "Pay every creator their weekly share in one transaction, with a memo on each payment and the activity credited to your app."
+  },
+  {
+    "id": "pay-a-name",
+    "name": "Pay a name",
+    "bricks": [
+      "basenames",
+      "base-pay",
+      "speed"
+    ],
+    "idea": "Send USDC to alice.base.eth and see it confirmed in the next 200ms block on Base Sepolia."
+  },
+  {
+    "id": "fair-airdrop",
+    "name": "Fair airdrop",
+    "bricks": [
+      "verify-onchain",
+      "b20",
+      "payouts"
+    ],
+    "idea": "Drop a new token to real people only: one claim per verified person, checked by the contract."
+  },
+  {
+    "id": "members-only-fund",
+    "name": "Members-only fund",
+    "bricks": [
+      "b20",
+      "allowlist",
+      "multiplier",
+      "stocks"
+    ],
+    "idea": "A tokenized fund only approved investors can hold, whose balances update correctly for splits."
+  },
+  {
+    "id": "agent-data-market",
+    "name": "Agent data market",
+    "bricks": [
+      "x402-api",
+      "agent-spend",
+      "agent-codes"
+    ],
+    "idea": "Sell data per call to AI agents that stay inside their spend limits, with every agent credited onchain."
+  },
+  {
+    "id": "metered-ai-api",
+    "name": "Metered AI API",
+    "bricks": [
+      "usage-billing",
+      "basetime",
+      "docs-mcp"
+    ],
+    "idea": "An AI API that holds a maximum, then charges only for the exact usage, timed to the millisecond."
+  },
+  {
+    "id": "private-payroll",
+    "name": "Private payroll",
+    "bricks": [
+      "private-ledgers",
+      "payouts",
+      "memos"
+    ],
+    "idea": "Run payroll without publishing every salary, with each payment tagged to its pay period."
+  },
+  {
+    "id": "escrow-marketplace",
+    "name": "Escrow marketplace",
+    "bricks": [
+      "escrow",
+      "splits",
+      "refunds",
+      "verify"
+    ],
+    "idea": "Verified buyers pay into escrow, sellers get paid on delivery with the platform fee split out, and returns refund in one click."
+  },
+  {
+    "id": "borrow-to-pay",
+    "name": "Borrow to pay",
+    "bricks": [
+      "borrow",
+      "swaps",
+      "base-pay"
+    ],
+    "idea": "Borrow USDC against ETH, swap if needed, and pay a merchant without selling your ETH."
+  },
+  {
+    "id": "gas-free-onboarding",
+    "name": "Gas-free onboarding",
+    "bricks": [
+      "connect-wallet",
+      "sponsored-gas",
+      "batch-calls",
+      "bridge"
+    ],
+    "idea": "New users connect, bring funds in, and make their first payment in one tap with the app paying fees (sponsorship arrives with Everest)."
+  },
+  {
+    "id": "live-merchant-screen",
+    "name": "Live merchant screen",
+    "bricks": [
+      "payments",
+      "live-stream",
+      "reconcile",
+      "flashblocks"
+    ],
+    "idea": "A shop counter screen that flips to Paid the moment payment lands, with a clean end-of-day report."
+  },
+  {
+    "id": "safe-stablecoin-desk",
+    "name": "Stablecoin ops desk",
+    "bricks": [
+      "b20",
+      "freeze",
+      "pause",
+      "memos"
+    ],
+    "idea": "An issuer console to mint a stablecoin, put a hold on one account, pause in an incident, and match every move to its record."
+  }
+]
