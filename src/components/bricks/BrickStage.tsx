@@ -1,7 +1,7 @@
 "use client";
 
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import type { BrickStageProps } from "@/lib/contract";
+import type { BrickLayoutItem, BrickStageProps } from "@/lib/contract";
 import { detectRenderer, markSlow } from "./core/capability";
 import type { GhostRect } from "./core/ghost";
 import { DEFAULT_FRAMING, stackLabel, type Framing } from "./core/layout";
@@ -49,7 +49,7 @@ const serverSnapshot = () => null;
  * changing `settledSignal` (the Generate moment; 60 ms stagger, bottom first).
  */
 export default function BrickStage(props: BrickStageViewProps) {
-  const { bricks, nextLevel, className, onSettled, onGhostRect, onFrame } = props;
+  const { bricks, nextLevel, className, onSettled, onGhostRect, onFrame, onLayout } = props;
   const f = { ...DEFAULT_FRAMING, ...props.framing };
   const { plateFill, maxH, maxW, side, sideMax, bias } = f;
   const framing = useMemo<Framing>(() => ({ plateFill, maxH, maxW, side, sideMax, bias }), [plateFill, maxH, maxW, side, sideMax, bias]);
@@ -70,10 +70,43 @@ export default function BrickStage(props: BrickStageViewProps) {
   const onFps = useCallback((fps: number) => root.current?.setAttribute("data-fps", fps.toFixed(0)), []);
 
   // Only the visible renderer reports landings.
-  const live = useRef({ show3D, onSettled, onGhostRect, onFrame });
+  const live = useRef({ show3D, onSettled, onGhostRect, onFrame, onLayout });
   useEffect(() => {
-    live.current = { show3D, onSettled, onGhostRect, onFrame };
+    live.current = { show3D, onSettled, onGhostRect, onFrame, onLayout };
   });
+  // onLayout: each renderer reports its brick boxes; the visible one's go out, at most once a frame
+  // (rAF-debounced), and again after each landing and when the renderer switches.
+  const layouts = useRef<{ svg: BrickLayoutItem[] | null; gl: BrickLayoutItem[] | null }>({ svg: null, gl: null });
+  const raf = useRef(0);
+  const emitLayout = useCallback(() => {
+    if (raf.current) return;
+    raf.current = requestAnimationFrame(() => {
+      raf.current = 0;
+      const items = live.current.show3D ? layouts.current.gl : layouts.current.svg;
+      if (items) live.current.onLayout?.(items);
+    });
+  }, []);
+  useEffect(
+    () => () => {
+      if (raf.current) cancelAnimationFrame(raf.current);
+      raf.current = 0;
+    },
+    [],
+  );
+  const svgLayout = useCallback(
+    (items: BrickLayoutItem[]) => {
+      layouts.current.svg = items;
+      if (!live.current.show3D) emitLayout();
+    },
+    [emitLayout],
+  );
+  const glLayout = useCallback(
+    (items: BrickLayoutItem[]) => {
+      layouts.current.gl = items;
+      if (live.current.show3D) emitLayout();
+    },
+    [emitLayout],
+  );
   // Each renderer reports its ghost; only the visible one's reaches the caller (re-sent on a switch).
   const rects = useRef<{ svg: GhostRect | null; gl: GhostRect | null }>({ svg: null, gl: null });
   const svgGhost = useCallback((r: GhostRect | null) => {
@@ -101,15 +134,26 @@ export default function BrickStage(props: BrickStageViewProps) {
   useEffect(() => {
     live.current.onGhostRect?.(show3D ? rects.current.gl : rects.current.svg);
     sendFrame(show3D ? frames.current.gl : frames.current.svg);
-  }, [show3D]);
-  const svgSettled = useCallback((id: string) => {
-    if (!live.current.show3D) live.current.onSettled?.(id);
-  }, []);
-  const glSettled = useCallback((id: string) => {
-    if (live.current.show3D) live.current.onSettled?.(id);
-  }, []);
+    emitLayout();
+  }, [show3D, emitLayout]);
+  const svgSettled = useCallback(
+    (id: string) => {
+      if (live.current.show3D) return;
+      live.current.onSettled?.(id);
+      emitLayout();
+    },
+    [emitLayout],
+  );
+  const glSettled = useCallback(
+    (id: string) => {
+      if (!live.current.show3D) return;
+      live.current.onSettled?.(id);
+      emitLayout();
+    },
+    [emitLayout],
+  );
 
-  const inner = { ...props, className: undefined, framing, onGhostRect: undefined, onFrame: undefined };
+  const inner = { ...props, className: undefined, framing, onGhostRect: undefined, onFrame: undefined, onLayout: undefined };
   return (
     <div
       ref={root}
@@ -123,12 +167,12 @@ export default function BrickStage(props: BrickStageViewProps) {
       data-next-level={nextLevel ?? "full"}
     >
       <div className={[styles.layer, show3D ? styles.hidden : ""].join(" ")}>
-        <SvgBrickStage {...inner} onSettled={svgSettled} onGhostRect={svgGhost} onFrame={svgFrame} decorative />
+        <SvgBrickStage {...inner} onSettled={svgSettled} onGhostRect={svgGhost} onFrame={svgFrame} onLayout={svgLayout} decorative />
       </div>
       {mode === "webgl" && (
         <Suspense fallback={null}>
           <div className={styles.layer} style={{ opacity: show3D ? 1 : 0 }}>
-            <Stage3D {...inner} onSettled={glSettled} onGhostRect={glGhost} onFrame={glFrame} onReady={onReady} onSlow={onSlow} onFps={onFps} />
+            <Stage3D {...inner} onSettled={glSettled} onGhostRect={glGhost} onFrame={glFrame} onLayout={glLayout} onReady={onReady} onSlow={onSlow} onFps={onFps} />
           </div>
         </Suspense>
       )}

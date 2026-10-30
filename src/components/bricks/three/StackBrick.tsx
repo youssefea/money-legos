@@ -57,7 +57,7 @@ export function StackBrick({ brick, drop, leaving, reducedMotion, bounceSignal, 
   const plates = brick.kind === "plate" ? 1 : 3;
   const geometry = useMemo(() => brickGeometry({ w, d, plates }), [w, d, plates]);
   const seed = jitter(brick.id, 9);
-  const material = useMemo(() => plasticMaterial(brick.color, "gloss", seed, plates * DIM.plate), [brick.color, seed, plates]);
+  const material = useMemo(() => plasticMaterial(brick.color, "gloss", seed, plates * DIM.plate, false, [w, d]), [brick.color, seed, plates, w, d]);
   useEffect(() => () => material.dispose(), [material]);
 
   const face = frontFace(w, plates);

@@ -68,11 +68,19 @@ export function layoutLabel(verb: string, name: string, faceW: number, faceH: nu
   if (lines.length > 1 && faceW < 20) verbSize = Math.min(verbSize, P.verb * 0.86);
 
   // Vertical block: verb cap height (~0.7 em) + gap + name lines, centred on the face (a hair low: the top bevel catches the light and reads as part of the face).
+  const blockOf = () => verbSize * 0.71 + verbSize * 0.3 + nameSize * 0.72 + (lines.length - 1) * nameSize * 1.3;
+  // Never taller than the face (minus a 0.55 mm margin top and bottom): shrink both lines together.
+  const room = faceH - 1.1;
+  if (blockOf() > room) {
+    const k = room / blockOf();
+    verbSize *= k;
+    nameSize *= k;
+  }
   const capH = verbSize * 0.71;
   const gap = verbSize * 0.3;
   const lineH = nameSize * 1.3;
-  const block = capH + gap + nameSize * 0.72 + (lines.length - 1) * lineH;
-  const top = (faceH - block) / 2 + faceH * 0.025;
+  const block = blockOf();
+  const top = Math.min((faceH - block) / 2 + faceH * 0.025, faceH - 0.55 - block);
   const verbBaseline = top + capH;
   return {
     x,

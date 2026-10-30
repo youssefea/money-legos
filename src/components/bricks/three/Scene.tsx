@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import type { PlacedBrick } from "@/lib/contract";
+import type { BrickLayoutItem, PlacedBrick } from "@/lib/contract";
 import { ghostGeom, type GhostGeom } from "../core/ghost";
 import { DIM } from "../core/dims";
-import { BASEPLATE, BOARD, DEFAULT_FRAMING, FOV, GHOST_SIZE, VIEW, boxCorners, byLevel, frameBox, massBox, plateCorners, plateFraction, type Framing, type V3 } from "../core/layout";
+import { BASEPLATE, BOARD, DEFAULT_FRAMING, FOV, GHOST_SIZE, VIEW, boxCorners, byLevel, frameBox, brickLayoutItems, massBox, plateCorners, plateFraction, type Framing, type V3 } from "../core/layout";
 import { AO } from "./AO";
 import { Baseplate } from "./Baseplate";
 import { MotionContext, MotionStore, useMotion } from "./motion";
@@ -26,7 +26,7 @@ const PAN_MS = 320;
  * once with reduced motion). It projects the ghost marker into canvas px and reports the top of the
  * stack/ghost so UI can sit a caption above it.
  */
-function CameraRig({ bricks, nextLevel, framing, reducedMotion, onGhost, onFrame, onPan }: { bricks: PlacedBrick[]; nextLevel: number | null; framing: Framing; reducedMotion: boolean; onGhost: (g: GhostGeom | null) => void; onFrame?: (f: BoardFrame) => void; onPan?: (dx: number, dy: number) => void }) {
+function CameraRig({ bricks, nextLevel, framing, reducedMotion, onGhost, onFrame, onPan, onLayout }: { bricks: PlacedBrick[]; nextLevel: number | null; framing: Framing; reducedMotion: boolean; onGhost: (g: GhostGeom | null) => void; onFrame?: (f: BoardFrame) => void; onPan?: (dx: number, dy: number) => void; onLayout?: (items: BrickLayoutItem[]) => void }) {
   const get = useThree((s) => s.get);
   const size = useThree((s) => s.size);
   const invalidate = useThree((s) => s.invalidate);
@@ -35,9 +35,10 @@ function CameraRig({ bricks, nextLevel, framing, reducedMotion, onGhost, onFrame
   const anim = useRef<{ from: THREE.Vector3; to: THREE.Vector3; t0: number; pivot: THREE.Vector3; end: [number, number] } | null>(null);
   const fitted = useRef("");
   const top = massBox(bricks, nextLevel).max[1];
-  const live = useRef({ onGhost, onFrame, onPan, nextLevel, top });
-  useEffect(() => {
-    live.current = { onGhost, onFrame, onPan, nextLevel, top };
+  const live = useRef({ onGhost, onFrame, onPan, onLayout, bricks, nextLevel, top });
+  // A layout effect, declared first: the framing layout effect below reads it in the same commit.
+  useLayoutEffect(() => {
+    live.current = { onGhost, onFrame, onPan, onLayout, bricks, nextLevel, top };
   });
   /** Screen offset (px) of the scene now versus where the pan ends, for the overlay. */
   const panOffset = useCallback(() => {
@@ -55,7 +56,8 @@ function CameraRig({ bricks, nextLevel, framing, reducedMotion, onGhost, onFrame
       const v = new THREE.Vector3(...p).project(camera);
       return [((v.x + 1) / 2) * sz.width, ((1 - v.y) / 2) * sz.height];
     };
-    const { nextLevel: next, top: t } = live.current;
+    const { nextLevel: next, top: t, bricks: placed } = live.current;
+    live.current.onLayout?.(brickLayoutItems(placed, project, sz.width, sz.height));
     live.current.onGhost(next === null ? null : ghostGeom(next, project));
     // Highest projected point of the mass top face (the rear corners sit highest on screen).
     const gw = (GHOST_SIZE[0] * DIM.pitch) / 2, gd = (GHOST_SIZE[1] * DIM.pitch) / 2;
@@ -280,12 +282,14 @@ export type SceneProps = {
   onFrame?: (f: BoardFrame) => void;
   /** While the camera eases to a new framing: the scene's offset in px from its final place. */
   onPan?: (dx: number, dy: number) => void;
+  /** Front-face boxes of the placed bricks (see BrickStageProps.onLayout), at the final framing. */
+  onLayout?: (items: BrickLayoutItem[]) => void;
 };
 
 type Shown = { brick: PlacedBrick; leaving: boolean };
 
 export function Scene(props: SceneProps) {
-  const { bricks, nextLevel, dark, reducedMotion, settledSignal = 0, onSettled, fontsReady, ao, framing = DEFAULT_FRAMING, onGhost, onReady, onSlow, onFps, onFrame, onPan } = props;
+  const { bricks, nextLevel, dark, reducedMotion, settledSignal = 0, onSettled, fontsReady, ao, framing = DEFAULT_FRAMING, onGhost, onReady, onSlow, onFps, onFrame, onPan, onLayout } = props;
   const [motion] = useState(() => new MotionStore());
 
   // Bricks present at first render appear in place; later ones drop in.
@@ -311,7 +315,7 @@ export function Scene(props: SceneProps) {
 
   return (
     <MotionContext.Provider value={motion}>
-      <CameraRig bricks={bricks} nextLevel={nextLevel} framing={framing} reducedMotion={reducedMotion} onGhost={onGhost} onFrame={onFrame} onPan={onPan} />
+      <CameraRig bricks={bricks} nextLevel={nextLevel} framing={framing} reducedMotion={reducedMotion} onGhost={onGhost} onFrame={onFrame} onPan={onPan} onLayout={onLayout} />
       <Studio dark={dark} floorShadow={!debug.includes("nocontact")} />
       <Baseplate studs={BASEPLATE} color={c.baseplate} dark={dark} />
       {shown.map(({ brick, leaving: isLeaving }, i) => (

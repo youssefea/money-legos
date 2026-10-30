@@ -26,7 +26,7 @@ export type Stage3DProps = Omit<BrickStageProps, "className"> & {
 const fill = { position: "absolute", inset: 0, width: "100%", height: "100%" } as const;
 
 /** The live board: one R3F canvas (renders on demand) plus an SVG overlay for the ghost slot. */
-export default function Stage3D({ ao = true, onReady, onSlow, onFps, onGhostRect, onFrame, framing, ...props }: Stage3DProps) {
+export default function Stage3D({ ao = true, onReady, onSlow, onFps, onGhostRect, onFrame, onLayout, framing, ...props }: Stage3DProps) {
   const [ghost, setGhostState] = useState<GhostGeom | null>(null);
   const rectCb = useRef(onGhostRect);
   useEffect(() => {
@@ -63,7 +63,7 @@ export default function Stage3D({ ao = true, onReady, onSlow, onFps, onGhostRect
         camera={{ fov: FOV, position: [0, 80, 200] }}
         gl={{ antialias: true, alpha: true, toneMapping: THREE.NeutralToneMapping, toneMappingExposure: 1, powerPreference: "high-performance" }}
       >
-        <Scene {...props} fontsReady={fontsReady} ao={ao} framing={framing} onGhost={setGhost} onReady={onReady} onSlow={onSlow} onFps={onFps} onFrame={onFrame} onPan={onPan} />
+        <Scene {...props} fontsReady={fontsReady} ao={ao} framing={framing} onGhost={setGhost} onReady={onReady} onSlow={onSlow} onFps={onFps} onFrame={onFrame} onPan={onPan} onLayout={onLayout} />
       </Canvas>
       {ghost && (
         <svg ref={overlay} style={{ ...fill, overflow: "visible", pointerEvents: "none" }}>

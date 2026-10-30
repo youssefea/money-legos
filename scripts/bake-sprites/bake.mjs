@@ -4,9 +4,10 @@
 //   public/sprites/<legoId>.webp        tray sprite: every hero 2x4 on the same CANVAS (192x104 CSS px at 2x,
 //                                       TOP_PAD clear above the rear studs); 2x2s at the same mm-to-px
 //                                       scale, same height and baseline, width = brick + side margins
-//   public/sprites/glyph-<legoId>.webp  unprinted 2x4 glyph, GLYPH px, for small lists
+//   public/sprites/glyph-<legoId>.webp  unprinted 2x4 glyph, GLYPH px, for small lists (heroes only)
 //   src/components/bricks/spriteMeta.ts pixel sizes + aspect, so <BrickSprite> reserves its box.
-// Uses Playwright's bundled Chromium with real GPU flags. ONLY=<id> bakes one Lego.
+// The catalog comes from the harness (ALL_BRICKS). Uses Playwright's bundled Chromium with real GPU
+// flags. ONLY=<id> bakes one Lego.
 import { chromium } from "playwright";
 import sharp from "sharp";
 import fs from "node:fs";
@@ -31,11 +32,6 @@ const GLYPH = [128, 80];
 /** Alpha below this counts as empty when cropping (invisible on any background). */
 const ALPHA_CUT = 6;
 const PAD = 2;
-
-// Read the lego list (id + tier) from the source so the script never drifts from src/lib/legos.ts.
-const src = fs.readFileSync(path.join(repo, "src/lib/legos.ts"), "utf8");
-const ids = [...src.matchAll(/^\s{4}id: "([a-z0-9-]+)",\s*\n\s{4}tier: "(featured|secondary)"/gm)].map((m) => ({ id: m[1], hero: m[2] === "featured" }));
-if (ids.length !== 13) throw new Error(`expected 13 legos in src/lib/legos.ts, found ${ids.length}`);
 
 /** Bounding box of pixels with alpha >= ALPHA_CUT, padded. */
 async function alphaBox(png) {
@@ -67,6 +63,12 @@ const browser = await chromium.launch({ args: GPU_ARGS });
 const page = await browser.newPage({ viewport: { width: VIEWPORT[0], height: VIEWPORT[1] }, deviceScaleFactor: RENDER_DPR });
 page.on("pageerror", (e) => console.error("pageerror", e.message));
 
+// The catalog, from the harness (src/lib/bricks ALL_BRICKS): id, footprint, tier.
+await page.goto(`${s.url}?list=1`);
+const ids = (await page.waitForFunction(() => window.__bricks).then((h) => h.jsonValue())).map((b) => ({ id: b.id, hero: b.hero, size: b.size }));
+if (ids.length < 13) throw new Error(`expected the full catalog, found ${ids.length} bricks`);
+const keep = new Set(ids.flatMap(({ id, hero }) => [`${id}.webp`, ...(hero ? [`glyph-${id}.webp`] : [])]));
+
 async function render(id, glyph) {
   await page.goto(`${s.url}?bake=${id}${glyph ? "&glyph=1" : ""}`);
   await page.waitForFunction(() => window.__bakeReady === true, null, { timeout: 60000 });
@@ -89,16 +91,18 @@ let scale = null;
 const meta = {};
 let total = 0;
 try {
-  const order = [...ids].sort((a, b) => Number(b.hero) - Number(a.hero));
-  for (const { id, hero } of order) {
+  // Scale reference first: a hero 2x4.
+  const ref = (b) => (b.hero && b.size[0] === 4 && b.size[1] === 2 ? 2 : b.hero ? 1 : 0);
+  const order = [...ids].sort((a, b) => ref(b) - ref(a));
+  for (const { id, hero, size } of order) {
     const { png, box, renderer } = await render(id, false);
     if (scale === null) {
-      if (!hero) throw new Error("first bake must be a hero brick");
+      if (!hero || size[0] !== 4 || size[1] !== 2) throw new Error("first bake must be a hero 2x4");
       scale = Math.min((CANVAS[0] - 2 * SIDE_PAD) / box.width, (CANVAS[1] - TOP_PAD - BOTTOM_PAD) / box.height);
     }
     const w = Math.min(CANVAS[0] - 2 * SIDE_PAD, Math.round(box.width * scale));
     const h = Math.min(CANVAS[1] - TOP_PAD - BOTTOM_PAD, Math.round(box.height * scale));
-    const cw = hero ? CANVAS[0] : w + 2 * SIDE_PAD;
+    const cw = size[0] === 4 && size[1] === 2 ? CANVAS[0] : w + 2 * SIDE_PAD;
     const ch = CANVAS[1];
     meta[id] = { width: cw, height: ch, aspect: +(cw / ch).toFixed(4) };
     if (only && only !== id) continue;
@@ -111,22 +115,30 @@ try {
       sharp({ create: { width: cw, height: ch, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } }).composite([{ input: fitted, left, top }]),
     ).toFile(file);
 
-    const g = await render(id, true);
-    const gfile = path.join(outDir, `glyph-${id}.webp`);
-    await webp(
-      sharp(g.png)
-        .extract(g.box)
-        .resize(GLYPH[0], GLYPH[1], { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 }, kernel: "lanczos3" }),
-    ).toFile(gfile);
-    const bytes = fs.statSync(file).size + fs.statSync(gfile).size;
+    let bytes = fs.statSync(file).size;
+    let gsize = "";
+    // Glyphs (unprinted 2x4s for small lists) only for the five heroes: the UI draws its own elsewhere.
+    if (hero) {
+      const g = await render(id, true);
+      const gfile = path.join(outDir, `glyph-${id}.webp`);
+      await webp(
+        sharp(g.png)
+          .extract(g.box)
+          .resize(GLYPH[0], GLYPH[1], { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 }, kernel: "lanczos3" }),
+      ).toFile(gfile);
+      bytes += fs.statSync(gfile).size;
+      gsize = `  glyph ${(fs.statSync(gfile).size / 1024).toFixed(1)} KB`;
+    }
     total += bytes;
-    console.log(`${id.padEnd(14)} ${`${w}x${h}`.padEnd(9)} ${(fs.statSync(file).size / 1024).toFixed(1)} KB  glyph ${(fs.statSync(gfile).size / 1024).toFixed(1)} KB  (${renderer})`);
+    console.log(`${id.padEnd(16)} ${size.join("x")}  ${`${cw}x${ch}`.padEnd(8)} ${(fs.statSync(file).size / 1024).toFixed(1)} KB${gsize}  (${renderer})`);
   }
 } finally {
   await browser.close();
   await s.close();
 }
 
+// Drop sprites of ids that left the catalog (and non-hero glyphs).
+if (!only) for (const f of fs.readdirSync(outDir)) if (f.endsWith(".webp") && !keep.has(f)) fs.rmSync(path.join(outDir, f));
 const ordered = ids.map(({ id }) => [id, meta[id]]);
 const manifest = `// Generated by scripts/bake-sprites/bake.mjs. Do not edit by hand.
 export type SpriteMeta = {
@@ -148,10 +160,10 @@ export const SPRITE_META: Readonly<Record<string, SpriteMeta>> = {
 ${ordered.map(([id, m]) => `  ${JSON.stringify(id)}: { width: ${m.width}, height: ${m.height}, aspect: ${m.aspect} },`).join("\n")}
 };
 
-/** Glyph sprites public/sprites/glyph-<legoId>.webp: one shape (a 2x4 brick), all the same size. */
+/** Glyph sprites public/sprites/glyph-<legoId>.webp (the five heroes only): one shape, a 2x4 brick. */
 export const GLYPH_META: SpriteMeta = { width: ${GLYPH[0]}, height: ${GLYPH[1]}, aspect: ${+(GLYPH[0] / GLYPH[1]).toFixed(4)} };
 `;
 fs.writeFileSync(path.join(repo, "src/components/bricks/spriteMeta.ts"), manifest);
 const all = fs.readdirSync(outDir).filter((f) => f.endsWith(".webp")).reduce((a, f) => a + fs.statSync(path.join(outDir, f)).size, 0);
 console.log(`baked ${only ? 1 : ids.length} (+glyphs); this run ${(total / 1024).toFixed(1)} KB; all sprites ${(all / 1024).toFixed(1)} KB`);
-if (all > 450 * 1024) throw new Error(`sprite budget exceeded: ${(all / 1024).toFixed(1)} KB > 450 KB`);
+if (all > 700 * 1024) throw new Error(`sprite budget exceeded: ${(all / 1024).toFixed(1)} KB > 700 KB`);

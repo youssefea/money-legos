@@ -8,17 +8,23 @@ import SvgBrickStage from "@/components/bricks/svg/SvgBrickStage";
 import { nextLevel, toPlacedBricks } from "@/lib/bricks";
 import { HERO_LEGOS, LEGOS, MORE_LEGOS, isLegoId } from "@/lib/legos";
 import type { LegoId } from "@/lib/types";
+import type { BrickLayoutItem } from "@/lib/contract";
 import styles from "./DevBricks.module.css";
 
 /** Default add order: Issue, Pay, Trade, Speed (the screenshot stack), then the rest. */
 const ORDER: LegoId[] = ["b20", "payments", "validity", "speed", ...LEGOS.map((l) => l.id).filter((id) => !["b20", "payments", "validity", "speed"].includes(id))];
+/** ?mix=1: a mixed-footprint stack, bottom to top 2x4, 2x3, 1x4, 2x1. */
+const MIX: LegoId[] = ["b20", "escrow", "payouts", "refunds"];
 
 function fromUrl() {
   const q = new URLSearchParams(window.location.search);
   const listed = (q.get("ids") ?? "").split(",").filter(isLegoId);
   const n = Math.max(0, Math.min(4, Number(q.get("n") ?? 3)));
+  const order = q.get("mix") === "1" ? MIX : ORDER;
   return {
-    ids: listed.length > 0 ? listed.slice(0, 4) : ORDER.slice(0, n),
+    ids: listed.length > 0 ? listed.slice(0, 4) : order.slice(0, n),
+    /** ?layoutbox=1: outline the onLayout boxes in red. */
+    layoutBox: q.get("layoutbox") === "1",
     dark: q.get("dark") === "1",
     reduced: q.get("rm") === "1" || window.matchMedia("(prefers-reduced-motion: reduce)").matches,
     only: q.get("only"),
@@ -30,6 +36,7 @@ function fromUrl() {
 /**
  * Dev test page: the live board with add/remove controls, the SVG fallback beside it, and the 13
  * baked tray sprites. URL: ?n=0..4 | ?ids=b20,payments  &dark=1  &rm=1  &only=stage|svg|sprites
+ * &mix=1 (mixed footprints)  &layoutbox=1 (onLayout boxes in red)
  * &bricks=svg|webgl (force a renderer)  &box=567x520 (stage/svg in a fixed-size panel; the ghost box is outlined in red with &ghostbox=1).
  */
 export default function DevBricks() {
@@ -39,10 +46,11 @@ export default function DevBricks() {
   const [reduced, setReduced] = useState(init.reduced);
   const [signal, setSignal] = useState(0);
   const [log, setLog] = useState<string[]>([]);
+  const [layout, setLayout] = useState<BrickLayoutItem[]>([]);
   const bricks = useMemo(() => toPlacedBricks(ids), [ids]);
   const next = nextLevel(ids.length);
   const onSettled = (id: string) => setLog((l) => [`settled ${id}`, ...l].slice(0, 4));
-  const stageProps = { bricks, nextLevel: next, dark, reducedMotion: reduced, settledSignal: signal, onSettled };
+  const stageProps = { bricks, nextLevel: next, dark, reducedMotion: reduced, settledSignal: signal, onSettled, onLayout: setLayout };
   const add = () => {
     const id = ORDER.find((x) => !ids.includes(x));
     if (id && ids.length < 4) setIds([...ids, id]);
@@ -55,6 +63,14 @@ export default function DevBricks() {
       <div className={[page, styles.boxPage].join(" ")}>
         <div className={styles.boxPanel} style={{ width: bw, height: bh }} data-testid="box-panel">
           {init.only === "stage" ? <BrickStage {...stageProps} className={styles.fullStage} /> : <SvgBrickStage {...stageProps} className={styles.fullStage} />}
+          {init.layoutBox &&
+            layout.map((b) => (
+              <span
+                key={b.id}
+                data-layout-box={b.id}
+                style={{ position: "absolute", left: `${(b.cx - b.w / 2) * 100}%`, top: `${(b.cy - b.h / 2) * 100}%`, width: `${b.w * 100}%`, height: `${b.h * 100}%`, outline: "1px solid red", pointerEvents: "none" }}
+              />
+            ))}
         </div>
       </div>
     );
@@ -83,7 +99,7 @@ export default function DevBricks() {
         ))}
       </div>
       <div className={styles.glyphs}>
-        {[...HERO_LEGOS, ...MORE_LEGOS].map((l) => (
+        {HERO_LEGOS.map((l) => (
           <span key={l.id} className={styles.glyphRow}>
             <BrickGlyph id={l.id} color={l.brick.hex} />
             <span>

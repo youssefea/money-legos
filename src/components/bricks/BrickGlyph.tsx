@@ -7,7 +7,7 @@ import { GLYPH_META } from "./spriteMeta";
 import styles from "./BrickGlyph.module.css";
 
 export type BrickGlyphProps = {
-  /** Lego id; the glyph is public/sprites/glyph-<id>.webp (an unprinted 2x4 in the Lego's colour). */
+  /** Hero Lego id; the glyph is public/sprites/glyph-<id>.webp (an unprinted 2x4 in the Lego's colour). Only the five heroes are baked; other ids show the colour block. */
   id: SpriteId;
   /** Brick hex, for the stand-in before the WebP loads. */
   color: string;

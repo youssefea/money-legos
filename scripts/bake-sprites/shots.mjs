@@ -19,10 +19,14 @@ for (const [v, [box, w, h, dpr]] of Object.entries(VIEWS)) {
     const d = theme === "dark" ? "&dark=1" : "";
     for (const n of [0, 1, 3, 4]) jobs.push([`stage-${theme}-${v}-${n}brick${n === 1 ? "" : "s"}`, `?only=stage&box=${box}&n=${n}&ids=${STACKS[n]}${d}`, [w, h, dpr]]);
     jobs.push([`svg-fallback-${theme}-${v}-3bricks`, `?only=svg&box=${box}&ids=${STACKS[3]}${d}`, [w, h, dpr]]);
+    jobs.push([`stage-${theme}-${v}-mixed`, `?only=stage&box=${box}&mix=1&n=4${d}`, [w, h, dpr]]);
+    jobs.push([`svg-fallback-${theme}-${v}-mixed`, `?only=svg&box=${box}&mix=1&n=4${d}`, [w, h, dpr]]);
   }
 }
 for (const theme of ["light", "dark"]) jobs.push([`sprites-${theme}`, `?only=sprites${theme === "dark" ? "&dark=1" : ""}`, [1440, 900, 2], true]);
 jobs.push(["sprites-light-phone", "?only=sprites", [390, 844, 3], true]);
+jobs.push(["layout-boxes-light-desktop-mixed", "?only=stage&box=567x520&mix=1&n=3&layoutbox=1", [640, 580, 2]]);
+jobs.push(["layout-boxes-svg-light-desktop-mixed", "?only=svg&box=567x520&mix=1&n=3&layoutbox=1", [640, 580, 2]]);
 
 const only = process.env.ONLY;
 const s = await serve();

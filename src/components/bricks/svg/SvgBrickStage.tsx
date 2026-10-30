@@ -2,10 +2,10 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import type { GhostRect } from "../core/ghost";
-import type { BrickStageProps, PlacedBrick } from "@/lib/contract";
+import type { BrickLayoutItem, BrickStageProps, PlacedBrick } from "@/lib/contract";
 import { GhostMarker } from "../core/GhostMarker";
 import { ghostGeom } from "../core/ghost";
-import { BASEPLATE, BOARD, DEFAULT_FRAMING, GHOST_SIZE, byLevel, massBox, plateCorners, poseFor, stackLabel, type Framing } from "../core/layout";
+import { BASEPLATE, BOARD, DEFAULT_FRAMING, GHOST_SIZE, brickLayoutItems, byLevel, massBox, plateCorners, poseFor, stackLabel, type Framing } from "../core/layout";
 import type { BoardFrame } from "../three/Scene";
 import { EXTENTS, project, svgViewBox } from "./projector";
 import { SvgBrick } from "./SvgBrick";
@@ -81,7 +81,7 @@ export type SvgBrickStageProps = BrickStageProps & {
  * (zero image bytes). Drops use a CSS keyframe; prefers-reduced-motion places bricks at once.
  */
 export default function SvgBrickStage(props: SvgBrickStageProps) {
-  const { bricks, nextLevel, dark, reducedMotion, settledSignal = 0, onSettled, className, decorative = false, onGhostRect, onFrame } = props;
+  const { bricks, nextLevel, dark, reducedMotion, settledSignal = 0, onSettled, className, decorative = false, onGhostRect, onFrame, onLayout } = props;
   const framing = props.framing ?? DEFAULT_FRAMING;
   const root = useRef<HTMLDivElement>(null);
   const [box, setBox] = useState<[number, number]>([0, 0]);
@@ -127,6 +127,18 @@ export default function SvgBrickStage(props: SvgBrickStageProps) {
   useEffect(() => {
     frameCb.current = onFrame;
   });
+  // onLayout: front-face boxes in this element's px, as fractions.
+  const layoutKey = measured ? JSON.stringify(brickLayoutItems(bricks, (p) => {
+    const [x, y] = project(p);
+    return [(x - vb.x) * vb.scale, (y - vb.y) * vb.scale];
+  }, box[0], box[1])) : "";
+  const layoutCb = useRef(onLayout);
+  useEffect(() => {
+    layoutCb.current = onLayout;
+  });
+  useEffect(() => {
+    if (layoutKey) layoutCb.current?.(JSON.parse(layoutKey) as BrickLayoutItem[]);
+  }, [layoutKey]);
   useEffect(() => {
     if (!frameKey) return;
     const [stackTop, platePx] = frameKey.split(",").map(Number);

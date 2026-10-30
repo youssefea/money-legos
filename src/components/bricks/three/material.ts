@@ -22,6 +22,7 @@ uniform float uTop;
 uniform float uSeam;
 uniform float uRim;
 uniform float uPeel;
+uniform vec2 uGrid;
 float mlHash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
 float mlNoise(vec3 x) {
   vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 - 2.0 * f);
@@ -30,9 +31,9 @@ float mlNoise(vec3 x) {
 }
 `;
 
-type Patch = { seed: number; wear: number; top: number; seam: number; rim: number; peel: number };
+type Patch = { seed: number; wear: number; top: number; seam: number; rim: number; peel: number; grid: [number, number] };
 
-function patch(m: THREE.MeshPhysicalMaterial, { seed, wear, top, seam, rim, peel }: Patch) {
+function patch(m: THREE.MeshPhysicalMaterial, { seed, wear, top, seam, rim, peel, grid }: Patch) {
   m.onBeforeCompile = (shader) => {
     shader.uniforms.uSeed = { value: seed };
     shader.uniforms.uWear = { value: wear };
@@ -40,6 +41,7 @@ function patch(m: THREE.MeshPhysicalMaterial, { seed, wear, top, seam, rim, peel
     shader.uniforms.uSeam = { value: seam };
     shader.uniforms.uRim = { value: rim };
     shader.uniforms.uPeel = { value: peel };
+    shader.uniforms.uGrid = { value: new THREE.Vector2(...grid) };
     shader.vertexShader = shader.vertexShader
       .replace("#include <common>", "#include <common>\nattribute float wear;\nvarying float vWear;\nvarying vec3 vObj;")
       .replace(
@@ -61,8 +63,8 @@ float mlW = vWear * uWear * (0.55 + 0.45 * mlNoise(vObj * 1.7 + uSeed * 13.0));
 diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.0), mlW * 0.035);
 float mlAO = 1.0;
 if (uTop > 0.0) {
-  // studs sit on an 8 mm grid with centres at 4 mm offsets (every piece here is an even number of studs wide)
-  vec2 mlQ = mod(vObj.xz, 8.0) - 4.0;
+  // studs sit on an 8 mm grid with centres at 4 mm offsets; uGrid shifts it by 4 mm on an odd side
+  vec2 mlQ = mod(vObj.xz + uGrid, 8.0) - 4.0;
   float mlR = length(mlQ);
   float mlH = vObj.y - uTop;
   if (mlH > -0.05 && mlH < 1.0) mlAO -= 0.36 * (1.0 - smoothstep(2.32, 3.7, mlR)) * (1.0 - smoothstep(0.0, 1.0, max(mlH, 0.0)));
@@ -86,7 +88,7 @@ float mlN0 = mlNoise(mlP);
 vec3 mlG = vec3(mlNoise(mlP + vec3(mlE, 0.0, 0.0)) - mlN0, mlNoise(mlP + vec3(0.0, mlE, 0.0)) - mlN0, mlNoise(mlP + vec3(0.0, 0.0, mlE)) - mlN0) / mlE;
 vec3 mlTilt = mlG * uPeel;
 if (uTop > 0.0) {
-  vec2 mlS = mod(vObj.xz, 8.0) - 4.0;
+  vec2 mlS = mod(vObj.xz + uGrid, 8.0) - 4.0;
   float mlSR = length(mlS);
   if (vObj.y > uTop + 1.68 && mlSR < 1.9) {
     // concave dimple ~1.6 mm across: the normal leans towards the stud axis
@@ -113,14 +115,15 @@ outgoingLight += vec3(uRim * mlF * mlAO * (1.0 - mlSeam));
 #include <opaque_fragment>`,
       );
   };
-  m.customProgramCacheKey = () => "money-legos-abs";
+  m.customProgramCacheKey = () => "money-legos-abs-2";
 }
 
 /**
  * A fresh material per brick (it can fade on removal). Dispose it when the brick unmounts.
  * `top` = height of the face the studs stand on (mm, object space), for the stud-root occlusion.
+ * `studs` = footprint [w, d], so the stud grid lines up on odd sides (a 2x3 or 1x4).
  */
-export function plasticMaterial(color: string, finish: PlasticFinish = "gloss", seed = 0, top = 0, dark = false) {
+export function plasticMaterial(color: string, finish: PlasticFinish = "gloss", seed = 0, top = 0, dark = false, studs: [number, number] = [2, 2]) {
   const c = new THREE.Color(color);
   const m = new THREE.MeshPhysicalMaterial(
     finish === "gloss"
@@ -138,6 +141,6 @@ export function plasticMaterial(color: string, finish: PlasticFinish = "gloss", 
   const gloss = finish === "gloss";
   // Dark mode: the plate's stud rims mirror the strip lights; a quarter less keeps them plastic, not metal.
   if (!gloss) m.envMapIntensity = dark ? 0.6 : 0.62;
-  patch(m, { seed, wear: gloss ? 1 : 0.6, top, seam: gloss ? 1 : 0, rim: (gloss ? 0.1 : 0.05) * (dark ? 0.75 : 1), peel: gloss ? 0.022 : 0.03 });
+  patch(m, { seed, wear: gloss ? 1 : 0.6, top, seam: gloss ? 1 : 0, rim: (gloss ? 0.1 : 0.05) * (dark ? 0.75 : 1), peel: gloss ? 0.022 : 0.03, grid: [(studs[0] % 2) * 4, (studs[1] % 2) * 4] });
   return m;
 }

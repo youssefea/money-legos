@@ -1,4 +1,4 @@
-import type { PlacedBrick } from "@/lib/contract";
+import type { BrickLayoutItem, PlacedBrick } from "@/lib/contract";
 import { PLATES_PER_BRICK } from "@/lib/bricks";
 import { BASEPLATE_TOP, DIM } from "./dims";
 
@@ -104,7 +104,7 @@ export function levelY(level: number): number {
 }
 
 /**
- * Where a placed brick sits: centred on the baseplate, `level` plates up, with a deterministic
+ * Where a placed brick sits: centred on the baseplate (on the stud grid), `level` plates up, with a deterministic
  * sub-0.3 mm misalignment per brick id (corner displacement included).
  */
 export function poseFor(b: PlacedBrick): BrickPose {
@@ -112,9 +112,11 @@ export function poseFor(b: PlacedBrick): BrickPose {
   const yaw = jitter(b.id, 3) * 0.007;
   const halfDiag = (Math.hypot(b.size[0], b.size[1]) * DIM.pitch) / 2;
   const room = Math.max(0, 0.28 - Math.abs(yaw) * halfDiag);
+  // An odd side shifts half a stud so the studs land on the plate's grid: a 2x3 sits right-flush with
+  // a 2x4, a 1-deep brick front-flush with a 2-deep one (the label faces stay in one plane).
   return {
-    x: jitter(b.id, 1) * room * 0.7,
-    z: jitter(b.id, 2) * room * 0.7,
+    x: ((b.size[0] % 2) * DIM.pitch) / 2 + jitter(b.id, 1) * room * 0.7,
+    z: ((b.size[1] % 2) * DIM.pitch) / 2 + jitter(b.id, 2) * room * 0.7,
     y: levelY(b.level),
     yaw,
     height: pieceHeight(b.kind),
@@ -176,4 +178,24 @@ export function stackLabel(bricks: readonly PlacedBrick[], nextLevel: number | n
 /** Stable display order: bottom to top. */
 export function byLevel(bricks: readonly PlacedBrick[]): PlacedBrick[] {
   return [...bricks].sort((a, b) => a.level - b.level);
+}
+
+/**
+ * Where each brick's front (label) face is on screen, as fractions of a `width` x `height` container
+ * (`project` maps world mm to that container's px): cx/cy = centre of the face, w/h = its projected
+ * bounding box. The BrickStage `onLayout` payload.
+ */
+export function brickLayoutItems(bricks: readonly PlacedBrick[], project: (p: V3) => [number, number], width: number, height: number): BrickLayoutItem[] {
+  if (width <= 0 || height <= 0) return [];
+  return byLevel(bricks).map((b) => {
+    const p = poseFor(b);
+    const W = b.size[0] * DIM.pitch - DIM.gap;
+    const z = p.z + (b.size[1] * DIM.pitch - DIM.gap) / 2;
+    const pts = [project([p.x - W / 2, p.y, z]), project([p.x + W / 2, p.y, z]), project([p.x - W / 2, p.y + p.height, z]), project([p.x + W / 2, p.y + p.height, z])];
+    const xs = pts.map((q) => q[0]);
+    const ys = pts.map((q) => q[1]);
+    const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    const r = (n: number) => Math.round(n * 10000) / 10000;
+    return { id: b.id, cx: r((x0 + x1) / 2 / width), cy: r((y0 + y1) / 2 / height), w: r((x1 - x0) / width), h: r((y1 - y0) / height) };
+  });
 }
