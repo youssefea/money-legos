@@ -30,6 +30,8 @@ export type TrayProps = {
   onHover?: (id: LegoId | null) => void;
   /** bin = the parts bin (hero shelf + stud grid); strip = one horizontal row (Present mode drawer). */
   layout?: "bin" | "strip";
+  /** Strip only: the category shown first (e.g. the one holding the brick that had focus). */
+  initialCategory?: Category | null;
 };
 
 type Tip = { id: LegoId; x: number; top: number; bottom: number };
@@ -120,7 +122,7 @@ function TipBox({ tip, lego }: { tip: Tip; lego: Lego }) {
  * adds); name, tag and status show in a tooltip on hover, keyboard focus or a long press. Category
  * chips come after the bricks in tab order (shown above them) and are one Tab stop too.
  */
-export default function Tray({ ids, onToggle, onPointerDown, wasDrag, dragging, inspect = null, onInspect, onHover, layout = "bin" }: TrayProps) {
+export default function Tray({ ids, onToggle, onPointerDown, wasDrag, dragging, inspect = null, onInspect, onHover, layout = "bin", initialCategory }: TrayProps) {
   const [filter, setFilter] = useState<Category | null>(null);
   const [tip, setTip] = useState<Tip | null>(null);
   const [focusId, setFocusId] = useState<LegoId | null>(null);
@@ -133,11 +135,14 @@ export default function Tray({ ids, onToggle, onPointerDown, wasDrag, dragging, 
   const pressTimer = useRef<number | undefined>(undefined);
   const longPressed = useRef(false);
 
-  const match = (l: Lego) => filter === null || l.category === filter;
+  // The Present drawer shows the 5 heroes and one category at a time (never the whole catalog).
+  const strip = layout === "strip";
+  const active = strip ? (filter ?? initialCategory ?? CATEGORIES[0]!) : filter;
+  const match = (l: Lego) => active === null || l.category === active;
   const more = MORE_LEGOS.filter(match);
   const visible = [...HERO_LEGOS, ...more];
   const tabId = focusId && visible.some((l) => l.id === focusId) ? focusId : visible[0]?.id;
-  const chipTab = chipFocus ?? filter ?? CATEGORIES[0];
+  const chipTab = chipFocus ?? active ?? CATEGORIES[0];
 
   const clearTimers = () => {
     window.clearTimeout(hoverTimer.current);
@@ -246,7 +251,7 @@ export default function Tray({ ids, onToggle, onPointerDown, wasDrag, dragging, 
   const item = (lego: Lego) => {
     const placed = ids.includes(lego.id);
     const hero = lego.tier === "hero";
-    const dim = hero && !match(lego);
+    const dim = hero && !strip && !match(lego);
     const g = geometry(lego);
     const hover = (on: boolean) => {
       if (!placed) onHover?.(on ? lego.id : null);
@@ -350,8 +355,9 @@ export default function Tray({ ids, onToggle, onPointerDown, wasDrag, dragging, 
       </span>
       {layout === "strip" ? (
         <div ref={scrollRef} className={styles.strip} data-testid="tray-scroll">
-          <ul className={styles.stripRow} aria-label={filter ? `${filter} bricks` : "Bricks"}>
-            {HERO_LEGOS.filter(match).map(item)}
+          <ul className={styles.stripRow} aria-label={`Core and ${active} bricks`}>
+            {HERO_LEGOS.map(item)}
+            <li className={styles.stripSep} aria-hidden="true" />
             {more.map(item)}
           </ul>
         </div>
@@ -369,19 +375,19 @@ export default function Tray({ ids, onToggle, onPointerDown, wasDrag, dragging, 
         </>
       )}
       <div className={styles.chipsWrap} data-more-left={chipsMore.left || undefined} data-more-right={chipsMore.right || undefined}>
-        <div ref={chipsRef} className={styles.chips} role="group" aria-label="Filter bricks">
+        <div ref={chipsRef} className={styles.chips} role="group" aria-label={strip ? "Category" : "Filter bricks"}>
           {CATEGORIES.map((c, i) => (
             <button
               key={c}
               type="button"
               className={styles.chip}
-              aria-pressed={filter === c}
+              aria-pressed={active === c}
               tabIndex={c === chipTab ? 0 : -1}
               data-chip={c}
               onKeyDown={(e) => onChipKey(e, i)}
               onFocus={() => setChipFocus(c)}
               onClick={() => {
-                setFilter((f) => (f === c ? null : c));
+                setFilter((f) => (strip ? c : f === c ? null : c));
                 hideTip();
                 scrollRef.current?.scrollTo({ top: 0, left: 0 });
               }}

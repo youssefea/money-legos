@@ -19,7 +19,8 @@
   --fs-sm: 12px;
   --fs-money: 22px;
   --fs-huge: 34px;
-  --pw: min(100cqw, var(--phone-max, 400px));
+  /* Width from the column, capped by the slot's height so the phone is never squat (height >= 1.6 x width). */
+  --pw: min(100cqw, var(--phone-max, 400px), calc(100cqh / var(--phone-aspect, 1.6)));
   position: relative;
   width: var(--pw);
   height: min(100cqh, calc(var(--pw) * 2.06));
@@ -806,13 +807,18 @@
   padding: 0 28px;
 }
 
-/* ---------------------------------------------------------------- short screens (<=800px tall) */
-/* The device keeps its bezel but drops the status bar and tab bar, and the screen scrolls. */
-@media (max-height: 800px) {
-  .slot:not(.frameless) .status,
+/* ---------------------------------------------------------------- short phones (by the slot's own height) */
+/* Under 420px tall the tab bar goes too (the tiles come first). */
+@container (max-height: 419.98px) {
   .slot:not(.frameless) .tabbar,
-  .slot:not(.frameless) .island,
   .slot:not(.frameless) .home {
+    display: none;
+  }
+}
+/* Under 540px tall the device keeps its bezel and tab bar but drops the status bar, and the tiles tighten. */
+@container (max-height: 539.98px) {
+  .slot:not(.frameless) .status,
+  .slot:not(.frameless) .island {
     display: none;
   }
   .slot:not(.frameless) .appbar {
@@ -862,10 +868,11 @@
 }
 /* Present mode: read from the back of the room. */
 :global([data-present]) .device {
-  --fs: 18px;
-  --fs-sm: 16px;
-  --fs-money: 28px;
-  --fs-huge: 44px;
+  /* Present: read from the back of the room; the type scales with the phone (18/16 at 460px wide). */
+  --fs: clamp(14px, calc(var(--pw) * 0.0391), 18px);
+  --fs-sm: clamp(12px, calc(var(--pw) * 0.0348), 16px);
+  --fs-money: clamp(22px, calc(var(--pw) * 0.061), 28px);
+  --fs-huge: clamp(32px, calc(var(--pw) * 0.0957), 44px);
 }
 
 /* ---------------------------------------------------------------- dark */

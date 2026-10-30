@@ -1,17 +1,26 @@
 /*
  * The column is a size container so the name, the phone and the buttons share the phone's width:
- * the column's width up to --phone-max (400px laptop, 460px projector, 520px Present).
+ * the column's width up to --phone-max (400px laptop, 460px projector and Present), and never wider
+ * than the phone's height / --phone-aspect (1.6), so the phone stays phone-shaped on short screens.
+ * --chrome is the panel height that is not the phone (a two-line name, the demo label, the buttons
+ * and the gaps); it errs high, so the phone itself never ends up narrower than the name and buttons.
  */
 .panel {
   container-type: size;
   --phone-max: 400px;
-  --pw: min(100cqw, var(--phone-max));
+  --phone-aspect: 1.6;
+  --name-fs: 24px;
+  --demo-lh: 16px;
+  --act-h: 52px;
+  --gap: var(--space-3);
+  --chrome: calc(2.3 * var(--name-fs) + var(--space-1) + var(--demo-lh) + 2 * var(--gap) + var(--act-h) + 2px);
+  --pw: min(100cqw, var(--phone-max), calc((100cqh - var(--chrome)) / var(--phone-aspect)));
   height: 100%;
   min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: var(--space-3);
+  gap: var(--gap);
 }
 
 .head,
@@ -32,7 +41,7 @@
   min-height: calc(2 * 1.15em);
   display: flex;
   align-items: flex-end;
-  font-size: 24px;
+  font-size: var(--name-fs);
   line-height: 1.15;
   font-weight: var(--weight-medium);
   letter-spacing: -0.015em;
@@ -80,7 +89,7 @@
   justify-content: center;
   gap: var(--space-2);
   width: 100%;
-  min-height: 52px;
+  min-height: var(--act-h);
   padding: 0 var(--space-4);
   border: 1px solid var(--base-blue);
   border-radius: var(--radius-md);
@@ -125,7 +134,7 @@
 
 .details {
   flex: none;
-  min-height: 52px;
+  min-height: var(--act-h);
   padding: 0 var(--space-4);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
@@ -162,24 +171,21 @@
 /* Short screens: the name sits on one line beside nothing else, the chrome shrinks. */
 @media (max-height: 800px) {
   .panel {
-    gap: var(--space-2);
+    --gap: var(--space-2);
+    --name-fs: 20px;
+    --act-h: 48px;
   }
   .name {
     min-height: 0;
-    font-size: 20px;
-  }
-  .copy,
-  .details {
-    min-height: 48px;
   }
 }
 
 @media (min-width: 1600px) {
   .panel {
     --phone-max: 460px;
-  }
-  .name {
-    font-size: 28px;
+    --name-fs: 28px;
+    --demo-lh: 18px;
+    --act-h: 60px;
   }
   .demo {
     font-size: 14px;
@@ -187,14 +193,12 @@
   }
   .copy,
   .details {
-    min-height: 60px;
     font-size: 19px;
   }
 }
 
+/* Present: the same 460px cap (the height decides), a 28px name. */
 :global([data-present]) .panel {
-  --phone-max: 520px;
-}
-:global([data-present]) .name {
-  font-size: 32px;
+  --phone-max: 460px;
+  --name-fs: 28px;
 }

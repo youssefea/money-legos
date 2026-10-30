@@ -148,16 +148,26 @@
   grid-column: span 2;
 }
 
-/* ---------------------------------------------------------------- strip (Present mode drawer): one row */
+/*
+ * ---------------------------------------------------------------- strip (Present mode drawer): one row
+ * The 5 heroes, a hairline, then the active category, on the bin's own 24px stud (26px projector),
+ * so every printed verb stays >= 12px. Scrolls sideways when the row is wider than the drawer.
+ */
 .strip {
   flex: none;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: thin;
-  padding-bottom: 4px;
+  padding-bottom: 2px;
+}
+.stripSep {
+  flex: none;
+  align-self: stretch;
+  width: 1px;
+  margin: 8px 6px 4px;
+  background: var(--color-hairline);
 }
 .stripRow {
-  --stud: 14px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -396,9 +406,6 @@
   .chip {
     font-size: 16px;
   }
-  .stripRow {
-    --stud: 18px;
-  }
 }
 
 /* ---------------------------------------------------------------- compact (<1024): the page scrolls, not the tray */
@@ -461,13 +468,22 @@
   }
 }
 
-/* Present mode drawer: chips in one row with the same fade and chevron. */
+/* Present mode drawer: the category switcher is one row of chips (36px) over the strip. */
 .tray[data-layout="strip"] .chips {
   display: flex;
   flex-wrap: nowrap;
   overflow-x: auto;
   scrollbar-width: none;
-  padding: 2px 0 var(--space-2);
+  padding: 0 0 var(--space-1);
+}
+.tray[data-layout="strip"] .chip {
+  height: 36px;
+  padding: 0 12px;
+}
+.tray[data-layout="strip"] .chipsNext {
+  top: 0;
+  height: 36px;
+  width: 36px;
 }
 .tray[data-layout="strip"] .chipsWrap[data-more-right] .chips {
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 72px), transparent calc(100% - 24px));

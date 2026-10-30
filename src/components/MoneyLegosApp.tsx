@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore, type MouseEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore, type MouseEvent } from "react";
 import {
   BY_ID,
   MAX_LEGOS,
@@ -14,6 +14,7 @@ import {
   recipeHash,
   surprise,
   toHash,
+  type Category,
   type LegoId,
   type Recipe,
 } from "@/lib";
@@ -87,7 +88,19 @@ export default function MoneyLegosApp() {
   // Present mode (P or the header toggle): board + phone fill the screen, bricks in a bottom drawer.
   // Remembered for the tab (sessionStorage), never in the URL.
   const present = useSyncExternalStore(subscribePresent, readPresent, () => false);
-  const setPresent = writePresent;
+  // Entering or leaving Present moves the tray (bin <-> drawer): the focused brick, or else the
+  // Present toggle, keeps the focus across the move (never <body>).
+  const presentFocus = useRef<{ lego: LegoId | null } | null>(null);
+  // The drawer opens on the category of the brick that had focus, so that brick is there to focus.
+  const [stripCategory, setStripCategory] = useState<Category | null>(null);
+  const setPresent = useCallback((on: boolean) => {
+    const el = document.activeElement as HTMLElement | null;
+    const lego = (el?.dataset.lego as LegoId | undefined) ?? null;
+    setStripCategory(lego && BY_ID[lego] && BY_ID[lego].tier !== "hero" ? BY_ID[lego].category : null);
+    // Only restore focus that was inside the page's controls (not a click that left focus on <body>).
+    presentFocus.current = el && el !== document.body ? { lego } : null;
+    writePresent(on);
+  }, []);
   const copyRef = useRef<HTMLButtonElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLElement>(null);
@@ -212,14 +225,14 @@ export default function MoneyLegosApp() {
       if (e.key === "p" || e.key === "P") {
         if (compactNow()) return;
         e.preventDefault();
-        writePresent(!present);
+        setPresent(!present);
       } else if (e.key === "Escape" && present) {
-        writePresent(false);
+        setPresent(false);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [present]);
+  }, [present, setPresent]);
 
   // Deep links: #b20,payments,speed or #recipe=neobroker load the stack and build it. An empty hash
   // (Back to the start) or a link with no known bricks clears the board, so URL and screen agree.
@@ -282,6 +295,14 @@ export default function MoneyLegosApp() {
   const announce = state.announce.text + (state.announce.n % 2 ? "\u200b" : "");
   const dragLego = drag ? BY_ID[drag.id] : null;
   const presenting = present && !isMobile;
+  useLayoutEffect(() => {
+    const want = presentFocus.current;
+    presentFocus.current = null;
+    if (!want) return;
+    const target =
+      (want.lego && document.querySelector<HTMLElement>(`button[data-lego="${want.lego}"]`)) || document.querySelector<HTMLElement>('[data-testid="present-toggle"]');
+    target?.focus({ preventScroll: true });
+  }, [presenting]);
   const tray = (
     <Tray
       ids={state.ids}
@@ -293,6 +314,7 @@ export default function MoneyLegosApp() {
       onInspect={setInspect}
       onHover={setHoverId}
       layout={presenting ? "strip" : "bin"}
+      initialCategory={stripCategory}
     />
   );
 
@@ -383,14 +405,13 @@ export default function MoneyLegosApp() {
             />
           </div>
         )}
+        {presenting && (
+          <div className={styles.drawer} data-testid="present-drawer">
+            {tray}
+          </div>
+        )}
         {!isMobile && <Connectors hostRef={mainRef} ids={state.ids} layout={layout} tiles={tiles} dark={dark} boot={state.generation} inspect={inspected} play={play} />}
       </main>
-
-      {presenting && (
-        <div className={styles.drawer} data-testid="present-drawer">
-          {tray}
-        </div>
-      )}
 
       <footer className={styles.footer}>
         <p>{RISK_FOOTER}</p>

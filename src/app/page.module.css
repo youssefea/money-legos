@@ -80,10 +80,45 @@
 }
 
 /* ---------------------------------------------------------------- Present mode (P): board + phone fill the screen */
+/*
+ * The phone column runs the full height (the phone takes its width from that height); the brick
+ * drawer sits under the board only. The H1, subline and rail step aside (the presenter is talking);
+ * the H1 stays for screen readers.
+ */
+.page[data-present] .main {
+  grid-template-columns: minmax(0, 1fr) var(--col-present, clamp(340px, 30vw, 520px));
+  grid-template-rows: minmax(0, 1fr) auto;
+  row-gap: var(--space-3);
+  animation: present-in var(--dur-open) var(--ease-out) both;
+}
+.page[data-present] .boardPanel {
+  grid-area: 1 / 1 / 2 / 2;
+}
+.page[data-present] .phonePanel {
+  grid-area: 1 / 2 / 3 / 3;
+}
+.page[data-present] .h1 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.page[data-present] .subline,
+.page[data-present] .rail {
+  display: none;
+}
+@keyframes present-in {
+  from {
+    opacity: 0.6;
+  }
+}
 .drawer {
-  flex: none;
-  margin-top: var(--space-3);
-  padding: var(--space-3) var(--space-5) var(--space-2);
+  grid-area: 2 / 1 / 3 / 2;
+  min-width: 0;
+  padding: var(--space-2) var(--space-4) var(--space-2);
   border-radius: 20px;
   background: var(--base-gray-10);
   animation: drawer-in var(--dur-open) var(--ease-out) both;
@@ -92,15 +127,6 @@
   from {
     transform: translateY(24px);
     opacity: 0;
-  }
-}
-.page[data-present] .main {
-  grid-template-columns: minmax(0, 1fr) var(--col-present, 600px);
-  animation: present-in var(--dur-open) var(--ease-out) both;
-}
-@keyframes present-in {
-  from {
-    opacity: 0.6;
   }
 }
 @media (prefers-color-scheme: dark) {
@@ -154,31 +180,45 @@
     height: 100dvh;
     overflow: hidden;
   }
-  /* Laptop heights (900 and below 960): tighten the hero so the stage and set box keep their height. */
+  /*
+   * Laptop heights (<=960): lockup, title and rail on ONE 48px row (the subline goes: the rail says
+   * the same), so the phone gets the height it needs to stay phone-shaped.
+   */
   @media (max-height: 960px) {
-    /* The rail moves up beside the subline so the columns keep their height. */
-    .hero {
-      margin-top: var(--space-2);
+    .top {
       display: grid;
-      grid-template-columns: auto minmax(0, 560px);
-      justify-content: space-between;
+      grid-template-columns: auto auto minmax(240px, 1fr) auto;
+      column-gap: var(--space-8);
       align-items: center;
-      column-gap: var(--space-12);
+      min-height: 48px;
     }
-    .h1 {
-      grid-column: 1 / -1;
+    .top > header,
+    .hero {
+      display: contents;
     }
-    .hero .rail {
-      margin-top: var(--space-1);
+    .top > header > :first-child {
+      grid-column: 1;
     }
-    .h1 {
-      font-size: clamp(36px, 2.8vw, 48px);
+    .h1.h1 {
+      grid-column: 2;
+      grid-row: 1;
+      font-size: clamp(24px, 2.1vw, 32px);
+      white-space: nowrap;
     }
     .subline {
-      margin-top: var(--space-1);
+      display: none;
     }
-    .rail {
-      margin-top: var(--space-3);
+    .hero .rail.rail {
+      grid-column: 3;
+      grid-row: 1;
+      justify-self: center;
+      width: 100%;
+      max-width: 420px;
+      margin-top: 0;
+    }
+    .top > header > nav {
+      grid-column: 4;
+      grid-row: 1;
     }
     .main {
       margin-top: var(--space-4);
@@ -187,28 +227,30 @@
       margin-top: var(--space-2);
     }
   }
-  /* Short laptop / projector 1280x720: title and subline on the left, the rail beside them. */
+  /* Below 700px tall the page scrolls (laid out as at 700) rather than squeezing the phone. */
+  @media (max-height: 699.98px) {
+    .page {
+      height: auto;
+      min-height: 700px;
+      overflow: visible;
+    }
+  }
+  /* 720p: every pixel of height goes to the stage (the footer's sound toggle keeps its 44px target by overhanging). */
   @media (max-height: 800px) {
-    .hero {
-      margin-top: 0;
-      grid-template-columns: auto minmax(0, 520px);
-      grid-template-areas: "h1 rail" "sub rail";
-    }
-    .h1 {
-      grid-area: h1;
-      font-size: 32px;
-    }
-    .subline {
-      grid-area: sub;
-      font-size: 16px;
-    }
-    .hero .rail {
-      grid-area: rail;
-      margin-top: 0;
+    .page {
+      padding-top: var(--space-3);
+      padding-bottom: var(--space-2);
     }
     .main {
-      margin-top: var(--space-3);
-      padding: var(--space-4) var(--space-5);
+      margin-top: var(--space-2);
+      padding: var(--space-3) var(--space-5);
+    }
+    .footer {
+      margin-top: var(--space-1);
+      min-height: 28px;
+    }
+    .footer > button {
+      margin-block: -8px;
     }
   }
 }

@@ -16,7 +16,8 @@ test.describe("desktop", () => {
 
   test("first screen: one H1, the subline, an empty board and an empty phone; no helper text", async ({ page }) => {
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Snap together a money app.");
-    await expect(page.getByText("Snap bricks. Preview an app. Copy the prompt.")).toBeVisible();
+    // The subline is shown on tall screens; on laptop heights (<= 960) the one-row header drops it (the rail says the same).
+    await expect(page.getByText("Snap bricks. Preview an app. Copy the prompt.")).toBeAttached();
     await expect(count(page)).toHaveAttribute("aria-label", "0 of 4 bricks");
     await expect(build(page)).toHaveText("Build app");
     await expect(build(page)).toHaveAttribute("aria-disabled", "true");
@@ -482,7 +483,10 @@ test.describe("fits one screen", () => {
       const copy = page.getByTestId("copy");
       await expect(copy).toBeInViewport({ ratio: 1 });
       expect((await copy.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-      expect((await phone(page).boundingBox())!.width).toBeGreaterThanOrEqual(300);
+      // Phone-shaped (height >= 1.55 x width), never a squat card, and a real phone's width.
+      const box = (await phone(page).boundingBox())!;
+      expect(box.width).toBeGreaterThanOrEqual(270);
+      expect(box.height / box.width).toBeGreaterThanOrEqual(1.55);
       // Every tile is inside the phone screen.
       const fit = await phone(page).evaluate((ph) => {
         const screen = ph.querySelector("ol")!.getBoundingClientRect();
@@ -503,6 +507,82 @@ test.describe("fits one screen", () => {
       expect(tiny).toEqual([]);
     });
   }
+});
+
+test.describe("Present geometry", () => {
+  test.use({ reducedMotion: "reduce" });
+  for (const [w, h] of [
+    [1280, 720],
+    [1440, 900],
+    [1920, 1080],
+  ] as const) {
+    for (const mode of ["present", "normal"] as const) {
+      test(`${mode} ${w}x${h}: a phone-shaped phone with all 4 tiles and their connectors in view, no inner scroll`, async ({ page }) => {
+        await page.setViewportSize({ width: w, height: h });
+        if (mode === "present") await page.addInitScript(() => sessionStorage.setItem("money-legos:present", "1"));
+        await page.goto("/#recipe=neobank");
+        await expect(phone(page).locator("[data-tile]")).toHaveCount(4);
+        if (mode === "present") await expect(page.getByTestId("present-drawer")).toBeVisible();
+        expect(await page.evaluate(() => document.documentElement.scrollHeight - innerHeight)).toBeLessThanOrEqual(0);
+        const g = await phone(page).evaluate((ph) => {
+          const ol = ph.querySelector("ol")!;
+          const s = ol.getBoundingClientRect();
+          const d = ph.getBoundingClientRect();
+          return {
+            w: d.width,
+            h: d.height,
+            inner: ol.scrollHeight - ol.clientHeight,
+            inside: [...ph.querySelectorAll("[data-tile]")].every((t) => {
+              const r = t.getBoundingClientRect();
+              return r.top >= s.top - 1 && r.bottom <= s.bottom + 1;
+            }),
+            tabbar: getComputedStyle(ph.querySelector('[class*="tabbar"]')!).display !== "none",
+          };
+        });
+        expect(g.h / g.w).toBeGreaterThanOrEqual(1.55);
+        expect(g.w).toBeGreaterThanOrEqual(260);
+        expect(g.inner).toBeLessThanOrEqual(1);
+        expect(g.inside).toBe(true);
+        // A phone 420px or taller keeps its tab bar.
+        if (g.h >= 420) expect(g.tabbar).toBe(true);
+        await expect(page.getByTestId("connectors").locator("[data-line]")).toHaveCount(4);
+        for (const t of await phone(page).locator("[data-tile]").all()) await expect(t).toBeInViewport({ ratio: 1 });
+        if (mode === "present") {
+          // The drawer is a strip: 5 heroes + one category, and every printed verb >= 12px.
+          const drawer = page.getByTestId("present-drawer");
+          expect((await drawer.boundingBox())!.height).toBeLessThanOrEqual(150);
+          const cats = await drawer.locator("button[data-lego]").evaluateAll((els) => els.length);
+          expect(cats).toBeLessThanOrEqual(20);
+          const verbs = await drawer.locator("button[data-lego][data-print]").evaluateAll((els) =>
+            els.map((b) => b.querySelector("[data-sprite]")!.getBoundingClientRect().width * Number((b as HTMLElement).dataset.print)),
+          );
+          expect(Math.min(...verbs)).toBeGreaterThanOrEqual(12);
+        }
+      });
+    }
+  }
+
+  test("P keeps keyboard focus: on the same tray brick in the drawer and back, else on the toggle", async ({ page }) => {
+    await page.goto("/");
+    await page.getByTestId("brick-stage").waitFor();
+    const focused = () => page.evaluate(() => (document.activeElement as HTMLElement).dataset.lego ?? (document.activeElement as HTMLElement).dataset.testid ?? document.activeElement!.tagName);
+    await brick(page, "escrow").focus();
+    await page.keyboard.press("p");
+    await expect(page.getByTestId("present-drawer")).toBeVisible();
+    expect(await focused()).toBe("escrow");
+    // The first Escape closes the brick's tooltip, the second leaves Present.
+    await page.keyboard.press("Escape");
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("hero-shelf")).toBeVisible();
+    expect(await focused()).toBe("escrow");
+    await brick(page, "payments").focus();
+    await page.keyboard.press("p");
+    expect(await focused()).toBe("payments");
+    await page.keyboard.press("p");
+    expect(await focused()).toBe("payments");
+    await page.getByTestId("present-toggle").click();
+    expect(await focused()).toBe("present-toggle");
+  });
 });
 
 test.describe("accessibility", () => {
@@ -781,7 +861,7 @@ test.describe("v6: Replay, inspect from the board, Present mode, the name", () =
     const drawer = page.getByTestId("present-drawer");
     await expect(drawer).toBeVisible();
     await expect(page.getByTestId("hero-shelf")).toHaveCount(0);
-    expect((await phone(page).boundingBox())!.width).toBeGreaterThanOrEqual(460);
+    expect((await phone(page).boundingBox())!.width).toBeGreaterThanOrEqual(400);
     // Pick from the drawer with the keyboard.
     await drawer.locator('button[data-lego="speed"]').focus();
     await page.keyboard.press("Enter");
