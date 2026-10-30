@@ -26,7 +26,7 @@ type Line = { id: LegoId; d: string; x0: number; y0: number; x1: number; y1: num
 type Ring = { x: number; y: number; w: number; h: number; hull: [number, number][] | null };
 
 /** Pale bricks would vanish as a dotted line on a light page (under 3:1): they use Gray 60. */
-const PALE_LIGHT = new Set(["white", "gray-light", "gray", "lime", "trade", "speed", "tan"]);
+const PALE_LIGHT = new Set(["white", "gray-light", "gray", "lime", "grow", "trade", "speed", "tan"]);
 
 function lineColor(id: LegoId, dark: boolean): string {
   const c = BY_ID[id].brick;

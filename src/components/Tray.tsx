@@ -42,6 +42,11 @@ const KEYS_ID = "brick-keys";
 /** Tallest sprite on the stud scale (in studs): rows are this tall, so no two rows overlap. */
 const SPRITE_ROW = Math.max(...Object.values(SPRITE_META).map((m) => m.height)) / (SPRITE_DPR * SPRITE_STUD_PX);
 const HERO_META = SPRITE_META[HERO_LEGOS[0]!.id];
+/** A hero's whole visible width in studs (front face + side face), so shelf cells never overlap. */
+const HERO_SPAN = (() => {
+  const g = geometry(HERO_LEGOS[0]!);
+  return g.sw - g.fl;
+})();
 const HOVER_DELAY = 320;
 const LONG_PRESS = 450;
 const EDGE = 16;
@@ -343,6 +348,7 @@ export default function Tray({ ids, onToggle, onPointerDown, wasDrag, dragging, 
   const vars = {
     "--row": SPRITE_ROW.toFixed(3),
     "--hero-aspect": HERO_META ? HERO_META.aspect.toFixed(4) : "1.85",
+    "--hero-span": HERO_SPAN.toFixed(3),
   } as CSSProperties;
 
   return (

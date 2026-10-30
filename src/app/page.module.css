@@ -57,6 +57,9 @@
   min-height: 0;
   min-width: 0;
 }
+.boardPanel {
+  position: relative;
+}
 
 /* The only hairline: between the parts bin and the work surface. */
 .trayPanel {
@@ -277,7 +280,7 @@
   .h1.h1 {
     grid-area: 1 / 2 / 2 / 3;
     align-self: end;
-    font-size: 44px;
+    font-size: 40px;
   }
   .subline.subline {
     grid-area: 2 / 2 / 3 / 3;

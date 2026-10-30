@@ -38,20 +38,6 @@
   stroke-dasharray: 3 3;
 }
 
-/* Upright numeral with a halo in the page colour, so it stays legible over the studs behind. */
-.numeral {
-  fill: var(--ghost-color);
-  stroke: var(--ghost-halo);
-  stroke-opacity: 0.7;
-  stroke-linejoin: round;
-  paint-order: stroke;
-  font-family: var(--font-mono);
-  font-weight: 500;
-  text-anchor: middle;
-  dominant-baseline: central;
-  font-variant-numeric: tabular-nums;
-}
-
 .still,
 .still * {
   animation: none !important;

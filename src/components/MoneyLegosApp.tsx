@@ -438,6 +438,7 @@ export default function MoneyLegosApp() {
             onRecipe={onRecipe}
             onLayout={setLayout}
           />
+          {!isMobile && <Toast toast={state.toast} onUndo={onUndo} onDone={(n) => dispatch({ type: "toastDone", n })} placement="board" />}
         </div>
         {!isMobile && (
           <div className={`${styles.panel} ${styles.phonePanel}`}>
@@ -473,7 +474,7 @@ export default function MoneyLegosApp() {
         <SoundToggle on={sound.on} onChange={sound.setOn} />
       </footer>
 
-      <Toast toast={state.toast} onUndo={onUndo} onDone={(n) => dispatch({ type: "toastDone", n })} />
+      {isMobile && <Toast toast={state.toast} onUndo={onUndo} onDone={(n) => dispatch({ type: "toastDone", n })} />}
 
       {isMobile && result && (
         <ResultSheet

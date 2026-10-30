@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties, RefObject } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type RefObject } from "react";
 import { BY_ID, MIN_LEGOS, chipLabel, type FakeApp, type LegoId } from "@/lib";
 import { StudCount } from "./Board";
 import StageView from "./StageView";
@@ -31,6 +31,23 @@ export type MobileBarProps = {
 export default function MobileBar({ actionRef, stageSize = [96, 64], ...p }: MobileBarProps) {
   const count = p.ids.length;
   const ready = count >= MIN_LEGOS;
+  // The chip row fades at its right edge only while it overflows.
+  const modsRef = useRef<HTMLOListElement>(null);
+  const [more, setMore] = useState(false);
+  const labels = p.app.tiles.map((t) => t.legoId).join(",");
+  useEffect(() => {
+    const el = modsRef.current;
+    if (!el) return;
+    const check = () => setMore(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    el.addEventListener("scroll", check, { passive: true });
+    return () => {
+      ro.disconnect();
+      el.removeEventListener("scroll", check);
+    };
+  }, [labels]);
   return (
     <div className={styles.bar} data-testid="mobile-bar" style={{ "--mini-w": `${stageSize[0]}px`, "--mini-h": `${stageSize[1]}px` } as CSSProperties}>
       <StageView className={styles.stage} ids={p.ids} dark={p.dark} reducedMotion={p.reducedMotion} generation={p.generation} lastAdded={p.lastAdded} live={p.live} compact />
@@ -40,7 +57,7 @@ export default function MobileBar({ actionRef, stageSize = [96, 64], ...p }: Mob
       <button ref={actionRef} type="button" className={styles.generate} aria-disabled={!ready} onClick={p.onAction} data-testid="mobile-action">
         {p.built ? "View app" : "Build app"}
       </button>
-      <ol className={styles.modules} aria-label="App preview" data-testid="mobile-modules">
+      <ol ref={modsRef} className={styles.modules} aria-label="App preview" data-testid="mobile-modules" data-more={more || undefined}>
         {p.app.tiles.length ? (
           p.app.tiles.map((t) => (
             <li key={t.legoId} className={styles.module} data-module={t.legoId}>

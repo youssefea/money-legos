@@ -86,15 +86,15 @@ test.describe("desktop", () => {
     // Full colour (no fade), a 2px Base Blue ring.
     expect(await brick(page, "b20").locator("[data-sprite]").evaluate((el) => getComputedStyle(el).opacity)).toBe("1");
     expect(await brick(page, "b20").evaluate((el) => getComputedStyle(el).boxShadow)).toMatch(/rgb\(0, 0, 255\).*inset|inset.*rgb\(0, 0, 255\)/);
-    // Hero: the check sits on the studs (top of the front face), never over the centred verb.
-    const check = (await brick(page, "b20").getByTestId("placed-check").boundingBox())!;
-    const cell = (await brick(page, "b20").boundingBox())!;
-    expect(check.y + check.height).toBeLessThan(cell.y + cell.height * 0.45);
-    expect(check.x + check.width).toBeLessThanOrEqual(cell.x + cell.width + 1);
-    // Small brick: bottom-right corner of its cell.
-    const c2 = (await brick(page, "swaps").getByTestId("placed-check").boundingBox())!;
-    const b2 = (await brick(page, "swaps").boundingBox())!;
-    expect(c2.y).toBeGreaterThan(b2.y + b2.height * 0.5);
+    // One check position everywhere: the bottom-right corner of the front face (hero and small brick alike),
+    // in the bottom quarter, inside the brick's cell.
+    for (const id of ["b20", "swaps"]) {
+      const check = (await brick(page, id).getByTestId("placed-check").boundingBox())!;
+      const cell = (await brick(page, id).boundingBox())!;
+      expect(check.y, id).toBeGreaterThan(cell.y + cell.height * 0.7);
+      expect(check.x + check.width, id).toBeLessThanOrEqual(cell.x + cell.width + 1);
+      expect(check.x, id).toBeGreaterThan(cell.x + cell.width * 0.45);
+    }
     await expect.poll(async () => Math.round((await brick(page, "b20").getByTestId("placed-check").boundingBox())!.width)).toBe(16);
     await brick(page, "b20").click();
     await expect(brick(page, "b20")).toHaveAttribute("aria-pressed", "false");
@@ -102,19 +102,22 @@ test.describe("desktop", () => {
     await expect(phone(page).locator("[data-tile]")).toHaveCount(1);
   });
 
-  test("hero shelf: 3 + 2 above the bin on the bin's stud scale (a 2x4 is twice a 2x2), rows never overlap", async ({ page }) => {
+  test("hero shelf: 3 + 2 above the bin, each hero its whole brick (no overlap), rows never overlap", async ({ page }) => {
     const shelf = page.getByTestId("hero-shelf");
     const heroes = shelf.locator("button[data-lego]");
     await expect(heroes).toHaveCount(5);
     const boxes = await heroes.evaluateAll((els) => els.map((e) => e.getBoundingClientRect().toJSON() as DOMRect));
     for (const b of boxes.slice(1, 3)) expect(Math.abs(b.y - boxes[0]!.y)).toBeLessThan(2);
     for (const b of boxes.slice(3)) expect(b.y).toBeGreaterThanOrEqual(boxes[0]!.y + boxes[0]!.height - 0.5);
-    // One stud scale: sprite width / baked width is the same for a hero and a 2x2.
+    // Never larger than the bin's stud scale; the whole sprite (side face too) fits its own cell.
     const scale = (id: string) =>
       brick(page, id)
         .locator("img")
         .evaluate((el) => (el as HTMLImageElement).getBoundingClientRect().width / (el as HTMLImageElement).naturalWidth);
-    expect(await scale("b20")).toBeCloseTo(await scale("swaps"), 3);
+    expect(await scale("b20")).toBeLessThanOrEqual((await scale("swaps")) + 0.001);
+    const sprites = await heroes.evaluateAll((els) => els.map((e) => [e.getBoundingClientRect().toJSON(), e.querySelector("[data-sprite]")!.getBoundingClientRect().toJSON()] as [DOMRect, DOMRect]));
+    for (const [cell, sp] of sprites) expect(sp.right).toBeLessThanOrEqual(cell.right + 1);
+    for (let i = 1; i < 3; i++) expect(boxes[i]!.x).toBeGreaterThanOrEqual(boxes[i - 1]!.x + boxes[i - 1]!.width - 0.5);
     // The bin under the shelf: row boxes never overlap vertically.
     const rows = await page.getByTestId("tray-scroll").locator("li").evaluateAll((els) => {
       const r = els.map((e) => e.getBoundingClientRect());
@@ -726,12 +729,25 @@ test.describe("phone", () => {
     await expect(page.getByTestId("recipes").locator("visible=true")).toBeInViewport();
     await expect(page.getByRole("button", { name: "Surprise me" })).toBeInViewport();
     await expect(page.getByRole("button", { name: "Money", exact: true })).toBeInViewport();
-    const [a, b, c] = await Promise.all(["b20", "payments", "financing"].map((id) => brick(page, id).boundingBox()));
-    // The five heroes share one shelf row.
-    expect(Math.abs(a!.y - b!.y)).toBeLessThan(2);
-    expect(Math.abs(c!.y - a!.y)).toBeLessThan(2);
+    const heroIds = (await page.getByTestId("hero-shelf").locator("button[data-lego]").evaluateAll((els) => els.map((e) => e.getAttribute("data-lego")!)));
+    const hb = await Promise.all(heroIds.map((id) => brick(page, id).boundingBox()));
+    // 3 + 2, like desktop: three on the first row, two below, never overlapping.
+    expect(Math.abs(hb[0]!.y - hb[1]!.y)).toBeLessThan(2);
+    expect(Math.abs(hb[2]!.y - hb[0]!.y)).toBeLessThan(2);
+    expect(hb[3]!.y).toBeGreaterThanOrEqual(hb[0]!.y + hb[0]!.height - 0.5);
+    for (let i = 1; i < 3; i++) expect(hb[i]!.x).toBeGreaterThanOrEqual(hb[i - 1]!.x + hb[i - 1]!.width - 0.5);
+    // All 8 categories visible at once in a 4 x 2 grid of equal 44px chips; no chevron, no scroll, nothing clipped.
     const chips = page.getByRole("group", { name: "Filter bricks" });
-    expect(await chips.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+    expect(await chips.evaluate((el) => el.scrollWidth > el.clientWidth + 1)).toBe(false);
+    const cb = await chips.locator("button").evaluateAll((els) => els.map((e) => ({ ...e.getBoundingClientRect().toJSON(), clip: e.scrollWidth > e.clientWidth + 1 })));
+    expect(cb).toHaveLength(8);
+    expect(new Set(cb.map((b) => Math.round(b.y))).size).toBe(2);
+    for (const b of cb) {
+      expect(b.height).toBeGreaterThanOrEqual(44);
+      expect(b.clip).toBe(false);
+      expect(Math.abs(b.width - cb[0]!.width)).toBeLessThan(1);
+    }
+    await expect(page.getByRole("button", { name: "More categories" })).toHaveCount(0);
   });
 
   test("a shared link opens straight on the app (frameless sheet)", async ({ page }) => {
@@ -911,6 +927,28 @@ test.describe("v6: Replay, inspect from the board, Present mode, the name", () =
     await expect(brick(page, "speed")).toHaveAttribute("aria-pressed", "false");
   });
 
+  test("the ghost brick: a dashed volume with no numeral; gone once the stack is full", async ({ page }) => {
+    const ghost = page.locator("[data-ghost-slot]");
+    await expect(ghost.first()).toBeAttached();
+    await expect(page.locator("[data-ghost-slot] text")).toHaveCount(0);
+    for (const id of ["b20", "payments", "financing", "validity"]) await brick(page, id).click();
+    await expect(count(page)).toHaveAttribute("aria-label", "4 of 4 bricks");
+    await expect(ghost).toHaveCount(0);
+    await brick(page, "speed").hover();
+    await expect(ghost).toHaveCount(0);
+  });
+
+  test("Grow's dotted line is Gray 60 on the light surface; the toast never touches the footer or the board controls", async ({ page }) => {
+    await page.goto("/#b20,financing");
+    await expect(page.getByTestId("connectors").locator('[data-line="financing"] path').first()).toHaveAttribute("stroke", /#5B616E/i);
+    await page.locator('[data-board-brick="b20"]').click();
+    const t = (await page.getByTestId("toast").boundingBox())!;
+    const f = (await page.locator("footer p").boundingBox())!;
+    const c = (await build(page).boundingBox())!;
+    expect(t.y + t.height).toBeLessThanOrEqual(f.y - 4);
+    expect(t.y + t.height).toBeLessThanOrEqual(c.y);
+  });
+
   test("focus never drops to <body>: after a board removal (keyboard or click), after Undo", async ({ page }) => {
     await page.goto("/#b20,payments,speed");
     await expect(phone(page).locator("[data-tile]")).toHaveCount(3);
@@ -970,7 +1008,7 @@ test.describe("v6: Replay, inspect from the board, Present mode, the name", () =
   });
 });
 
-for (const w of [320, 390, 430]) {
+for (const w of [320, 360, 390, 430]) {
   test.describe(`compact bar at ${w}px`, () => {
     test.use({ viewport: { width: w, height: 760 }, hasTouch: true, isMobile: true, reducedMotion: "reduce" });
 
@@ -1001,6 +1039,23 @@ for (const w of [320, 390, 430]) {
       await brick(page, "validity").tap();
       await expect(page.getByTestId("toast")).toContainText("Full · swapped");
       await expect(bar).not.toContainText("Full");
+      // Four bricks: the four count studs never touch Build/View, and no module chip is cut mid-word
+      // (all fit, or the row fades at its edge while it scrolls).
+      const g = await bar.evaluate((el) => {
+        const dots = el.querySelector('[data-testid="board-count"]')!.getBoundingClientRect();
+        const act = el.querySelector('[data-testid="mobile-action"]')!.getBoundingClientRect();
+        const mods = el.querySelector('[data-testid="mobile-modules"]') as HTMLElement;
+        const mr = mods.getBoundingClientRect();
+        const cut = [...mods.querySelectorAll("li")].some((li) => li.getBoundingClientRect().right > mr.right + 0.5);
+        return { gap: act.left - dots.right, cut, faded: mods.hasAttribute("data-more") };
+      });
+      expect(g.gap).toBeGreaterThanOrEqual(2);
+      if (g.cut) expect(g.faded).toBe(true);
+      // Printed verbs >= 12px in the compact bin too.
+      const verbs = await page.locator("button[data-lego][data-print]").evaluateAll((els) =>
+        els.map((b) => b.querySelector("[data-sprite]")!.getBoundingClientRect().width * Number((b as HTMLElement).dataset.print)),
+      );
+      expect(Math.min(...verbs)).toBeGreaterThanOrEqual(12);
     });
   });
 }

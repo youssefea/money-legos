@@ -11,13 +11,15 @@ export type ToastProps = {
   onUndo: () => void;
   /** Called when the toast has been on screen for 6s (paused while hovered or focused). */
   onDone: (n: number) => void;
+  /** board = inside the board column, just above its controls (desktop: clear of the footer); page = fixed at the bottom (compact). */
+  placement?: "board" | "page";
 };
 
 /**
  * Transient feedback with Undo: "Full · swapped Issue for Hold · Undo", "Issue removed · Undo".
  * 6s, paused while the pointer or focus is on it; Ctrl/Cmd+Z does the same Undo from anywhere.
  */
-export default function Toast({ toast, onUndo, onDone }: ToastProps) {
+export default function Toast({ toast, onUndo, onDone, placement = "page" }: ToastProps) {
   // Held (pointer or focus on it) for this toast only: a new toast, or Undo unmounting it, never stays held.
   const [heldN, setHeldN] = useState<number | null>(null);
   const doneRef = useRef(onDone);
@@ -33,7 +35,7 @@ export default function Toast({ toast, onUndo, onDone }: ToastProps) {
   }, [n, held]);
 
   return (
-    <div className={styles.dock}>
+    <div className={styles.dock} data-place={placement}>
       {toast && (
         <div
           key={toast.n}

@@ -80,10 +80,14 @@
   cursor: pointer;
 }
 
-/* ---------------------------------------------------------------- hero shelf: pinned, 3 + 2 on the bin's stud scale */
+/* ---------------------------------------------------------------- hero shelf: pinned, 3 + 2 on every layout */
 .heroShelf {
-  /* The bin's stud scale; smaller only when 3 fronts (+ padding and the last side face) won't fit. */
-  --hero-stud: min(var(--stud), calc((100cqw - 12px - 2 * var(--gap) - 3 * 6px) / 13.44));
+  /*
+   * Each hero gets its whole brick (front face + side face, --hero-span studs): three across fit the
+   * shelf, on the bin's stud scale or smaller when the column is narrow. Nothing overlaps, so the
+   * selection ring never cuts a brick.
+   */
+  --hero-stud: min(var(--stud), calc((100cqw - 12px - 2 * var(--gap)) / (3 * var(--hero-span, 5.44))));
   order: -1;
   flex: none;
   margin: 0 0 var(--space-3);
@@ -97,22 +101,14 @@
   background: var(--base-gray-10);
   box-shadow: inset 0 -1px 0 var(--base-gray-15);
 }
-/*
- * 2x4 fronts side by side, like bricks in a row: each cell is its front face (4 studs) plus a 6px
- * inset so the selection ring never hugs the face; the sprite's side face runs under the next brick
- * (drawn on top), the last in a row shows it whole.
- */
 .heroShelf .cell.cell {
   --stud: var(--hero-stud);
   flex: none;
-  width: calc(var(--stud) * 4 + 6px);
+  width: calc(var(--stud) * var(--hero-span, 5.44));
   height: calc(var(--stud) * var(--sh, 3.32));
 }
 .heroShelf .cell[data-span] {
   grid-column: auto;
-}
-.heroShelf .brick {
-  padding-left: 6px;
 }
 /* ---------------------------------------------------------------- scroll area (the other 35) */
 .scroll {
@@ -288,11 +284,15 @@
   white-space: nowrap;
 }
 
-/* Placed: a 16px check at the cell's bottom-right corner (over the side face, never the print). */
+/*
+ * Placed: a 16px check at the bottom-right corner of the front face (the sprite's front runs from
+ * the cell's left edge to --fr - --fl studs), on the face's edge below the centred print. One
+ * position everywhere: shelf, bin and Present strip.
+ */
 .check {
   position: absolute;
-  right: 3px;
-  bottom: 3px;
+  left: calc(var(--stud) * (var(--fr) - var(--fl)) - 10px);
+  bottom: 2px;
   z-index: 1;
   width: 16px;
   height: 16px;
@@ -410,54 +410,19 @@
 
 /* ---------------------------------------------------------------- compact (<1024): the page scrolls, not the tray */
 @media (max-width: 1023.98px) {
+  /* The bin's 24px stud here too, so every printed verb is >= 12px (3 or 4 columns; the page scrolls). */
   .tray {
     height: auto;
-    --stud: 18px;
+    --stud: 24px;
   }
-  /* Five across, the stud shrinking to fit (the page scrolls here, not the tray). */
-  .heroShelf {
-    --hero-stud: min(var(--stud), calc((100cqw - 12px - 4 * 4px) / 21.44));
-    display: flex;
-    gap: 4px;
-    align-items: flex-end;
-  }
-  .heroShelf .cell.cell {
-    width: calc(var(--stud) * 4);
-  }
-  .heroShelf .brick {
-    padding-left: 0;
-  }
-  .heroShelf .cell:last-child {
-    margin-right: calc(var(--stud) * 1.44);
-  }
-  /* One chip row that scrolls sideways, edge fades and a chevron while there is more. */
-  .chipsWrap {
-    margin: 0 calc(var(--page-pad-x) * -1);
-  }
+  /* All 8 categories at once: a 4 x 2 grid of equal 44px chips (no sideways scroll, nothing clipped). */
   .chips {
-    display: flex;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding: 6px var(--page-pad-x) var(--space-3);
-    scrollbar-width: none;
-  }
-  .chips::-webkit-scrollbar {
-    display: none;
-  }
-  .chipsWrap[data-more-right] .chips {
-    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 72px), transparent calc(100% - 24px));
-    mask-image: linear-gradient(to right, #000 calc(100% - 72px), transparent calc(100% - 24px));
-  }
-  .chipsWrap[data-more-left][data-more-right] .chips {
-    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 32px, #000 calc(100% - 72px), transparent calc(100% - 24px));
-    mask-image: linear-gradient(to right, transparent 0, #000 32px, #000 calc(100% - 72px), transparent calc(100% - 24px));
-  }
-  .chipsNext {
-    top: 6px;
-    right: var(--page-pad-x);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding: 6px 0 var(--space-3);
   }
   .chip {
     height: 44px;
+    padding: 0 4px;
     font-size: 15px;
   }
   .scroll {
@@ -488,24 +453,4 @@
 .tray[data-layout="strip"] .chipsWrap[data-more-right] .chips {
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 72px), transparent calc(100% - 24px));
   mask-image: linear-gradient(to right, #000 calc(100% - 72px), transparent calc(100% - 24px));
-}
-
-/* Hero shelf: the check sits on the studs at the top-right of the front face (the side face is under the next brick). */
-.heroShelf .art {
-  position: static;
-}
-/* (Lift the sprite, not .art: a transform on .art would move the check's containing block.) */
-.heroShelf .brick .art {
-  transform: none;
-}
-@media (hover: hover) {
-  .heroShelf .brick:hover .sprite,
-  .heroShelf .brick:hover .drawn {
-    transform: translateY(-3px);
-  }
-}
-.heroShelf .check {
-  top: 2px;
-  right: 2px;
-  bottom: auto;
 }

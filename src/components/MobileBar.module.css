@@ -53,7 +53,7 @@
   color: var(--base-gray-60);
 }
 
-/* One line of tiny module chips; scrolls sideways (never wraps) if four long names do not fit. */
+/* One line of tiny module chips; if four long names still do not fit, the row scrolls with an edge fade (never a hard cut mid-word). */
 .modules {
   grid-column: 1 / -1;
   min-width: 0;
@@ -67,6 +67,10 @@
 }
 .modules::-webkit-scrollbar {
   display: none;
+}
+.modules[data-more] {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
 }
 .module {
   flex: none;
@@ -127,5 +131,34 @@
     background: var(--base-gray-80);
     border-color: var(--base-gray-80);
     color: var(--base-gray-30);
+  }
+}
+
+/* Smallest phones (<360): a smaller mini stack and tighter studs and chips, so nothing touches. */
+@media (max-width: 359.98px) {
+  .bar {
+    grid-template-columns: 80px minmax(0, 1fr) auto;
+    column-gap: 4px;
+  }
+  .stage {
+    width: 80px;
+  }
+  .count :global([data-testid="board-count"]) {
+    gap: 5px;
+  }
+  .count :global([data-testid="board-count"]) i {
+    width: 12px;
+    height: 12px;
+  }
+  .modules {
+    gap: 3px;
+  }
+  .module {
+    gap: 4px;
+    padding: 0 6px 0 5px;
+  }
+  .module i {
+    width: 8px;
+    height: 8px;
   }
 }

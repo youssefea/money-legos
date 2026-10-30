@@ -101,13 +101,25 @@
   text-underline-offset: 4px;
 }
 
+/*
+ * Desktop: the H1 shares the header row, so "Money Legos" is a quiet product tag beside the lockup
+ * (16px, Gray 60), never a second headline next to the title.
+ */
+@media (min-width: 1280px) {
+  .name {
+    font-size: 16px;
+    color: var(--color-fg-muted);
+  }
+}
 @media (min-width: 1600px) {
   .divider {
     height: 32px;
   }
-  .name,
   .docs {
     font-size: 20px;
+  }
+  .name {
+    font-size: 17px;
   }
 }
 

@@ -1,4 +1,8 @@
-/* Bottom-centre on desktop, under the sticky bar on compact. Never holds layout space. */
+/*
+ * Desktop: inside the board column, centred just above Build / Surprise me / Recipes, so it never
+ * covers the controls, the bin or the footer risk line. Compact: fixed at the bottom of the screen.
+ * Never holds layout space.
+ */
 .dock {
   position: fixed;
   z-index: 40;
@@ -8,6 +12,17 @@
   display: flex;
   justify-content: center;
   pointer-events: none;
+}
+.dock[data-place="board"] {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 80px;
+}
+@media (min-width: 1600px) {
+  .dock[data-place="board"] {
+    bottom: 88px;
+  }
 }
 .toast .text {
   white-space: nowrap;
