@@ -124,8 +124,8 @@ export default function MoneyLegosApp() {
     const el = document.activeElement as HTMLElement | null;
     const lego = (el?.dataset.lego as LegoId | undefined) ?? null;
     setStripCategory(lego && BY_ID[lego] && BY_ID[lego].tier !== "hero" ? BY_ID[lego].category : null);
-    // Only restore focus that was inside the page's controls (not a click that left focus on <body>).
-    presentFocus.current = el && el !== document.body ? { lego } : null;
+    // (Safari does not focus a clicked button: then the toggle gets the focus, never <body>.)
+    presentFocus.current = { lego };
     writePresent(on);
   }, []);
   const copyRef = useRef<HTMLButtonElement>(null);
@@ -199,14 +199,16 @@ export default function MoneyLegosApp() {
     focusSoon(keyboard ? boardBrick(rest[i] ?? rest[i - 1]) : '[data-testid="board"]');
   };
 
-  const onUndo = () => {
+  // Undo from the toast unmounts its button: focus moves to the brick that came back. Ctrl/Cmd+Z leaves
+  // focus where it is, unless it was nowhere (<body>) or inside the toast.
+  const onUndo = (fromToast: boolean) => {
     const t = state.toast;
     if (!t) return;
     const back = t.prev.ids.find((x) => !state.ids.includes(x));
-    // Undo from the toast unmounts its button: move focus to the brick that came back.
-    const fromToast = !!document.activeElement?.closest("[data-testid='toast']");
+    const a = document.activeElement;
+    const move = fromToast || !a || a === document.body || !!a.closest("[data-testid='toast']");
     dispatch({ type: "undo" });
-    if (fromToast) focusSoon(boardBrick(back));
+    if (move) focusSoon(boardBrick(back));
   };
 
   // Compact bar: Build app, then View app (the live app in the sheet).
@@ -273,7 +275,7 @@ export default function MoneyLegosApp() {
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && (e.key === "z" || e.key === "Z")) {
         if (!hasToast) return;
         e.preventDefault();
-        undoRef.current();
+        undoRef.current(false);
         return;
       }
       if (e.metaKey || e.ctrlKey) return;
@@ -438,7 +440,7 @@ export default function MoneyLegosApp() {
             onRecipe={onRecipe}
             onLayout={setLayout}
           />
-          {!isMobile && <Toast toast={state.toast} onUndo={onUndo} onDone={(n) => dispatch({ type: "toastDone", n })} placement="board" />}
+          {!isMobile && <Toast toast={state.toast} onUndo={() => onUndo(true)} onDone={(n) => dispatch({ type: "toastDone", n })} placement="board" />}
         </div>
         {!isMobile && (
           <div className={`${styles.panel} ${styles.phonePanel}`}>
@@ -474,7 +476,7 @@ export default function MoneyLegosApp() {
         <SoundToggle on={sound.on} onChange={sound.setOn} />
       </footer>
 
-      {isMobile && <Toast toast={state.toast} onUndo={onUndo} onDone={(n) => dispatch({ type: "toastDone", n })} />}
+      {isMobile && <Toast toast={state.toast} onUndo={() => onUndo(true)} onDone={(n) => dispatch({ type: "toastDone", n })} />}
 
       {isMobile && result && (
         <ResultSheet
