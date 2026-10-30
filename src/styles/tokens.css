@@ -1,0 +1,221 @@
+/*
+ * Money Legos design tokens.
+ * Brand-locked: only the 16 colours from the Base Brand Guidelines (V1.0, June 2025, p10).
+ * Do not add tints, alpha variants or interpolated shades. Lighting in the 3D scene may
+ * shade a brick, but the base hex never changes.
+ * Values follow design/DESIGN-SPEC.md (v2 section wins) and design/research/brand-tokens.css.
+ */
+
+:root {
+  /* ------------------------------------------------------------ brand palette (16) */
+  --base-blue: #0000ff;
+  --base-cerulean: #3c8aff;
+  --base-tan: #b8a581;
+  --base-yellow: #ffd12f;
+  --base-green: #66c800;
+  --base-lime: #b6f569;
+  --base-red: #fc401f; /* errors only; never a brick colour */
+  --base-pink: #fea8cd;
+  --base-gray-0: #ffffff;
+  --base-gray-10: #eef0f3;
+  --base-gray-15: #dee1e7;
+  --base-gray-30: #b1b7c3;
+  --base-gray-50: #717886; /* large text / decorative only (4.44:1 on white) */
+  --base-gray-60: #5b616e;
+  --base-gray-80: #32353d;
+  --base-gray-100: #0a0b0d;
+
+  /* ------------------------------------------------------------ semantic, light */
+  --color-bg: var(--base-gray-0);
+  --color-surface: var(--base-gray-0);
+  --color-panel: var(--base-gray-10);
+  --color-hairline: var(--base-gray-15);
+  --color-border-strong: var(--base-gray-30);
+  --color-dashed: var(--base-gray-30); /* closed set-box blueprint outline */
+  --color-slot-outline: var(--base-gray-60); /* empty-slot ghost on the projector */
+  --color-fg: var(--base-gray-100);
+  --color-fg-muted: var(--base-gray-60);
+  --color-fg-label: var(--base-gray-60);
+  --color-accent: var(--base-blue);
+  --color-on-accent: var(--base-gray-0);
+  --color-link: var(--base-blue);
+  --color-danger: var(--base-red);
+  --color-on-secondary: var(--base-gray-100);
+  --color-success: var(--base-green); /* "COPIED" state; text on it is gray-100 */
+  --color-on-success: var(--base-gray-100);
+  --color-baseplate: var(--base-gray-15);
+
+  /* Focus ring: 2px, offset 2px. */
+  --focus-ring-color: var(--base-blue);
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+
+  /* ------------------------------------------------------------ bricks
+   * Hero bricks (2x4) and their label colours. White labels only on #0000FF,
+   * #32353D and #0A0B0D. */
+  --brick-issue: var(--base-blue);
+  --brick-issue-label: var(--base-gray-0);
+  --brick-pay: var(--base-cerulean);
+  --brick-pay-label: var(--base-gray-100);
+  --brick-grow: var(--base-green);
+  --brick-grow-label: var(--base-gray-100);
+  --brick-trade: var(--base-yellow);
+  --brick-trade-label: var(--base-gray-100);
+  --brick-speed: var(--base-pink);
+  --brick-speed-label: var(--base-gray-100);
+  /* Secondary bricks (2x2), cycled in tray order. */
+  --brick-lime: var(--base-lime);
+  --brick-lime-label: var(--base-gray-100);
+  --brick-tan: var(--base-tan);
+  --brick-tan-label: var(--base-gray-100);
+  --brick-white: var(--base-gray-0);
+  --brick-white-label: var(--base-gray-100);
+  --brick-gray-light: var(--base-gray-15);
+  --brick-gray-light-label: var(--base-gray-100);
+  --brick-gray: var(--base-gray-30);
+  --brick-gray-label: var(--base-gray-100);
+  --brick-gray-dark: var(--base-gray-80);
+  --brick-gray-dark-label: var(--base-gray-0);
+
+  /* ------------------------------------------------------------ typography */
+  /* --font-base-sans / --font-base-sans-mono come from next/font/local (src/app/fonts.ts) and carry the fallbacks. */
+  --font-sans: var(--font-base-sans, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif);
+  --font-mono: var(--font-base-sans-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-bold: 700;
+
+  --text-h1: clamp(36px, 3.2vw, 56px);
+  --text-h1-lh: 1.04;
+  --text-h1-tracking: -0.025em;
+  --text-subline: clamp(16px, 1.2vw, 20px);
+  --text-subline-lh: 1.4;
+  --text-headline: clamp(20px, 1.6vw, 28px); /* set-box app name */
+  --text-headline-lh: 1.15;
+  --text-headline-tracking: -0.015em;
+  --text-body: 16px;
+  --text-body-lh: 1.45;
+  --text-small: 14px;
+  --text-small-lh: 1.4;
+  --text-label: 12px; /* mono caps */
+  --text-label-lh: 1.2;
+  --text-label-tracking: 0.12em;
+  --text-code: 14px;
+  --text-code-lh: 1.55;
+  --text-brand-name: 18px; /* "Money Legos" next to the lockup */
+
+  /* ------------------------------------------------------------ spacing (4/8 scale) */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-24: 96px;
+
+  /* ------------------------------------------------------------ layout */
+  --page-max: 1760px;
+  --page-pad-y: 24px;
+  --page-pad-x: 32px;
+  --col-tray: 340px;
+  --col-board-min: 440px;
+  --col-result: 420px;
+  --col-gap: 24px;
+  --hit-target: 44px;
+  --hit-target-hero: 64px;
+  --mobile-bar-height: 132px;
+
+  /* ------------------------------------------------------------ logo */
+  --logo-height: 28px;
+  --logo-clearspace: 20px; /* lockup clear space x = square width ≈ 0.71 × height */
+
+  /* ------------------------------------------------------------ radii */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-card: 16px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+
+  /* ------------------------------------------------------------ motion */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-hover: ease;
+  --dur-instant: 75ms;
+  --dur-fast: 150ms;
+  --dur-base: 200ms;
+  --dur-place: 280ms; /* brick drop + squash (220–320ms) */
+  --dur-settle: 280ms; /* stack settle bounce */
+  --dur-stagger: 60ms; /* per-brick hop delay on Generate */
+  --dur-open: 360ms; /* set box lifts open */
+  --dur-copied: 2000ms; /* how long "COPIED" stays */
+  --squash: 0.06;
+
+  color-scheme: light dark;
+}
+
+/* Projector / 1920 wide. */
+@media (min-width: 1920px) {
+  :root {
+    --page-pad-y: 32px;
+    --page-pad-x: 48px;
+    --col-tray: 400px;
+    --col-result: 500px;
+    --col-gap: 32px;
+    --text-label: 14px;
+    --logo-height: 32px;
+    --logo-clearspace: 23px;
+  }
+}
+
+/* Dark mode follows the system unless data-theme="light" pins it. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg: var(--base-gray-100);
+    --color-surface: var(--base-gray-100);
+    --color-panel: var(--base-gray-100);
+    --color-hairline: var(--base-gray-80);
+    --color-border-strong: var(--base-gray-60);
+    --color-dashed: var(--base-gray-60);
+    --color-slot-outline: var(--base-gray-30);
+    --color-fg: var(--base-gray-0);
+    --color-fg-muted: var(--base-gray-30);
+    --color-fg-label: var(--base-gray-30);
+    --color-link: var(--base-cerulean);
+    --color-baseplate: var(--base-gray-80);
+    --focus-ring-color: var(--base-cerulean);
+  }
+}
+:root[data-theme="dark"] {
+  --color-bg: var(--base-gray-100);
+  --color-surface: var(--base-gray-100);
+  --color-panel: var(--base-gray-100);
+  --color-hairline: var(--base-gray-80);
+  --color-border-strong: var(--base-gray-60);
+  --color-dashed: var(--base-gray-60);
+  --color-slot-outline: var(--base-gray-30);
+  --color-fg: var(--base-gray-0);
+  --color-fg-muted: var(--base-gray-30);
+  --color-fg-label: var(--base-gray-30);
+  --color-link: var(--base-cerulean);
+  --color-baseplate: var(--base-gray-80);
+  --focus-ring-color: var(--base-cerulean);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-instant: 0ms;
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-place: 0ms;
+    --dur-settle: 0ms;
+    --dur-stagger: 0ms;
+    --dur-open: 0ms;
+    --squash: 0;
+  }
+}

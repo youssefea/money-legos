@@ -1,0 +1,38 @@
+/*
+ * Official Base lockup. Clear space = width of the lockup's Square (≈ 0.71 × height),
+ * 20px at 28px tall, 23px at 32px tall. Never apply opacity, filters or transforms to the logo.
+ */
+.root {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  padding: var(--logo-clearspace);
+  margin: calc(var(--logo-clearspace) * -1); /* clear space is reserved, not added to layout */
+  line-height: 0;
+}
+
+.logo {
+  display: block;
+  height: var(--logo-height);
+  width: auto;
+}
+
+.dark {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .light {
+    display: none;
+  }
+  :root:not([data-theme="light"]) .dark {
+    display: block;
+  }
+}
+
+:root[data-theme="dark"] .light {
+  display: none;
+}
+:root[data-theme="dark"] .dark {
+  display: block;
+}
