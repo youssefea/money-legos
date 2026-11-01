@@ -11,73 +11,10 @@
   --stud: 24px;
   container-type: inline-size;
   height: 100%;
+  flex: 1 1 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
-}
-
-/* ---------------------------------------------------------------- category chips (shown first, tabbed after the bricks) */
-.chipsWrap {
-  order: -2;
-  flex: none;
-  position: relative;
-}
-/* Desktop: all 8 chips in two balanced rows of 4, nothing hidden. */
-.chips {
-  display: grid;
-  grid-template-columns: repeat(4, max-content);
-  gap: 6px;
-  padding: 2px 0 var(--space-3);
-}
-.chip {
-  flex: none;
-  height: 40px;
-  padding: 0 14px;
-  border: 1px solid var(--color-hairline);
-  border-radius: var(--radius-pill);
-  background: var(--color-surface);
-  color: var(--color-fg);
-  font: inherit;
-  font-size: 14px;
-  line-height: 1;
-  white-space: nowrap;
-  cursor: pointer;
-  transition:
-    background-color var(--dur-fast) var(--ease-hover),
-    border-color var(--dur-fast) var(--ease-hover),
-    color var(--dur-fast) var(--ease-hover);
-}
-.chip:focus-visible {
-  outline-offset: -2px;
-}
-.chip[aria-pressed="true"] {
-  border-color: var(--base-gray-100);
-  background: var(--base-gray-100);
-  color: var(--base-gray-0);
-}
-@media (pointer: coarse) {
-  .chip {
-    height: 44px;
-  }
-}
-/* The overflow affordance (single-row layouts only): a chevron over the right edge fade. */
-.chipsNext {
-  position: absolute;
-  top: 2px;
-  right: 0;
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-pill);
-  background: var(--color-surface);
-  box-shadow:
-    0 0 0 1px var(--color-hairline),
-    -12px 0 12px 4px var(--color-bg);
-  color: var(--color-fg);
-  cursor: pointer;
 }
 
 /* ---------------------------------------------------------------- hero shelf: pinned, 3 + 2 on every layout */
@@ -87,11 +24,10 @@
    * shelf, on the bin's stud scale or smaller when the column is narrow. Nothing overlaps, so the
    * selection ring never cuts a brick.
    */
-  --hero-stud: min(var(--stud), calc((100cqw - 12px - 2 * var(--gap)) / (3 * var(--hero-span, 5.44))));
-  order: -1;
+  --hero-stud: min(var(--stud), calc((100cqw - 4px - 2 * var(--gap)) / (3 * var(--hero-span, 5.44))));
   flex: none;
   margin: 0 0 var(--space-3);
-  padding: 6px 6px 4px;
+  padding: 6px 2px 4px;
   list-style: none;
   display: grid;
   grid-template-columns: repeat(3, max-content);
@@ -117,8 +53,17 @@
   margin: 0 -4px;
   padding: var(--space-1) 4px var(--space-6);
   scrollbar-width: thin;
-  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - var(--space-6)), transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - var(--space-6)), transparent 100%);
+  --fade-top: 0px;
+  --fade-bottom: 0px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--fade-top), #000 calc(100% - var(--fade-bottom)), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 var(--fade-top), #000 calc(100% - var(--fade-bottom)), transparent 100%);
+}
+/* Subtle edge fades, only on the side that has more bricks. */
+.scroll[data-more-top] {
+  --fade-top: var(--space-5);
+}
+.scroll[data-more-bottom] {
+  --fade-bottom: var(--space-6);
 }
 
 /*
@@ -149,7 +94,7 @@
 
 /*
  * ---------------------------------------------------------------- strip (Present mode drawer): one row
- * The 5 heroes, a hairline, then the active category, on the bin's own 24px stud (26px projector),
+ * The 5 heroes, a hairline, then every other brick, on the bin's own 24px stud (26px projector),
  * so every printed verb stays >= 12px. Scrolls sideways when the row is wider than the drawer.
  */
 .stripWrap {
@@ -266,18 +211,9 @@
   .brick:hover .drawn {
     filter: drop-shadow(0 5px 4px rgb(10 11 13 / 0.14));
   }
-  .chip:hover:not([aria-pressed="true"]) {
-    border-color: var(--color-border-strong);
-  }
 }
 .brick:focus-visible {
   outline-offset: 0;
-}
-/* Hero bricks a filter leaves out stay in place as grey ghosts (never below 0.6). */
-.brick[data-dim] .sprite,
-.brick[data-dim] .drawn {
-  filter: saturate(0.15);
-  opacity: 0.6;
 }
 /* On the board: full colour, a 2px Base Blue ring and the check. */
 .brick[data-placed] {
@@ -431,11 +367,6 @@
     background: var(--base-gray-80);
     box-shadow: 0 8px 24px rgb(0 0 0 / 0.5);
   }
-  .chip[aria-pressed="true"] {
-    border-color: var(--base-gray-0);
-    background: var(--base-gray-0);
-    color: var(--base-gray-100);
-  }
   .brick[data-inspect],
   .brick[data-placed] {
     box-shadow: inset 0 0 0 2px var(--base-cerulean);
@@ -454,9 +385,6 @@
   .tray {
     --stud: 26px;
   }
-  .chip {
-    font-size: 16px;
-  }
 }
 
 /* ---------------------------------------------------------------- compact (<1024): the page scrolls, not the tray */
@@ -466,15 +394,15 @@
     height: auto;
     --stud: 24px;
   }
-  /* All 8 categories at once: a 4 x 2 grid of equal 44px chips (no sideways scroll, nothing clipped). */
-  .chips {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    padding: 6px 0 var(--space-3);
-  }
-  .chip {
-    height: 44px;
-    padding: 0 4px;
-    font-size: 15px;
+  /*
+   * A narrow phone (bin under 330px): three heroes across would print "Limit orders" under 12px, so the
+   * shelf goes 2 + 2 + 1 on the full stud.
+   */
+  @container (max-width: 329.98px) {
+    .heroShelf {
+      --hero-stud: min(var(--stud), calc((100cqw - 4px - var(--gap)) / (2 * var(--hero-span, 5.44))));
+      grid-template-columns: repeat(2, max-content);
+    }
   }
   .scroll {
     overflow: visible;
@@ -482,26 +410,4 @@
     mask-image: none;
     padding-bottom: var(--space-4);
   }
-}
-
-/* Present mode drawer: the category switcher is one row of chips (36px) over the strip. */
-.tray[data-layout="strip"] .chips {
-  display: flex;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  scrollbar-width: none;
-  padding: 0 0 var(--space-1);
-}
-.tray[data-layout="strip"] .chip {
-  height: 36px;
-  padding: 0 12px;
-}
-.tray[data-layout="strip"] .chipsNext {
-  top: 0;
-  height: 36px;
-  width: 36px;
-}
-.tray[data-layout="strip"] .chipsWrap[data-more-right] .chips {
-  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 72px), transparent calc(100% - 24px));
-  mask-image: linear-gradient(to right, #000 calc(100% - 72px), transparent calc(100% - 24px));
 }

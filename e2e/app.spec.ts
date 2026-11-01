@@ -32,8 +32,11 @@ test.describe("desktop", () => {
     // Every brick is presented as available: no status or test-network wording anywhere on the page.
     await expect(page.locator("body")).not.toContainText(/coming soon|announced|sepolia|testnet|early access|mainnet targeting|acme/i);
     await expect(page.locator("button[data-lego]")).toHaveCount(39);
-    // Brick copy, not "Lego", in the bin's names.
-    await expect(page.getByRole("group", { name: "Filter bricks" })).toBeVisible();
+    // No category chips: every brick in one bin, and a Recipes section under it (no Recipes popover on the board).
+    await expect(page.getByRole("group", { name: "Filter bricks" })).toHaveCount(0);
+    await expect(page.locator("button[data-chip]")).toHaveCount(0);
+    await expect(page.getByRole("region", { name: "Recipes" })).toBeVisible();
+    await expect(page.getByTestId("recipes")).toHaveCount(0);
   });
 
   test("bricks first in tab order: Docs, Present, then the bin", async ({ page, browserName }) => {
@@ -47,7 +50,7 @@ test.describe("desktop", () => {
   test("before Build app the phone shows wireframes; Build app boots it; then it stays live", async ({ page }) => {
     await brick(page, "b20").click();
     await expect(count(page)).toHaveAttribute("aria-label", "1 of 4 bricks");
-    await expect(live(page)).toHaveText(/Issue added, 1 of 4/);
+    await expect(live(page)).toHaveText(/Token added, 1 of 4/);
     expect(await tileIds(page)).toEqual(["b20"]);
     await expect(phone(page)).toHaveAttribute("data-phase", "wire");
     await expect(phone(page).locator("[data-tile]").first()).toHaveAttribute("data-wire", "true");
@@ -99,7 +102,7 @@ test.describe("desktop", () => {
     await expect.poll(async () => Math.round((await brick(page, "b20").getByTestId("placed-check").boundingBox())!.width)).toBe(16);
     await brick(page, "b20").click();
     await expect(brick(page, "b20")).toHaveAttribute("aria-pressed", "false");
-    await expect(live(page)).toHaveText(/Issue removed, 1 of 4/);
+    await expect(live(page)).toHaveText(/Token removed, 1 of 4/);
     await expect(phone(page).locator("[data-tile]")).toHaveCount(1);
   });
 
@@ -154,19 +157,47 @@ test.describe("desktop", () => {
       expect(await sc.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
       expect(await sc.evaluate((el) => getComputedStyle(el).maskImage)).toContain("linear-gradient");
       await expect(page.getByTestId("hero-shelf")).toBeInViewport({ ratio: 1 });
-      for (const c of await page.getByRole("group", { name: "Filter bricks" }).getByRole("button").all()) await expect(c).toBeInViewport({ ratio: 1 });
     });
   }
 
-  test("category chips: all 8 visible, 40px tall, nothing clipped", async ({ page }) => {
-    const chips = page.getByRole("group", { name: "Filter bricks" }).getByRole("button");
-    await expect(chips).toHaveCount(8);
-    for (const c of await chips.all()) {
-      await expect(c).toBeInViewport({ ratio: 1 });
-      expect(Math.round((await c.boundingBox())!.height)).toBeGreaterThanOrEqual(40);
-    }
-    await expect(page.locator("#brick-keys")).toHaveText(/Arrow keys/);
-  });
+  for (const [w, h, rows] of [
+    [1280, 720, 4],
+    [1440, 900, 4],
+    [1920, 1080, 6],
+  ] as const) {
+    test(`left column at ${w}x${h}: bricks on top, Recipes below (about a third, >= ${rows} whole rows), each scrolls on its own; no page scroll`, async ({ page }) => {
+      await page.setViewportSize({ width: w, height: h });
+      await page.getByTestId("tray-scroll").locator("img").first().waitFor();
+      expect(await page.evaluate(() => document.documentElement.scrollHeight - innerHeight)).toBeLessThanOrEqual(0);
+      const shelf = page.getByTestId("recipes-shelf");
+      await expect(shelf.getByRole("heading", { name: "Recipes" })).toBeVisible();
+      const g = await page.evaluate(() => {
+        const col = document.querySelector('[data-testid="recipes-shelf"]')!.parentElement!.getBoundingClientRect();
+        const shelf = document.querySelector('[data-testid="recipes-shelf"]')!;
+        const sc = shelf.querySelector("div")!;
+        const sr = sc.getBoundingClientRect();
+        const bin = document.querySelector('[data-testid="tray-scroll"]')!.getBoundingClientRect();
+        const items = [...sc.querySelectorAll("button[data-recipe]")].map((b) => b.getBoundingClientRect());
+        return {
+          share: shelf.getBoundingClientRect().height / col.height,
+          whole: items.filter((r) => r.top >= sr.top - 1 && r.bottom <= sr.bottom + 1).length,
+          below: shelf.getBoundingClientRect().top >= bin.bottom - 1,
+          overflow: getComputedStyle(sc).overflowY,
+          n: items.length,
+        };
+      });
+      expect(g.n).toBeGreaterThanOrEqual(12);
+      expect(g.whole).toBeGreaterThanOrEqual(rows);
+      expect(g.share).toBeGreaterThanOrEqual(0.28);
+      expect(g.share).toBeLessThanOrEqual(0.4);
+      expect(g.below).toBe(true);
+      expect(g.overflow).toBe("auto");
+      // Each row: 3-4 mini glyphs in catalog colours, then the name.
+      const first = shelf.locator("button[data-recipe]").first();
+      expect(await first.locator("svg").count()).toBeGreaterThanOrEqual(3);
+      await expect(page.locator("#brick-keys")).toHaveText(/Arrow keys/);
+    });
+  }
 
   test("keyboard: arrow keys move through the bin, Enter and Space add", async ({ page }) => {
     await brick(page, "b20").focus();
@@ -179,13 +210,21 @@ test.describe("desktop", () => {
     const focused = await page.evaluate(() => (document.activeElement as HTMLElement).dataset.lego);
     expect(focused).toBeTruthy();
     expect(focused).not.toBe("payments");
-    // Roving tab stop: one Tab leaves the bin and lands on the category chips (one stop too).
+    // Roving tab stop: one Tab leaves the bin and lands on the Recipes section (one stop too).
+    const recipe = () => page.evaluate(() => (document.activeElement as HTMLElement).dataset.recipe ?? null);
     await page.keyboard.press("Tab");
-    expect(await page.evaluate(() => (document.activeElement as HTMLElement).dataset.chip ?? null)).toBe("Money");
-    await page.keyboard.press("ArrowRight");
-    expect(await page.evaluate(() => (document.activeElement as HTMLElement).dataset.chip ?? null)).toBe("Identity");
+    expect(await recipe()).toBe("neobank");
+    await page.keyboard.press("ArrowDown");
+    expect(await recipe()).toBe("neobroker");
+    await page.keyboard.press("ArrowUp");
+    expect(await recipe()).toBe("neobank");
     await page.keyboard.press("Tab");
-    expect(await page.evaluate(() => (document.activeElement as HTMLElement).dataset.chip ?? null)).toBeNull();
+    expect(await recipe()).toBeNull();
+    // Shift+Tab comes back to the same recipe, and once more to the bin's brick.
+    await page.keyboard.press("Shift+Tab");
+    expect(await recipe()).toBe("neobank");
+    await page.keyboard.press("Shift+Tab");
+    expect(await page.evaluate(() => (document.activeElement as HTMLElement).dataset.lego ?? null)).toBe(focused);
   });
 
   test("place via drag and drop", async ({ page }) => {
@@ -201,24 +240,12 @@ test.describe("desktop", () => {
     await expect(count(page)).toHaveAttribute("aria-label", "1 of 4 bricks");
   });
 
-  test("category chips filter the small bricks; heroes stay, dimmed; no All chip", async ({ page }) => {
+  test("one bin, no filters: all 39 bricks, heroes first, never dimmed", async ({ page }) => {
     await expect(page.getByRole("button", { name: "All", exact: true })).toHaveCount(0);
-    const agents = page.getByRole("button", { name: "Agents", exact: true });
-    await agents.click();
-    await expect(agents).toHaveAttribute("aria-pressed", "true");
-    await expect(brick(page, "b20")).toBeVisible();
-    await expect(brick(page, "b20")).toHaveAttribute("data-dim", "true");
-    await expect(brick(page, "x402-api")).toBeVisible();
-    await expect(brick(page, "swaps")).toHaveCount(0);
-    const n = await page.locator("button[data-lego]").count();
-    expect(n).toBeGreaterThan(7);
-    expect(n).toBeLessThan(40);
-    await page.getByRole("button", { name: "Speed", exact: true }).click();
-    await expect(brick(page, "speed")).not.toHaveAttribute("data-dim", "true");
-    await expect(brick(page, "flashblocks")).toBeVisible();
-    // Pressing the active chip again shows everything.
-    await page.getByRole("button", { name: "Speed", exact: true }).click();
-    await expect(page.locator("button[data-lego]")).toHaveCount(39);
+    await expect(page.getByRole("button", { name: "Agents", exact: true })).toHaveCount(0);
+    await expect(page.getByTestId("tray-scroll").locator("button[data-lego]")).toHaveCount(34);
+    await expect(page.getByTestId("hero-shelf").locator("button[data-lego]")).toHaveCount(5);
+    await expect(page.locator("button[data-lego][data-dim]")).toHaveCount(0);
   });
 
   test("tooltip: name and tag only, no status line; stays on screen", async ({ page }) => {
@@ -246,25 +273,25 @@ test.describe("desktop", () => {
     await expect(tip).not.toContainText(/mainnet/i);
   });
 
-  test("recipes popover: brick glyph rows, arrow keys, Escape returns focus, picking one builds it", async ({ page }) => {
-    const trigger = page.getByTestId("recipes").locator("visible=true");
-    await trigger.click();
-    const pop = page.getByRole("dialog", { name: "Recipes" });
-    await expect(pop).toBeVisible();
-    const first = pop.getByRole("button").first();
-    await expect(first).toBeFocused();
-    expect(await first.locator("svg").count()).toBeGreaterThanOrEqual(2);
-    await page.keyboard.press("ArrowDown");
-    await expect(pop.getByRole("button").nth(1)).toBeFocused();
-    await page.keyboard.press("Escape");
-    await expect(pop).toHaveCount(0);
-    await expect(trigger).toBeFocused();
-    await trigger.click();
-    await pop.getByRole("button", { name: /^Neobroker/ }).click();
+  test("Recipes section: click or Enter loads and builds a recipe; the current one has aria-current", async ({ page }) => {
+    const shelf = page.getByTestId("recipes-shelf");
+    await expect(shelf.locator("[aria-current]")).toHaveCount(0);
+    await shelf.getByRole("button", { name: /^Neobroker/ }).click();
     await expect(count(page)).toHaveAttribute("aria-label", "4 of 4 bricks");
     await expect(page.getByTestId("app-name")).toHaveText("Neobroker");
     await expect(phone(page)).toHaveAttribute("data-phase", "live");
     await expect(page).toHaveURL(/#recipe=neobroker$/);
+    await expect(shelf.locator("[aria-current]")).toHaveCount(1);
+    await expect(shelf.getByRole("button", { name: /^Neobroker/ })).toHaveAttribute("aria-current", "true");
+    // Enter on another recipe builds that one; the current mark moves.
+    const pay = shelf.getByRole("button", { name: /^Pay a name/ });
+    await pay.focus();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/#recipe=pay-a-name$/);
+    await expect(pay).toHaveAttribute("aria-current", "true");
+    await expect(shelf.locator("[aria-current]")).toHaveCount(1);
+    // The current recipe is the section's Tab stop.
+    await expect(pay).toHaveAttribute("tabindex", "0");
   });
 
   test("4-brick stack: tiles in order, one dominant module, dotted connectors that never cross", async ({ page }) => {
@@ -598,11 +625,12 @@ test.describe("Present geometry", () => {
         await expect(page.getByTestId("connectors").locator("[data-line]")).toHaveCount(4);
         for (const t of await phone(page).locator("[data-tile]").all()) await expect(t).toBeInViewport({ ratio: 1 });
         if (mode === "present") {
-          // The drawer is a strip: 5 heroes + one category, and every printed verb >= 12px.
+          // The drawer is a strip: 5 heroes + every other brick (no chips), a small Recipes button, every printed verb >= 12px.
           const drawer = page.getByTestId("present-drawer");
           expect((await drawer.boundingBox())!.height).toBeLessThanOrEqual(150);
-          const cats = await drawer.locator("button[data-lego]").evaluateAll((els) => els.length);
-          expect(cats).toBeLessThanOrEqual(20);
+          await expect(drawer.locator("button[data-lego]")).toHaveCount(39);
+          await expect(drawer.locator("button[data-chip]")).toHaveCount(0);
+          await expect(drawer.getByTestId("recipes")).toBeVisible();
           const verbs = await drawer.locator("button[data-lego][data-print]").evaluateAll((els) =>
             els.map((b) => b.querySelector("[data-sprite]")!.getBoundingClientRect().width * Number((b as HTMLElement).dataset.print)),
           );
@@ -663,7 +691,7 @@ test.describe("accessibility", () => {
     await expect(regions).toHaveCount(1);
     await expect(regions).toHaveAttribute("role", "status");
     await brick(page, "b20").click();
-    await expect(live(page)).toHaveText(/Issue added, 1 of 4/);
+    await expect(live(page)).toHaveText(/Token added, 1 of 4/);
     await brick(page, "payments").click();
     await build(page).click();
     await expect(live(page)).toHaveText(/App built: .+\. Copy prompt to use it\./);
@@ -725,14 +753,15 @@ test.describe("compact tablet", () => {
 test.describe("phone", () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: "reduce" });
 
-  test("first screen: compact bar, tools, chips and the hero shelf", async ({ page }) => {
+  test("first screen: compact bar, tools and the hero shelf; no chips", async ({ page }) => {
     await page.goto("/");
     const bar = page.getByTestId("mobile-bar");
     await expect(bar.getByTestId("board-count")).toHaveAttribute("aria-label", "0 of 4 bricks");
     expect((await bar.boundingBox())!.height).toBeLessThanOrEqual(132);
-    await expect(page.getByTestId("recipes").locator("visible=true")).toBeInViewport();
     await expect(page.getByRole("button", { name: "Surprise me" })).toBeInViewport();
-    await expect(page.getByRole("button", { name: "Money", exact: true })).toBeInViewport();
+    await expect(page.getByTestId("hero-shelf")).toBeInViewport();
+    await expect(page.locator("button[data-chip]")).toHaveCount(0);
+    await expect(page.getByTestId("recipes")).toHaveCount(0);
     const heroIds = (await page.getByTestId("hero-shelf").locator("button[data-lego]").evaluateAll((els) => els.map((e) => e.getAttribute("data-lego")!)));
     const hb = await Promise.all(heroIds.map((id) => brick(page, id).boundingBox()));
     // 3 + 2, like desktop: three on the first row, two below, never overlapping.
@@ -740,18 +769,6 @@ test.describe("phone", () => {
     expect(Math.abs(hb[2]!.y - hb[0]!.y)).toBeLessThan(2);
     expect(hb[3]!.y).toBeGreaterThanOrEqual(hb[0]!.y + hb[0]!.height - 0.5);
     for (let i = 1; i < 3; i++) expect(hb[i]!.x).toBeGreaterThanOrEqual(hb[i - 1]!.x + hb[i - 1]!.width - 0.5);
-    // All 8 categories visible at once in a 4 x 2 grid of equal 44px chips; no chevron, no scroll, nothing clipped.
-    const chips = page.getByRole("group", { name: "Filter bricks" });
-    expect(await chips.evaluate((el) => el.scrollWidth > el.clientWidth + 1)).toBe(false);
-    const cb = await chips.locator("button").evaluateAll((els) => els.map((e) => ({ ...e.getBoundingClientRect().toJSON(), clip: e.scrollWidth > e.clientWidth + 1 })));
-    expect(cb).toHaveLength(8);
-    expect(new Set(cb.map((b) => Math.round(b.y))).size).toBe(2);
-    for (const b of cb) {
-      expect(b.height).toBeGreaterThanOrEqual(44);
-      expect(b.clip).toBe(false);
-      expect(Math.abs(b.width - cb[0]!.width)).toBeLessThan(1);
-    }
-    await expect(page.getByRole("button", { name: "More categories" })).toHaveCount(0);
   });
 
   test("a shared link opens straight on the app (frameless sheet)", async ({ page }) => {
@@ -814,12 +831,22 @@ test.describe("phone", () => {
     await expect(bar.getByRole("button", { name: "View app" })).toBeFocused();
   });
 
-  test("recipes menu opens below its button; picking one opens the sheet", async ({ page }) => {
+  test("Recipes below the bricks: a sideways row of cards (44px+ targets, swipes, never widens the page); a tap opens the sheet", async ({ page }) => {
     await page.goto("/");
-    await page.getByTestId("recipes").locator("visible=true").tap();
-    const pop = page.getByRole("dialog", { name: "Recipes" });
-    await expect(pop).toBeVisible();
-    await pop.getByRole("button", { name: /^Neobank/ }).tap();
+    const shelf = page.getByTestId("recipes-shelf");
+    await expect(shelf).toHaveAttribute("data-layout", "row");
+    const bin = (await page.getByTestId("tray-scroll").boundingBox())!;
+    const sb = (await shelf.boundingBox())!;
+    expect(sb.y).toBeGreaterThanOrEqual(bin.y + bin.height - 1);
+    const cards = shelf.locator("button[data-recipe]");
+    expect(await cards.count()).toBeGreaterThanOrEqual(12);
+    const boxes = await cards.evaluateAll((els) => els.map((e) => e.getBoundingClientRect().toJSON() as DOMRect));
+    for (const b of boxes) expect(b.height).toBeGreaterThanOrEqual(44);
+    expect(new Set(boxes.map((b) => Math.round(b.y))).size).toBe(1);
+    expect(await shelf.locator("div").first().evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+    await cards.first().scrollIntoViewIfNeeded();
+    await cards.first().tap();
     await expect(page.getByTestId("result-sheet")).toBeVisible();
   });
 
@@ -1035,7 +1062,7 @@ for (const w of [320, 360, 390, 430]) {
       // One word per chip, no sentences.
       for (const t of await mods.allTextContents()) expect(t.trim().split(/\s+/).length).toBeLessThanOrEqual(2);
       expect((await bar.getByTestId("mobile-action").boundingBox())!.height).toBeGreaterThanOrEqual(44);
-      for (const c of await page.getByRole("group", { name: "Filter bricks" }).getByRole("button").all()) {
+      for (const c of await page.getByTestId("recipes-shelf").locator("button[data-recipe]").all()) {
         expect(Math.round((await c.boundingBox())!.height)).toBeGreaterThanOrEqual(44);
       }
       // A fifth brick: the swap is a toast, the bar stays prose-free.
@@ -1181,14 +1208,6 @@ test.describe("v8: desktop", () => {
     const toggle = page.getByTestId("present-toggle");
     await expect(toggle).toHaveAttribute("title", "Present (P)");
     await expect(toggle).toHaveAttribute("aria-keyshortcuts", "P");
-    // Inside the Recipes popover (role=dialog): P does nothing.
-    await page.getByTestId("recipes").locator("visible=true").click();
-    const pop = page.getByRole("dialog", { name: "Recipes" });
-    await expect(pop).toBeVisible();
-    await pop.locator("button").first().focus();
-    await page.keyboard.press("p");
-    await expect(page.getByTestId("present-drawer")).toHaveCount(0);
-    await page.keyboard.press("Escape");
     // Inside the Details dialog: nothing.
     await brick(page, "b20").click();
     await brick(page, "payments").click();
@@ -1201,6 +1220,22 @@ test.describe("v8: desktop", () => {
     await page.keyboard.press("p");
     await expect(page.getByTestId("present-drawer")).toBeVisible();
     await expect(toggle).toHaveAttribute("title", "Leave Present (P or Esc)");
+    // Inside the drawer's Recipes popover (role=dialog): P does nothing, Escape closes it and focus goes back to its button.
+    const trigger = page.getByTestId("present-drawer").getByTestId("recipes");
+    await trigger.click();
+    const pop = page.getByRole("dialog", { name: "Recipes" });
+    await expect(pop).toBeVisible();
+    await pop.locator("button").first().focus();
+    await page.keyboard.press("p");
+    await expect(page.getByTestId("present-drawer")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(pop).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+    await expect(page.getByTestId("present-drawer")).toBeVisible();
+    // Picking a recipe from the drawer builds it.
+    await trigger.click();
+    await pop.getByRole("button", { name: /^Neobroker/ }).click();
+    await expect(page).toHaveURL(/#recipe=neobroker$/);
   });
 
   test("status-only stack (Speed + Verify + Sponsor): the most prominent status is a hero card, never 3 identical rows", async ({ page }) => {

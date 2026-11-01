@@ -148,10 +148,6 @@
   opacity: 0.6;
 }
 
-.recipes {
-  margin-left: auto;
-}
-
 /* 1280-1599: the board column is ~400-430px; the toolbar stays on one row. */
 @media (min-width: 1024px) and (max-width: 1599.98px) {
   .controls {

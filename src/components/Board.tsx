@@ -1,14 +1,12 @@
 "use client";
 
 import { useCallback, useState, type CSSProperties, type MouseEvent, type RefObject } from "react";
-import { MAX_LEGOS, MIN_LEGOS, type LegoId, type Recipe } from "@/lib";
-import RecipesMenu from "./RecipesMenu";
+import { MAX_LEGOS, MIN_LEGOS, type LegoId } from "@/lib";
 import StageView, { type Frame, type StageLayout } from "./StageView";
 import styles from "./Board.module.css";
 
 export type BoardProps = {
   ids: readonly LegoId[];
-  recipe: string | null;
   dark: boolean;
   reducedMotion: boolean;
   generation: number;
@@ -31,7 +29,6 @@ export type BoardProps = {
   onBuild: (e: MouseEvent<HTMLButtonElement>) => void;
   onSurprise: () => void;
   onClear: () => void;
-  onRecipe: (r: Recipe) => void;
   onLayout?: (layout: StageLayout | null) => void;
 };
 
@@ -52,7 +49,7 @@ const ReplayIcon = () => (
   </svg>
 );
 
-/** Centre column: the baseplate with the stack, Build app (then Replay) / Surprise me / Clear and Recipes. */
+/** Centre column: the baseplate with the stack, Build app (then Replay) / Surprise me / Clear. */
 export default function Board({ dropRef, ...p }: BoardProps) {
   const count = p.ids.length;
   const ready = count >= MIN_LEGOS;
@@ -110,7 +107,6 @@ export default function Board({ dropRef, ...p }: BoardProps) {
         <button type="button" className={styles.text} onClick={p.onClear} disabled={count === 0}>
           Clear
         </button>
-        <RecipesMenu className={styles.recipes} active={p.recipe} onPick={p.onRecipe} placement="up" />
       </div>
     </section>
   );

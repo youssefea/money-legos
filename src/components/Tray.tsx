@@ -12,7 +12,7 @@ import {
 } from "react";
 import BrickSprite from "@/components/bricks/BrickSprite";
 import { SPRITE_DPR, SPRITE_META, SPRITE_STUD_PX } from "@/components/bricks/spriteMeta";
-import { CATEGORIES, HERO_LEGOS, MORE_LEGOS, type Category, type Lego, type LegoId } from "@/lib";
+import { HERO_LEGOS, MORE_LEGOS, type Lego, type LegoId } from "@/lib";
 import { BrickGlyph } from "./BrickArt";
 import styles from "./Tray.module.css";
 
@@ -29,8 +29,6 @@ export type TrayProps = {
   onHover?: (id: LegoId | null) => void;
   /** bin = the parts bin (hero shelf + stud grid); strip = one horizontal row (Present mode drawer). */
   layout?: "bin" | "strip";
-  /** Strip only: the category shown first (e.g. the one holding the brick that had focus). */
-  initialCategory?: Category | null;
 };
 
 type Tip = { id: LegoId; x: number; top: number; bottom: number };
@@ -70,6 +68,9 @@ function geometry(lego: Lego): { sw: number; fl: number; fr: number; span: 1 | 2
   const span = lego.tier === "hero" || sw - fl > 3.4 ? 2 : 1;
   return { sw, fl, fr, span };
 }
+
+/** Every brick, heroes first: the bin and the Present strip both show the whole catalog (no filters). */
+const ALL = [...HERO_LEGOS, ...MORE_LEGOS];
 
 /** The brick picture: the baked sprite, or a drawn brick with its verb until the sprite exists. */
 function BrickArtFor({ lego }: { lego: Lego }) {
@@ -117,33 +118,23 @@ function TipBox({ tip, lego }: { tip: Tip; lego: Lego }) {
 }
 
 /**
- * The brick bin on one stud scale: the 5 hero 2x4s always on top (dimmed when a filter leaves them
- * out), then the rest on a true stud grid. Bricks are buttons (one Tab stop, arrow keys move, Enter
- * adds); name and tag show in a tooltip on hover, keyboard focus or a long press. Category
- * chips come after the bricks in tab order (shown above them) and are one Tab stop too.
+ * The brick bin on one stud scale: the 5 hero 2x4s on top (no box, a hairline under them), then every
+ * other brick in one scrolling grid. Bricks are buttons (one Tab stop, arrow keys move, Enter adds);
+ * name and tag show in a tooltip on hover, keyboard focus or a long press.
  */
-export default function Tray({ ids, onToggle, onPointerDown, wasDrag, dragging, inspect = null, onInspect, onHover, layout = "bin", initialCategory }: TrayProps) {
-  const [filter, setFilter] = useState<Category | null>(null);
+export default function Tray({ ids, onToggle, onPointerDown, wasDrag, dragging, inspect = null, onInspect, onHover, layout = "bin" }: TrayProps) {
   const [tip, setTip] = useState<Tip | null>(null);
   const [focusId, setFocusId] = useState<LegoId | null>(null);
-  const [chipFocus, setChipFocus] = useState<Category | null>(null);
   const rootRef = useRef<HTMLElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const chipsRef = useRef<HTMLDivElement>(null);
-  const [chipsMore, setChipsMore] = useState<{ left: boolean; right: boolean }>({ left: false, right: false });
+  const [binMore, setBinMore] = useState<{ top: boolean; bottom: boolean }>({ top: false, bottom: false });
   const [stripMore, setStripMore] = useState<{ left: boolean; right: boolean }>({ left: false, right: false });
   const hoverTimer = useRef<number | undefined>(undefined);
   const pressTimer = useRef<number | undefined>(undefined);
   const longPressed = useRef(false);
 
-  // The Present drawer shows the 5 heroes and one category at a time (never the whole catalog).
   const strip = layout === "strip";
-  const active = strip ? (filter ?? initialCategory ?? CATEGORIES[0]!) : filter;
-  const match = (l: Lego) => active === null || l.category === active;
-  const more = MORE_LEGOS.filter(match);
-  const visible = [...HERO_LEGOS, ...more];
-  const tabId = focusId && visible.some((l) => l.id === focusId) ? focusId : visible[0]?.id;
-  const chipTab = chipFocus ?? active ?? CATEGORIES[0];
+  const tabId = focusId ?? ALL[0]!.id;
 
   const clearTimers = () => {
     window.clearTimeout(hoverTimer.current);
@@ -151,24 +142,25 @@ export default function Tray({ ids, onToggle, onPointerDown, wasDrag, dragging, 
   };
   useEffect(() => clearTimers, []);
 
-  // Category chips: when the row overflows, show which side has more (edge fade + a chevron).
+  // The bin's grid: a subtle fade on the edge that has more bricks (top once scrolled, bottom until the end).
   useEffect(() => {
-    const el = chipsRef.current;
-    if (!el) return;
+    const el = scrollRef.current;
+    if (strip || !el) return;
     const check = () => {
-      const left = el.scrollLeft > 2;
-      const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 2;
-      setChipsMore((p) => (p.left === left && p.right === right ? p : { left, right }));
+      const top = el.scrollTop > 2;
+      const bottom = el.scrollTop + el.clientHeight < el.scrollHeight - 2;
+      setBinMore((p) => (p.top === top && p.bottom === bottom ? p : { top, bottom }));
     };
     check();
     const ro = new ResizeObserver(check);
     ro.observe(el);
+    if (el.firstElementChild) ro.observe(el.firstElementChild);
     el.addEventListener("scroll", check, { passive: true });
     return () => {
       ro.disconnect();
       el.removeEventListener("scroll", check);
     };
-  }, []);
+  }, [strip]);
 
   // Present drawer strip: an edge fade and a "›" on the side that has more bricks (it snaps brick by brick).
   useEffect(() => {
@@ -277,24 +269,9 @@ export default function Tray({ ids, onToggle, onPointerDown, wasDrag, dragging, 
     }
   };
 
-  const onChipKey = (e: ReactKeyboardEvent<HTMLButtonElement>, i: number) => {
-    let j: number;
-    if (e.key === "ArrowRight") j = (i + 1) % CATEGORIES.length;
-    else if (e.key === "ArrowLeft") j = (i - 1 + CATEGORIES.length) % CATEGORIES.length;
-    else if (e.key === "Home") j = 0;
-    else if (e.key === "End") j = CATEGORIES.length - 1;
-    else return;
-    e.preventDefault();
-    setChipFocus(CATEGORIES[j]!);
-    const el = rootRef.current?.querySelectorAll<HTMLButtonElement>("button[data-chip]")[j];
-    el?.focus();
-    el?.scrollIntoView({ block: "nearest", inline: "nearest" });
-  };
-
   const item = (lego: Lego) => {
     const placed = ids.includes(lego.id);
     const hero = lego.tier === "hero";
-    const dim = hero && !strip && !match(lego);
     const g = geometry(lego);
     const hover = (on: boolean) => {
       if (!placed) onHover?.(on ? lego.id : null);
@@ -317,7 +294,6 @@ export default function Tray({ ids, onToggle, onPointerDown, wasDrag, dragging, 
           data-lego={lego.id}
           data-placed={placed || undefined}
           data-pale={lego.brick.id === "white" || lego.brick.id === "gray-light" || undefined}
-          data-dim={dim || undefined}
           data-inspect={(placed && inspect === lego.id) || undefined}
           data-dragging={dragging === lego.id || undefined}
           // The printed verb's font size as a share of the sprite's width (e2e: verb CSS px = sprite width x this).
@@ -389,7 +365,7 @@ export default function Tray({ ids, onToggle, onPointerDown, wasDrag, dragging, 
     );
   };
 
-  const tipLego = tip ? visible.find((l) => l.id === tip.id) : undefined;
+  const tipLego = tip ? ALL.find((l) => l.id === tip.id) : undefined;
   const vars = {
     "--row": SPRITE_ROW.toFixed(3),
     "--hero-aspect": HERO_META ? HERO_META.aspect.toFixed(4) : "1.85",
@@ -407,10 +383,10 @@ export default function Tray({ ids, onToggle, onPointerDown, wasDrag, dragging, 
       {layout === "strip" ? (
         <div className={styles.stripWrap} data-more-left={stripMore.left || undefined} data-more-right={stripMore.right || undefined}>
           <div ref={scrollRef} className={styles.strip} data-testid="tray-scroll">
-            <ul className={styles.stripRow} aria-label={`Core and ${active} bricks`}>
+            <ul className={styles.stripRow} aria-label="All bricks">
               {HERO_LEGOS.map(item)}
               <li className={styles.stripSep} aria-hidden="true" />
-              {more.map(item)}
+              {MORE_LEGOS.map(item)}
             </ul>
           </div>
           {stripMore.left && (
@@ -434,49 +410,20 @@ export default function Tray({ ids, onToggle, onPointerDown, wasDrag, dragging, 
             {HERO_LEGOS.map(item)}
           </ul>
           {/* Not a Tab stop of its own (Chromium makes a scroller with no tabbable child one): the roving brick is. */}
-          <div ref={scrollRef} className={styles.scroll} data-testid="tray-scroll" tabIndex={-1}>
-            <ul className={styles.grid} aria-label={filter ? `More ${filter} bricks` : "More bricks"}>
-              {more.map(item)}
+          <div
+            ref={scrollRef}
+            className={styles.scroll}
+            data-testid="tray-scroll"
+            tabIndex={-1}
+            data-more-top={binMore.top || undefined}
+            data-more-bottom={binMore.bottom || undefined}
+          >
+            <ul className={styles.grid} aria-label="More bricks">
+              {MORE_LEGOS.map(item)}
             </ul>
           </div>
         </>
       )}
-      <div className={styles.chipsWrap} data-more-left={chipsMore.left || undefined} data-more-right={chipsMore.right || undefined}>
-        <div ref={chipsRef} className={styles.chips} role="group" aria-label={strip ? "Category" : "Filter bricks"}>
-          {CATEGORIES.map((c, i) => (
-            <button
-              key={c}
-              type="button"
-              className={styles.chip}
-              aria-pressed={active === c}
-              tabIndex={c === chipTab ? 0 : -1}
-              data-chip={c}
-              onKeyDown={(e) => onChipKey(e, i)}
-              onFocus={() => setChipFocus(c)}
-              onClick={() => {
-                setFilter((f) => (strip ? c : f === c ? null : c));
-                hideTip();
-                scrollRef.current?.scrollTo({ top: 0, left: 0 });
-              }}
-            >
-              {c}
-            </button>
-          ))}
-        </div>
-        {chipsMore.right && (
-          <button
-            type="button"
-            className={styles.chipsNext}
-            tabIndex={-1}
-            aria-label="More categories"
-            onClick={() => chipsRef.current?.scrollBy({ left: 160, behavior: "smooth" })}
-          >
-            <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
-              <path d="M6 3.5l4.5 4.5L6 12.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-        )}
-      </div>
       {tip && tipLego && <TipBox tip={tip} lego={tipLego} />}
     </section>
   );

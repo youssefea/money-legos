@@ -128,7 +128,7 @@ export default function SpriteBake({ brick, glyph = false }: { brick: PlacedBric
         {/* the board's studio and contact shadow, moved up under the lone brick */}
         <Studio floorShadow floorY={pose.y - 0.02} />
         {/* a glyph is too small for print: never draw the label */}
-        <StackBrick brick={printed} drop={false} leaving={false} reducedMotion bounceSignal={0} index={0} fontsReady={fontsReady && !glyph} />
+        <StackBrick brick={printed} trayPrint drop={false} leaving={false} reducedMotion bounceSignal={0} index={0} fontsReady={fontsReady && !glyph} />
         {/* shadow catcher: the key light's soft cast shadow, as the plate receives it on the board */}
         <mesh rotation-x={-Math.PI / 2} position={[0, pose.y - 0.01, 0]} receiveShadow>
           <planeGeometry args={[120, 120]} />

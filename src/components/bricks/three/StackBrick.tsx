@@ -50,11 +50,13 @@ export type StackBrickProps = {
   /** Part of this brick's top the next brick up covers (stud-row shadow), null if none. */
   cover?: Cover | null;
   fontsReady: boolean;
+  /** Tray sprite bake: the label alone, centred and as big as the face allows (the board left-aligns it). */
+  trayPrint?: boolean;
   onSettled?: (id: string) => void;
   onLeft?: (id: string) => void;
 };
 
-export function StackBrick({ brick, drop, leaving, reducedMotion, bounceSignal, index, cover = null, fontsReady, onSettled, onLeft }: StackBrickProps) {
+export function StackBrick({ brick, drop, leaving, reducedMotion, bounceSignal, index, cover = null, fontsReady, trayPrint = false, onSettled, onLeft }: StackBrickProps) {
   const [w, d] = brick.size;
   const plates = brick.kind === "plate" ? 1 : 3;
   const geometry = useMemo(() => brickGeometry({ w, d, plates }), [w, d, plates]);
@@ -78,7 +80,7 @@ export function StackBrick({ brick, drop, leaving, reducedMotion, bounceSignal, 
     if (!fontsReady) return null;
     // Pad print: a thin ink film, a touch less glossy than the ABS under it.
     return new THREE.MeshPhysicalMaterial({
-      map: labelTexture(verb, name, ink, face.width, face.height, Math.min(16, maxAniso)),
+      map: labelTexture(verb, name, ink, face.width, face.height, Math.min(16, maxAniso), trayPrint ? "middle" : "start"),
       transparent: true,
       roughness: 0.3,
       clearcoat: 0.45,
@@ -90,7 +92,7 @@ export function StackBrick({ brick, drop, leaving, reducedMotion, bounceSignal, 
       polygonOffsetFactor: -2,
       polygonOffsetUnits: -2,
     });
-  }, [fontsReady, verb, name, ink, face.width, face.height, maxAniso]);
+  }, [fontsReady, verb, name, ink, face.width, face.height, maxAniso, trayPrint]);
   useEffect(() => () => labelMat?.dispose(), [labelMat]);
 
   const blobMat = useMemo(

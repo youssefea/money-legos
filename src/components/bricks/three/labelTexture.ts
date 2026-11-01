@@ -9,8 +9,8 @@ const cache = new Map<string, THREE.CanvasTexture>();
  * Draws the pad-printed label for a brick front face into a transparent canvas texture.
  * Call after loadLabelFonts() so Base Sans is used, not a fallback.
  */
-export function labelTexture(verb: string, name: string, ink: string, faceW: number, faceH: number, anisotropy = 8) {
-  const key = [verb, name, ink, faceW.toFixed(2), faceH.toFixed(2), anisotropy].join("|");
+export function labelTexture(verb: string, name: string, ink: string, faceW: number, faceH: number, anisotropy = 8, solo: "middle" | "start" = "start") {
+  const key = [verb, name, ink, faceW.toFixed(2), faceH.toFixed(2), anisotropy, solo].join("|");
   const hit = cache.get(key);
   if (hit) return hit;
   const { sans, mono } = fontStacks();
@@ -24,7 +24,7 @@ export function labelTexture(verb: string, name: string, ink: string, faceW: num
     ctx.letterSpacing = f === "name" ? `${NAME_TRACKING * size * PX_PER_MM}px` : "0px";
     return ctx.measureText(text).width / PX_PER_MM;
   };
-  const L = layoutLabel(verb, name, faceW, faceH, measure);
+  const L = layoutLabel(verb, name, faceW, faceH, measure, solo);
   ctx.fillStyle = ink;
   ctx.textAlign = L.align === "middle" ? "center" : "left";
   ctx.textBaseline = "alphabetic";

@@ -87,7 +87,7 @@ export function SvgBrick({ size: [w, d], kind = "brick", color, id, label, matte
   if (label) {
     const fw = W - 2 * DIM.cornerR;
     const fh = H - 2 * DIM.fillet;
-    const L = layoutLabel(label.verb, label.name, fw, fh, approxMeasure);
+    const L = layoutLabel(label.verb, label.name, fw, fh, approxMeasure, "start");
     const o = P([-fw / 2, H - DIM.fillet, z1]);
     const u = P([-fw / 2 + 1, H - DIM.fillet, z1]);
     const v = P([-fw / 2, H - DIM.fillet - 1, z1]);

@@ -53,14 +53,23 @@ function wrap2(words: string[], fits: (s: string) => boolean): string[] | null {
   return null;
 }
 
-export function layoutLabel(verb: string, name: string, faceW: number, faceH: number, measure: Measure): LabelLayout {
-  if (name.trim() === "") return verbOnly(verb, faceW, faceH, measure);
+/**
+ * `solo` places a label with no sublabel: "middle" = centred and as big as the face allows (the tray
+ * sprites), "start" = the board's left-aligned pad print at its usual size, centred top to bottom, so a
+ * stack reads as one set whether or not a brick has a sublabel.
+ */
+export function layoutLabel(verb: string, name: string, faceW: number, faceH: number, measure: Measure, solo: "middle" | "start" = "middle"): LabelLayout {
   const P = faceW < 20 ? PRINT.small : PRINT.hero;
   const x = P.inset;
   const maxW = faceW - 2 * P.inset;
   let verbSize: number = P.verb;
   const vw = measure(verb, "verb", verbSize) + verb.length * verbSize * VERB_TRACKING;
   if (vw > maxW) verbSize *= maxW / vw;
+  if (name.trim() === "") {
+    if (solo === "middle") return verbOnly(verb, faceW, faceH, measure);
+    const capH = verbSize * 0.71;
+    return { x, align: "start", verb: { text: verb, size: verbSize, y: (faceH + capH) / 2 + faceH * 0.025 }, name: [], tracking: NAME_TRACKING };
+  }
 
   const caps = name.toUpperCase();
   let nameSize: number = P.name;

@@ -14,7 +14,6 @@ import {
   stackOrder,
   surprise,
   toHash,
-  type Category,
   type LegoId,
   type Recipe,
 } from "@/lib";
@@ -29,7 +28,7 @@ import Connectors from "./Connectors";
 import DetailsDrawer from "./DetailsDrawer";
 import Header, { SoundToggle } from "./Header";
 import MobileBar from "./MobileBar";
-import RecipesMenu from "./RecipesMenu";
+import RecipesMenu, { RecipesShelf } from "./RecipesMenu";
 import ResultPanel from "./ResultPanel";
 import ResultSheet from "./ResultSheet";
 import type { StageLayout } from "./StageView";
@@ -140,12 +139,9 @@ export default function MoneyLegosApp() {
   // Entering or leaving Present moves the tray (bin <-> drawer): the focused brick, or else the
   // Present toggle, keeps the focus across the move (never <body>).
   const presentFocus = useRef<{ lego: LegoId | null } | null>(null);
-  // The drawer opens on the category of the brick that had focus, so that brick is there to focus.
-  const [stripCategory, setStripCategory] = useState<Category | null>(null);
   const setPresent = useCallback((on: boolean) => {
     const el = document.activeElement as HTMLElement | null;
     const lego = (el?.dataset.lego as LegoId | undefined) ?? null;
-    setStripCategory(lego && BY_ID[lego] && BY_ID[lego].tier !== "hero" ? BY_ID[lego].category : null);
     // (Safari does not focus a clicked button: then the toggle gets the focus, never <body>.)
     presentFocus.current = { lego };
     writePresent(on);
@@ -430,7 +426,6 @@ export default function MoneyLegosApp() {
       onInspect={setInspect}
       onHover={setHoverId}
       layout={presenting ? "strip" : "bin"}
-      initialCategory={stripCategory}
     />
   );
 
@@ -463,7 +458,6 @@ export default function MoneyLegosApp() {
             onAction={onMobileAction}
           />
           <div className={styles.mobileTools}>
-            <RecipesMenu active={state.recipe} onPick={onRecipe} placement="down" />
             <button type="button" className={styles.smallButton} onClick={onSurprise}>
               Surprise me
             </button>
@@ -475,11 +469,15 @@ export default function MoneyLegosApp() {
       )}
 
       <main ref={mainRef} className={styles.main}>
-        {!presenting && <div className={`${styles.panel} ${styles.trayPanel}`}>{tray}</div>}
+        {!presenting && (
+          <div className={`${styles.panel} ${styles.trayPanel}`}>
+            {tray}
+            <RecipesShelf active={state.recipe} onPick={onRecipe} layout={isMobile ? "row" : "column"} />
+          </div>
+        )}
         <div className={`${styles.panel} ${styles.boardPanel}`}>
           <Board
             ids={state.ids}
-            recipe={state.recipe}
             dark={dark}
             reducedMotion={reducedMotion}
             generation={state.generation}
@@ -497,7 +495,6 @@ export default function MoneyLegosApp() {
             onBuild={onBuild}
             onSurprise={onSurprise}
             onClear={onClear}
-            onRecipe={onRecipe}
             onLayout={setLayout}
           />
           {!isMobile && <Toast toast={state.toast} onUndo={() => onUndo(true)} onDone={(n) => dispatch({ type: "toastDone", n })} placement="board" />}
@@ -525,6 +522,7 @@ export default function MoneyLegosApp() {
         )}
         {presenting && (
           <div className={styles.drawer} data-testid="present-drawer">
+            <RecipesMenu className={styles.drawerRecipes} active={state.recipe} onPick={onRecipe} placement="up" align="start" />
             {tray}
           </div>
         )}

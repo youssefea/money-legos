@@ -52,6 +52,11 @@
   right: auto;
   transform-origin: 0 0;
 }
+.pop[data-align="start"] {
+  left: 0;
+  right: auto;
+  transform-origin: 0 100%;
+}
 @keyframes pop-in {
   from {
     opacity: 0;
@@ -134,5 +139,162 @@
   }
   .glyph {
     height: 20px;
+  }
+}
+
+/* ---------------------------------------------------------------- shelf (left column, under the bricks) */
+.shelf {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.shelf[data-layout="column"] {
+  /* About a third of the column, never less than --rows whole recipes (4 on a laptop, 6 on a projector). */
+  --rows: 4;
+  flex: 0 0 max(32%, calc(var(--rows) * var(--hit-target) + var(--space-3) + 24px));
+  padding-top: var(--space-3);
+  box-shadow: inset 0 1px 0 var(--color-hairline);
+}
+.head {
+  flex: none;
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-label, 12px);
+  line-height: 16px;
+  font-weight: var(--weight-medium);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-fg-muted);
+}
+.shelfScroll {
+  --fade-start: 0px;
+  --fade-end: 0px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  margin: 0 -4px;
+  padding: 0 4px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent 100%);
+}
+.shelfScroll[data-more-start] {
+  --fade-start: var(--space-4);
+}
+.shelfScroll[data-more-end] {
+  --fade-end: var(--space-5);
+}
+.shelfScroll:focus {
+  outline: none;
+}
+.shelfList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.shelfItem {
+  width: 100%;
+  min-height: var(--hit-target);
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.shelfItem:hover,
+.shelfItem:focus-visible {
+  background: var(--color-panel);
+}
+.shelfItem:focus-visible {
+  outline-offset: -2px;
+}
+.shelfItem[aria-current="true"] {
+  background: var(--color-panel);
+  box-shadow: inset 0 0 0 2px var(--base-blue);
+}
+
+/* Compact (<1024): a sideways row of cards under the bricks, sized for a thumb. */
+.shelf[data-layout="row"] {
+  margin-top: var(--space-2);
+}
+.shelf[data-layout="row"] .shelfScroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 0 calc(var(--page-pad-x) * -1);
+  padding: 2px var(--page-pad-x) var(--space-2);
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--page-pad-x);
+  scrollbar-width: none;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+.shelf[data-layout="row"] .shelfScroll::-webkit-scrollbar {
+  display: none;
+}
+.shelf[data-layout="row"] .shelfList {
+  display: flex;
+  gap: var(--space-2);
+  width: max-content;
+}
+.shelf[data-layout="row"] li {
+  scroll-snap-align: start;
+}
+.shelf[data-layout="row"] .glyph {
+  height: 15px;
+}
+.shelf[data-layout="row"] .glyphs {
+  overflow: hidden;
+}
+.shelf[data-layout="row"] .shelfItem {
+  width: 160px;
+  min-height: 88px;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto auto;
+  align-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+.shelf[data-layout="row"] .shelfItem[aria-current="true"] {
+  border-color: var(--base-blue);
+  box-shadow: inset 0 0 0 1px var(--base-blue);
+}
+.shelf[data-layout="row"] .name {
+  font-size: 15px;
+  line-height: 20px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .shelfItem:hover,
+  .shelfItem:focus-visible,
+  .shelfItem[aria-current="true"] {
+    background: var(--base-gray-80);
+  }
+  .shelfItem[aria-current="true"],
+  .shelf[data-layout="row"] .shelfItem[aria-current="true"] {
+    border-color: var(--base-cerulean);
+    box-shadow: inset 0 0 0 2px var(--base-cerulean);
+  }
+  .shelf[data-layout="row"] .shelfItem {
+    background: var(--base-gray-100);
+    border-color: var(--base-gray-80);
+  }
+}
+@media (min-width: 1600px) {
+  .shelf[data-layout="column"] {
+    --rows: 6;
+  }
+  .head {
+    font-size: 14px;
+    line-height: 18px;
   }
 }
