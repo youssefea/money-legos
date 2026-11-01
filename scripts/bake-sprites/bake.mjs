@@ -11,6 +11,7 @@
 import { chromium } from "playwright";
 import sharp from "sharp";
 import fs from "node:fs";
+import crypto from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { serve, GPU_ARGS } from "./serve.mjs";
@@ -180,7 +181,14 @@ ${ordered.map(([id, m]) => `  ${JSON.stringify(id)}: { width: ${m.width}, height
 /** Glyph sprites public/sprites/glyph-<legoId>.webp (the five heroes only): one shape, a 2x4 brick. */
 export const GLYPH_META: Omit<SpriteMeta, "front" | "verb"> = { width: ${GLYPH[0]}, height: ${GLYPH[1]}, aspect: ${+(GLYPH[0] / GLYPH[1]).toFixed(4)} };
 `;
-fs.writeFileSync(path.join(repo, "src/components/bricks/spriteMeta.ts"), manifest);
+// Cache-busting version: a hash of every sprite file, so browsers never show stale bricks after a re-bake.
+const hash = crypto.createHash("sha256");
+for (const f of fs.readdirSync(outDir).filter((f) => f.endsWith(".webp")).sort()) hash.update(f).update(fs.readFileSync(path.join(outDir, f)));
+const version = hash.digest("hex").slice(0, 10);
+fs.writeFileSync(
+  path.join(repo, "src/components/bricks/spriteMeta.ts"),
+  manifest + `\n/** Hash of all sprite files; appended to sprite URLs so a re-bake is never hidden by the browser cache. */\nexport const SPRITE_VERSION = "${version}";\n`,
+);
 const all = fs.readdirSync(outDir).filter((f) => f.endsWith(".webp")).reduce((a, f) => a + fs.statSync(path.join(outDir, f)).size, 0);
 console.log(`baked ${only ? 1 : ids.length} (+glyphs); this run ${(total / 1024).toFixed(1)} KB; all sprites ${(all / 1024).toFixed(1)} KB`);
 if (all > 700 * 1024) throw new Error(`sprite budget exceeded: ${(all / 1024).toFixed(1)} KB > 700 KB`);

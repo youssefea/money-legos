@@ -3,7 +3,7 @@
 import { useState, type CSSProperties } from "react";
 import type { SpriteId } from "@/lib/contract";
 import { asset } from "@/lib/basePath";
-import { GLYPH_META } from "./spriteMeta";
+import { GLYPH_META, SPRITE_VERSION } from "./spriteMeta";
 import styles from "./BrickGlyph.module.css";
 
 export type BrickGlyphProps = {
@@ -41,7 +41,7 @@ export default function BrickGlyph({ id, color, width = 32, alt = "", title, cla
         <span className={styles.fallback} />
       ) : (
         // eslint-disable-next-line @next/next/no-img-element -- static export, pre-baked WebP
-        <img className={styles.img} src={asset(`/sprites/glyph-${id}.webp`)} alt="" width={width} height={height} decoding="async" draggable={false} onError={() => setFailedId(id)} />
+        <img className={styles.img} src={asset(`/sprites/glyph-${id}.webp?v=${SPRITE_VERSION}`)} alt="" width={width} height={height} decoding="async" draggable={false} onError={() => setFailedId(id)} />
       )}
     </span>
   );

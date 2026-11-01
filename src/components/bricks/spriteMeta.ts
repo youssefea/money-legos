@@ -66,3 +66,6 @@ export const SPRITE_META: Readonly<Record<string, SpriteMeta>> = {
 
 /** Glyph sprites public/sprites/glyph-<legoId>.webp (the five heroes only): one shape, a 2x4 brick. */
 export const GLYPH_META: Omit<SpriteMeta, "front" | "verb"> = { width: 128, height: 80, aspect: 1.6 };
+
+/** Hash of all sprite files; appended to sprite URLs so a re-bake is never hidden by the browser cache. */
+export const SPRITE_VERSION = "4c980b26ed";

@@ -3,7 +3,7 @@
 import { useState, type CSSProperties } from "react";
 import type { SpriteId } from "@/lib/contract";
 import { asset } from "@/lib/basePath";
-import { SPRITE_DPR, SPRITE_META } from "./spriteMeta";
+import { SPRITE_DPR, SPRITE_META, SPRITE_VERSION } from "./spriteMeta";
 import styles from "./BrickSprite.module.css";
 
 export type BrickSpriteProps = {
@@ -64,7 +64,7 @@ export default function BrickSprite({ id, color, size = [4, 2], alt = "", title,
         // eslint-disable-next-line @next/next/no-img-element -- static export, pre-baked WebP
         <img
           className={[styles.img, loaded ? "" : styles.pending].join(" ")}
-          src={asset(`/sprites/${id}.webp`)}
+          src={asset(`/sprites/${id}.webp?v=${SPRITE_VERSION}`)}
           alt=""
           width={w}
           height={h}
