@@ -85,7 +85,8 @@
   overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
-  padding: 0 var(--space-4);
+  /* The app screen is full-bleed: it keeps its own 20pt margins. */
+  padding: 0;
 }
 .body > * {
   flex: 1 0 auto;

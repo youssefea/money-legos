@@ -74,10 +74,10 @@ export default function ResultSheet({ open, app, name, copied, onCopy, onDetails
       <div
         className={styles.body}
         onPointerDown={(e) => {
-          if (!(e.target instanceof Element) || !e.target.closest("[data-tile]")) setInspect(null);
+          if (!(e.target instanceof Element) || !e.target.closest("[data-region]")) setInspect(null);
         }}
       >
-        <FakePhone className={styles.phone} app={app} phase="live" boot={0} slots={0} frameless inspect={inspect} onInspect={setInspect} />
+        <FakePhone className={styles.phone} app={app} phase="live" boot={0} frameless inspect={inspect} onInspect={setInspect} />
       </div>
       <div className={styles.bar}>
         <button type="button" className={styles.back} onClick={() => ref.current?.close()}>

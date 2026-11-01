@@ -1,24 +1,27 @@
 "use client";
 
-import { describeFakeApp, tileRoles, type FakeApp, type LegoId } from "@/lib";
-import FakeTile from "./FakeTile";
+import { useLayoutEffect, useMemo, useRef } from "react";
+import type { FakeApp, LegoId } from "@/lib";
+import { describeScreen, screenModel } from "@/lib/appScreens";
+import { StatusGlyphs } from "./screens/Icons";
+import { ScreenCtx, type ScreenCtxValue } from "./screens/Kit";
+import { AppScreen } from "./screens/Screens";
+import sc from "./screens/Screen.module.css";
 import styles from "./FakePhone.module.css";
 
-/** wire = bricks placed but the app is not built yet (wireframe tiles); live = built. */
+/** wire = bricks placed but the app is not built yet (a skeleton of the screen); live = built. */
 export type PhonePhase = "wire" | "live";
 
 export type FakePhoneProps = {
   app: FakeApp;
   phase: PhonePhase;
-  /** Bumps on every Build: the screen boots again (dark flash, app bar, tiles top to bottom). */
+  /** Bumps on every Build: the screen boots again (dark hold, shell, regions top to bottom). */
   boot: number;
-  /** Play the boot (dark hold, app bar, tiles one by one). False: show the built app at once (a shared link). */
+  /** Play the boot. False: show the built app at once (a shared link). */
   play?: boolean;
-  /** Faint empty wireframe slots under the tiles, waiting for more bricks. */
-  slots: number;
-  /** Tile elements by brick id, for the connector lines. */
-  tileRef?: (id: string, el: HTMLLIElement | null) => void;
-  /** The brick being inspected (hover/focus on a tile or its brick), highlighted everywhere. */
+  /** Region elements by brick id, for the connector lines. */
+  tileRef?: (id: string, el: HTMLElement | null) => void;
+  /** The brick being inspected (hover/focus on a region or its brick), highlighted everywhere. */
   inspect?: LegoId | null;
   onInspect?: (id: LegoId | null) => void;
   /** No device frame: the sheet on phones is the screen. */
@@ -26,38 +29,52 @@ export type FakePhoneProps = {
   className?: string;
 };
 
-const StatusIcons = () => (
-  <svg className={styles.sbIcons} viewBox="0 0 54 12" aria-hidden="true">
-    <rect x="0" y="7" width="3" height="5" rx="1" />
-    <rect x="5" y="5" width="3" height="7" rx="1" />
-    <rect x="10" y="2.5" width="3" height="9.5" rx="1" />
-    <rect x="15" y="0" width="3" height="12" rx="1" />
-    <path d="M28 3.2a9 9 0 0 1 12 0l-1.6 1.7a6.6 6.6 0 0 0-8.8 0zM30.8 6.2a5 5 0 0 1 6.4 0L34 9.8z" />
-    <rect x="44" y="1" width="9" height="10" rx="2.6" fill="none" stroke="currentColor" strokeWidth="1.2" />
-    <rect x="45.8" y="2.8" width="5.4" height="6.4" rx="1.2" />
-  </svg>
-);
-
-const TAB_ICONS = [
-  "M3 9.5L10 4l7 5.5V16a1 1 0 0 1-1 1h-3.5v-4.5h-5V17H4a1 1 0 0 1-1-1z",
-  "M3 6.5h14v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1zM3 6.5l1.6-3h10.8l1.6 3M7 10.5h6",
-  "M4 15.5l3.5-4 3 2.5 5.5-7",
-  "M10 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM4.5 17c.6-3 2.8-4.5 5.5-4.5s4.9 1.5 5.5 4.5",
-];
+/** Densities, loosest first: 1 tightens the gaps, 2 the rows and cards, 3 drops optional shell (range picker, items), 4 shrinks type. */
+const DENSITIES = ["0", "1", "2", "3", "4"] as const;
 
 /**
- * The fake phone: one tile per brick, top brick first. Before Build app the tiles are wireframes
- * (brick strip and studs, a short title, grey bars); after it the screen boots into the real fake app.
- * The phone is a labelled region; tiles are real text; the frame, studs and fake buttons are inert.
+ * The fake phone: ONE coherent app screen picked from the stack (neobank, checkout, trade, earn,
+ * payroll, agent dashboard or onboarding), where each brick fills one region. Before Build app the
+ * same screen is a skeleton; an empty board shows a neobank skeleton. The screen never scrolls: it
+ * picks the loosest density at which every region fits. The phone is a labelled region; regions are
+ * real text; the frame, icons and fake buttons are inert.
  */
-export default function FakePhone({ app, phase, boot, play = true, slots, tileRef, inspect = null, onInspect, frameless, className }: FakePhoneProps) {
-  const empty = app.tiles.length === 0;
+export default function FakePhone({ app, phase, boot, play = true, tileRef, inspect = null, onInspect, frameless, className }: FakePhoneProps) {
+  const ids = useMemo(() => app.tiles.map((t) => t.legoId), [app.tiles]);
+  const model = useMemo(() => screenModel(ids), [ids]);
+  const empty = ids.length === 0;
   const live = phase === "live" && !empty;
-  const roles = tileRoles(app.tiles);
-  const label = empty ? "Your app preview, empty" : live ? describeFakeApp(app) : `Your app preview, ${app.tiles.length} ${app.tiles.length === 1 ? "brick" : "bricks"}, not built yet`;
+  const label = empty ? "Your app preview, empty" : live ? describeScreen(app.brand, model) : `Your app preview, ${ids.length} ${ids.length === 1 ? "brick" : "bricks"}, not built yet`;
+  const ctx = useMemo<ScreenCtxValue>(() => ({ inspect, onInspect, regionRef: tileRef, order: model.order, wire: !live }), [inspect, onInspect, tileRef, model.order, live]);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // Fit: the loosest density at which nothing overflows the screen body (whole filler rows hide on their own).
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const fit = () => {
+      const body = root.querySelector<HTMLElement>("[data-body]");
+      if (!body) return;
+      for (const d of DENSITIES) {
+        root.dataset.density = d;
+        if (body.scrollHeight <= body.clientHeight + 1) break;
+      }
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(root);
+    return () => ro.disconnect();
+  });
+
   return (
     <div className={[styles.slot, frameless ? styles.frameless : undefined, className].filter(Boolean).join(" ")}>
-      <section className={styles.device} role="region" aria-label={label} data-testid="phone" data-phase={live ? "live" : empty ? "empty" : "wire"}>
+      <section className={styles.device} role="region" aria-label={label} data-testid="phone" data-phase={live ? "live" : empty ? "empty" : "wire"} data-archetype={model.archetype}>
+        <span className={styles.buttons} aria-hidden="true">
+          <i />
+          <i />
+          <i />
+          <i />
+        </span>
         {/* A new key per build restarts the boot animation. */}
         <div key={live ? `live-${boot}` : "wire"} className={styles.screen} data-boot={live && boot > 0 && play ? "true" : undefined}>
           {!frameless && (
@@ -65,55 +82,17 @@ export default function FakePhone({ app, phase, boot, play = true, slots, tileRe
               <div className={styles.island} aria-hidden="true" />
               <div className={styles.status} aria-hidden="true">
                 <span>9:41</span>
-                <StatusIcons />
+                <StatusGlyphs className={styles.sbIcons} />
               </div>
             </>
           )}
-          <div className={styles.appbar} data-live={live || undefined}>
-            {live ? (
-              <>
-                <span className={styles.logo} aria-hidden="true">
-                  A
-                </span>
-                <span className={styles.brand} data-testid="phone-brand">
-                  {app.brand}
-                </span>
-              </>
-            ) : (
-              <>
-                <span className={styles.skelCoin} aria-hidden="true" />
-                <span className={styles.skelBar} aria-hidden="true" />
-              </>
-            )}
-            <span className={styles.avatar} aria-hidden="true" />
-          </div>
-          <ol className={styles.tiles} aria-label="Screens">
-            {app.tiles.map((t, i) => (
-              <FakeTile
-                key={t.legoId}
-                tile={t}
-                role={roles[i]!}
-                index={i}
-                wire={!live}
-                inspected={inspect === t.legoId}
-                onInspect={onInspect}
-                refCb={tileRef ? (el) => tileRef(t.legoId, el) : undefined}
-              />
-            ))}
-            {Array.from({ length: slots }, (_, i) => (
-              <li key={`slot-${i}`} className={styles.placeholder} aria-hidden="true" data-slot data-big={(empty && i === 0) || undefined}>
-                <span className={styles.skelLine} />
-                <span className={styles.skelLine} data-short />
-              </li>
-            ))}
-          </ol>
-          <div className={styles.tabbar} aria-hidden="true" data-live={live || undefined}>
-            {TAB_ICONS.map((d, i) => (
-              <svg key={d} viewBox="0 0 20 20" data-on={i === 0 || undefined}>
-                <path d={d} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            ))}
-          </div>
+          <ScreenCtx.Provider value={ctx}>
+            <div ref={rootRef} className={frameless ? `${sc.root} frameless-screen` : sc.root} data-skel={!live || undefined} data-screen={model.archetype}>
+              <div className={sc.app}>
+                <AppScreen m={model} brand={app.brand} />
+              </div>
+            </div>
+          </ScreenCtx.Provider>
           {!frameless && <div className={styles.home} aria-hidden="true" />}
         </div>
       </section>

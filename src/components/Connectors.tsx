@@ -11,7 +11,7 @@ export type ConnectorsProps = {
   /** Stack, bottom brick first. */
   ids: readonly LegoId[];
   layout: StageLayout | null;
-  /** Fake-app tiles by brick id. */
+  /** Fake-app screen regions by brick id. */
   tiles: RefObject<Map<string, HTMLElement>>;
   dark: boolean;
   /** Bumps on Build: every line draws again after its tile lands. */
@@ -35,9 +35,11 @@ function lineColor(id: LegoId, dark: boolean): string {
 }
 
 /**
- * Dotted curved lines from each brick on the board to the fake-app tile it made (top brick to top
- * tile, so lines never cross). They end on the phone's outer edge with a disc, and draw just after
- * the tile lands. Redrawn on resize, scroll and every layout report; decorative.
+ * Dotted curved lines from each brick on the board to the region it fills on the fake-app screen.
+ * Regions follow the screen's order (balance first), not the stack's, so lines may cross: gentle
+ * S-curves with horizontal tangents, one lane each, ending in a disc at the region's left edge. They
+ * draw top to bottom just after their region lands. Redrawn on resize, scroll and every layout
+ * report; decorative.
  */
 export default function Connectors({ hostRef, ids, layout, tiles, dark, boot, inspect, play }: ConnectorsProps) {
   const [lines, setLines] = useState<Line[]>([]);
@@ -70,23 +72,32 @@ export default function Connectors({ hostRef, ids, layout, tiles, dark, boot, in
         return { id, x: sr.left - hr.left + (it.cx + it.w / 2) * sr.width + it.h * sr.height * 0.35, y: sr.top - hr.top + it.cy * sr.height };
       });
       const rightMost = Math.max(...starts.map((s) => s?.x ?? 0)) + 12;
-      const out: Line[] = [];
-      starts.forEach((s, i) => {
-        if (!s) return;
-        const tile = tiles.current?.get(s.id);
-        if (!tile) return;
-        const tr = tile.getBoundingClientRect();
-        // A tile scrolled out of the phone's screen has no line.
-        const list = tile.parentElement?.getBoundingClientRect();
-        const cy = tr.top + Math.min(tr.height / 2, 36);
-        if (list && (cy < list.top || cy > list.bottom)) return;
-        const device = tile.closest<HTMLElement>("[data-testid='phone']")?.getBoundingClientRect();
-        const x1 = (device ? device.left : tr.left) - hr.left - 2;
-        const y1 = cy - hr.top;
-        const x0 = s.x;
-        const k = Math.max(24, (x1 - rightMost) * 0.5);
-        const d = `M${x0.toFixed(1)} ${s.y.toFixed(1)} H${rightMost.toFixed(1)} C${(rightMost + k).toFixed(1)} ${s.y.toFixed(1)} ${(x1 - k).toFixed(1)} ${y1.toFixed(1)} ${x1.toFixed(1)} ${y1.toFixed(1)}`;
-        out.push({ id: s.id, d, x0, y0: s.y, x1, y1, color: lineColor(s.id, dark), order: ids.length - 1 - i });
+      // Each line ends on its region's left edge, level with the region's first line of text.
+      const ends: { id: LegoId; x: number; y: number; y0: number; x0: number }[] = [];
+      for (const st of starts) {
+        if (!st) continue;
+        const el = tiles.current?.get(st.id);
+        if (!el || !el.isConnected) continue;
+        const r = el.getBoundingClientRect();
+        if (!r.width || !r.height) continue;
+        const screen = el.closest<HTMLElement>("[data-screen]")?.getBoundingClientRect();
+        const cy = r.top + Math.min(r.height / 2, 26);
+        // A region outside the screen (hidden by the fit) has no line.
+        if (screen && (cy < screen.top || cy > screen.bottom || r.left > screen.right)) continue;
+        const left = Math.max(r.left, screen ? screen.left + 6 : r.left);
+        ends.push({ id: st.id, x: left - hr.left - 7, y: cy - hr.top, x0: st.x, y0: st.y });
+      }
+      // Draw-on order and lanes follow the screen, top to bottom; each line bends in its own lane so
+      // lines that must cross do it once, in the open gap, with even spacing.
+      ends.sort((p, q) => p.y - q.y);
+      const out: Line[] = ends.map((e, j) => {
+        const n = ends.length;
+        const gap = Math.max(40, e.x - rightMost);
+        const lane = n > 1 ? (j - (n - 1) / 2) * Math.min(10, gap / (n * 4)) : 0;
+        const bend = rightMost + lane;
+        const k = Math.max(20, (e.x - bend) * 0.5);
+        const d = `M${e.x0.toFixed(1)} ${e.y0.toFixed(1)} H${bend.toFixed(1)} C${(bend + k).toFixed(1)} ${e.y0.toFixed(1)} ${(e.x - k).toFixed(1)} ${e.y.toFixed(1)} ${e.x.toFixed(1)} ${e.y.toFixed(1)}`;
+        return { id: e.id, d, x0: e.x0, y0: e.y0, x1: e.x, y1: e.y, color: lineColor(e.id, dark), order: j };
       });
       // Only re-render when something moved (this runs after every render).
       const key =
@@ -167,7 +178,7 @@ export default function Connectors({ hostRef, ids, layout, tiles, dark, boot, in
           <g key={`${l.id}-${boot}`} mask={`url(#cm-${l.id})`} data-line={l.id} data-on={on || undefined} className={styles.line} data-dim={(inspect && !on) || undefined}>
             <path d={l.d} fill="none" stroke={l.color} strokeWidth={on ? 3 : l.color === "#66C800" ? 3 : 2.5} strokeLinecap="round" strokeDasharray={on ? undefined : l.color === "#66C800" ? "0 4" : "0 5"} />
             <circle cx={l.x0} cy={l.y0} r="3" fill={l.color} />
-            <circle cx={l.x1} cy={l.y1} r="5" fill={l.color} />
+            <circle cx={l.x1} cy={l.y1} r="4.5" fill={l.color} stroke={dark ? "#0A0B0D" : "#FFFFFF"} strokeWidth="2" />
           </g>
         );
       })}

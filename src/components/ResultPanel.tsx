@@ -106,8 +106,9 @@ export type ResultPanelProps = {
   /** The Build boot plays (Build / Replay / recipe / Surprise me); false for a shared link. */
   play: boolean;
   typing: Typing | null;
-  slots: number;
-  tileRef: (id: string, el: HTMLLIElement | null) => void;
+  /** Unused since the phone became one screen (kept so the page's props stay the same). */
+  slots?: number;
+  tileRef: (id: string, el: HTMLElement | null) => void;
   /** App name while the app is live. */
   name: string | null;
   /** 2+ bricks: Copy prompt (and Details) build first if needed. */
@@ -122,13 +123,13 @@ export type ResultPanelProps = {
 };
 
 /** Right column: the app name as the column title, the fake phone, Copy prompt and Details. */
-export default function ResultPanel({ app, phase, boot, play, typing, slots, tileRef, name, ready, copied, onCopy, onDetails, inspect, onInspect, detailsRef, copyRef }: ResultPanelProps) {
+export default function ResultPanel({ app, phase, boot, play, typing, tileRef, name, ready, copied, onCopy, onDetails, inspect, onInspect, detailsRef, copyRef }: ResultPanelProps) {
   return (
     <section className={styles.panel} aria-labelledby="app-name">
       <div className={styles.head}>
         <AppName id="app-name" name={name} typing={typing} />
       </div>
-      <FakePhone className={styles.phone} app={app} phase={phase} boot={boot} play={play} slots={slots} tileRef={tileRef} inspect={inspect} onInspect={onInspect} />
+      <FakePhone className={styles.phone} app={app} phase={phase} boot={boot} play={play} tileRef={tileRef} inspect={inspect} onInspect={onInspect} />
       <div className={styles.actions}>
         <CopyButton ref={copyRef} copied={copied} disabled={!ready} quiet={phase !== "live"} onCopy={onCopy} />
         <button ref={detailsRef} type="button" className={styles.details} aria-disabled={!ready} onClick={() => ready && onDetails()} aria-haspopup="dialog">

@@ -1,4 +1,5 @@
 import { flowOrder } from "./generate";
+import { anchorOf } from "./appScreens/archetype";
 import { BY_ID, resolveId } from "./legos";
 import type { FakeApp, FakeTile, LegoId, UiTemplate } from "./types";
 
@@ -16,10 +17,13 @@ function clean(ids: readonly string[]): LegoId[] {
   return out;
 }
 
-/** "Base <word>" from the Lego that names the app (lowest prio). Deterministic and order-free. */
+/**
+ * "Base <word>" from the Lego that picks the app's screen (appScreens/archetype.ts: the strongest tier,
+ * then the lowest prio), so the name matches the screen: B20 + Pay is "Base Neobank". Order-free.
+ */
 export function fakeBrand(ids: readonly LegoId[]): string {
-  if (!ids.length) return FAKE_BRAND;
-  const anchor = ids.slice().sort((a, b) => BY_ID[a].prio - BY_ID[b].prio)[0]!;
+  const anchor = anchorOf(ids);
+  if (!anchor) return FAKE_BRAND;
   const brand = `${FAKE_BRAND} ${BY_ID[anchor].brand}`;
   return brand.length <= MAX_BRAND_LENGTH ? brand : FAKE_BRAND;
 }

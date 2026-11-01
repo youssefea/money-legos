@@ -1,8 +1,8 @@
 /*
- * The fake phone. Its width comes from the column (up to --phone-max: 400px on a laptop, 460px on the
- * projector, 520px in Present mode) and it fills the slot's height (never taller than a real phone).
- * Text never shrinks: tiles use fixed type (14px body, 12px secondary, 22px+ money). The chrome is
- * slim so a 4-brick app (one hero + three 56px rows) fits without scrolling.
+ * The device: a modern phone drawn in CSS. Its width comes from the column (up to --phone-max) and it
+ * fills the slot's height, never squatter than 1.6 x its width nor taller than a real phone (2.06).
+ * Thin black bezel (2.2% of the width), 15% corner radius, a dynamic island, a titanium rim and four
+ * side buttons. The screen inside is scaled in points (screens/Screen.module.css).
  */
 
 .slot {
@@ -15,46 +15,51 @@
 }
 
 .device {
-  --fs: 14px;
-  --fs-sm: 12px;
-  --fs-money: 22px;
-  --fs-huge: 34px;
-  /* Width from the column, capped by the slot's height so the phone is never squat (height >= 1.6 x width). */
   --pw: min(100cqw, var(--phone-max, 400px), calc(100cqh / var(--phone-aspect, 1.6)));
+  --bezel: max(6px, calc(var(--pw) * 0.022));
+  --radius: calc(var(--pw) * 0.15);
   position: relative;
   width: var(--pw);
   height: min(100cqh, calc(var(--pw) * 2.06));
-  padding: 8px;
-  border-radius: 46px;
+  padding: var(--bezel);
+  border-radius: var(--radius);
   background: var(--base-gray-100);
   box-shadow:
-    0 0 0 1px var(--base-gray-80),
-    0 24px 48px -20px rgb(10 11 13 / 0.32),
-    0 4px 12px -4px rgb(10 11 13 / 0.12);
+    0 0 0 1.5px var(--base-gray-30),
+    0 0 0 2.5px var(--base-gray-15),
+    0 28px 56px -24px rgb(10 11 13 / 0.36),
+    0 6px 16px -6px rgb(10 11 13 / 0.14);
   font-family: var(--font-sans);
-  font-size: var(--fs);
-  line-height: 1.3;
-  color: var(--base-gray-100);
 }
 
-/* Side buttons. */
-.device::before,
-.device::after {
-  content: "";
+/* Side buttons: action and volume on the left, power on the right. */
+.buttons i {
   position: absolute;
   width: 3px;
-  border-radius: 2px;
-  background: var(--base-gray-80);
+  border-radius: 2px 0 0 2px;
+  background: linear-gradient(to right, var(--base-gray-30), var(--base-gray-15));
 }
-.device::before {
-  left: -3px;
-  top: 18%;
-  height: 9%;
+.buttons i:nth-child(1) {
+  left: -4px;
+  top: 16%;
+  height: 3.6%;
 }
-.device::after {
-  right: -3px;
-  top: 24%;
-  height: 13%;
+.buttons i:nth-child(2) {
+  left: -4px;
+  top: 23%;
+  height: 7%;
+}
+.buttons i:nth-child(3) {
+  left: -4px;
+  top: 31.5%;
+  height: 7%;
+}
+.buttons i:nth-child(4) {
+  right: -4px;
+  top: 25%;
+  height: 11%;
+  border-radius: 0 2px 2px 0;
+  background: linear-gradient(to left, var(--base-gray-30), var(--base-gray-15));
 }
 
 .screen {
@@ -63,20 +68,21 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  border-radius: 38px;
-  background: var(--base-gray-10);
+  border-radius: calc(var(--radius) - var(--bezel));
+  background: var(--base-gray-0);
+  color: var(--base-gray-100);
 }
 
 .island {
   position: absolute;
-  z-index: 2;
-  top: 8px;
+  z-index: 6;
+  top: calc(var(--pw) * 0.026);
   left: 50%;
-  width: 80px;
-  height: 22px;
+  width: 31%;
+  height: calc(var(--pw) * 0.088);
   transform: translateX(-50%);
   border-radius: 999px;
-  background: var(--base-gray-100);
+  background: #000;
 }
 
 .status {
@@ -84,670 +90,29 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 32px;
-  padding: 2px 26px 0 30px;
-  font-size: 13px;
+  height: calc(var(--pw) * 0.13);
+  padding: 0 9% 0 11%;
+  font-size: calc(var(--pw) * 0.04);
   font-weight: var(--weight-medium);
+  letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
 }
 .sbIcons {
-  width: 46px;
-  fill: currentColor;
-  color: var(--base-gray-100);
-}
-
-.appbar {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  height: 40px;
-  padding: 0 16px;
-}
-.logo,
-.skelCoin {
-  flex: none;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: var(--base-blue);
-  color: var(--base-gray-0);
-  font-size: 14px;
-  font-weight: var(--weight-bold);
-}
-.brand {
-  min-width: 0;
-  font-size: 18px;
-  font-weight: var(--weight-medium);
-  letter-spacing: -0.01em;
-  line-height: 1.15;
-}
-.avatar {
-  flex: none;
-  margin-left: auto;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--base-gray-15);
-}
-.skelCoin {
-  background: var(--base-gray-15);
-}
-.skelBar {
-  width: 38%;
-  height: 12px;
-  border-radius: 999px;
-  background: var(--base-gray-15);
-}
-
-/* ---------------------------------------------------------------- tiles */
-.tiles {
-  flex: 1;
-  min-height: 0;
-  margin: 0;
-  padding: 8px 10px 10px;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: none;
-}
-.tiles::-webkit-scrollbar {
-  display: none;
-}
-
-.tile {
-  --accent-line: var(--accent-line-light);
-  --ring: var(--base-blue);
-  position: relative;
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  border-radius: 14px;
-  background: var(--base-gray-0);
-  box-shadow:
-    0 0 0 1px var(--base-gray-15),
-    0 1px 2px rgb(10 11 13 / 0.05);
-  transition: box-shadow var(--dur-fast) var(--ease-hover);
-  animation: tile-in var(--dur-place) var(--ease-out) 150ms both;
-}
-@keyframes tile-in {
-  from {
-    opacity: 0;
-    transform: translateY(-10px) scale(0.985);
-  }
-}
-.tile[data-inspect] {
-  box-shadow:
-    0 0 0 2px var(--ring),
-    0 6px 16px -6px rgb(10 11 13 / 0.2);
-}
-
-/* The brick's colour strip with round, shaded studs: a filled tile reads as a brick, never a placeholder. */
-.strip {
-  flex: none;
-  height: 14px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 12px;
-  border-radius: 14px 14px 0 0;
-  background: var(--accent);
-}
-.strip i {
-  display: block;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow:
-    inset 0 -2px 0 rgb(10 11 13 / 0.2),
-    inset 0 1.5px 0 rgb(255 255 255 / 0.5),
-    0 1px 1px rgb(10 11 13 / 0.22);
-}
-.tile[data-pale] .strip {
-  box-shadow: inset 0 -1px 0 var(--base-gray-15);
-}
-
-.body {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 14px 12px;
-}
-/* The top tile is the hero: 112-144px. Every other tile is a compact 56px row (12px strip + 44px body). */
-.tile[data-role="hero"] .strip {
-  height: 16px;
-}
-.tile[data-role="hero"] .strip i {
-  width: 10px;
-  height: 10px;
-}
-.tile[data-role="hero"] .body {
-  min-height: 96px;
-  gap: 6px;
-  padding: 8px 14px 10px;
-}
-.tile[data-role="row"] .strip,
-.tile[data-role="status"] .strip {
-  height: 12px;
-}
-.tile[data-role="row"] .strip i,
-.tile[data-role="status"] .strip i {
-  width: 8px;
-  height: 8px;
-}
-.tile[data-role="row"] .body,
-.tile[data-role="status"] .body {
-  min-height: 44px;
-  padding: 5px 12px 6px;
-}
-.tile[data-role="status"] .hrow {
-  gap: 8px;
-}
-
-/*
- * The bottom tile takes the rest of the screen (a 2- or 3-tile app never leaves the bottom of the phone
- * empty): its content stays where it is (a hero ends on its action at the bottom) and the extra room is a
- * calm wash of the brick's colour.
- */
-.device[data-phase="live"] .tile:nth-last-child(1 of .tile) {
-  flex: 1 0 auto;
-  background:
-    linear-gradient(to bottom, transparent 0, transparent 72px, color-mix(in srgb, var(--accent) 7%, transparent) 100%),
-    var(--base-gray-0);
-}
-.device[data-phase="live"] .tile[data-pale]:nth-last-child(1 of .tile) {
-  background:
-    linear-gradient(to bottom, transparent 0, transparent 72px, color-mix(in srgb, var(--base-gray-30) 14%, transparent) 100%),
-    var(--base-gray-0);
-}
-.device[data-phase="live"] .tile:nth-last-child(1 of .tile) .body {
-  justify-content: flex-start;
-}
-.device[data-phase="live"] .tile[data-role="hero"]:nth-last-child(1 of .tile) .body {
-  justify-content: space-between;
-}
-.frameless .device[data-phase="live"] .tile:nth-last-child(1 of .tile) {
-  min-height: 0;
-}
-
-/* Wireframe (before Build app): short title and grey bars on the brick-strip card. */
-.wireTitle {
-  font-weight: var(--weight-medium);
-  color: var(--base-gray-60);
-}
-
-.row,
-.hrow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-.row {
-  justify-content: space-between;
-}
-.stackText {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-.titleText {
-  flex: 1;
-  min-width: 0;
-  font-weight: var(--weight-medium);
-  line-height: 1.25;
-}
-.row .titleText {
-  flex: 0 1 auto;
-}
-.label,
-.sub {
-  font-size: var(--fs-sm);
-  line-height: 1.3;
-  color: var(--base-gray-60);
-}
-.money,
-.moneyBig,
-.moneyHuge {
-  flex: none;
-  font-weight: var(--weight-medium);
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.1;
-  white-space: nowrap;
-}
-.money {
-  font-size: var(--fs-money);
-}
-.moneyBig {
-  font-size: calc(var(--fs-money) + 2px);
-}
-.moneyHuge {
-  font-size: var(--fs-huge);
-  letter-spacing: -0.03em;
-}
-.strong {
-  flex: none;
-  font-weight: var(--weight-medium);
-  font-variant-numeric: tabular-nums;
-}
-
-/* Hero treatments for a status, badge, sign-in, list or stat on top. */
-.heroMark {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.heroMark .heroTitle {
-  flex: 1;
-  min-width: 0;
-}
-.rowTop {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-}
-.pair {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.pair .field {
-  flex: 1;
-  min-width: 0;
-}
-.pair .cta {
-  flex: none;
-}
-/* Hero swap: From and To side by side, the swap mark between them. */
-.tile[data-role="hero"] .swap {
-  grid-template-columns: 1fr 1fr;
-}
-.tile[data-role="hero"] .swap .swapIcon {
-  top: 50%;
-  bottom: auto;
-  transform: translate(-50%, -50%);
-}
-.tile[data-role="hero"] .cta {
-  min-height: 32px;
-}
-.heroTitle {
-  font-size: calc(var(--fs) + 6px);
-  font-weight: var(--weight-medium);
-  letter-spacing: -0.015em;
-  line-height: 1.2;
-}
-.heroValue {
-  font-size: calc(var(--fs) + 10px);
-  font-weight: var(--weight-medium);
-  letter-spacing: -0.02em;
-  line-height: 1.1;
-  font-variant-numeric: tabular-nums;
-}
-.okBig,
-.iconBig {
-  flex: none;
-  width: 44px;
-  height: 44px;
-  padding: 10px;
-  border-radius: 50%;
-}
-.okBig {
-  background: var(--base-green);
-  color: var(--base-gray-100);
-}
-.iconBig {
-  background: var(--accent);
-  color: var(--accent-ink);
-  box-shadow: inset 0 0 0 1px var(--accent-line);
-}
-.okBig svg,
-.iconBig svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-.lines {
-  display: grid;
-  gap: 4px;
-}
-.line {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 6px 10px;
-  border-radius: 8px;
-  background: var(--base-gray-10);
-}
-.lineMoney {
-  font-weight: var(--weight-medium);
-  font-variant-numeric: tabular-nums;
-}
-.qrBig .qr {
-  width: 72px;
-  height: 72px;
-}
-
-.coin {
-  flex: none;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: var(--base-blue);
-  color: var(--base-gray-0);
-  font-weight: var(--weight-bold);
-}
-
-.chip {
-  flex: none;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--accent);
-  color: var(--accent-ink);
-  box-shadow: inset 0 0 0 1px var(--accent-line);
-  font-size: var(--fs-sm);
-  font-weight: var(--weight-medium);
-  line-height: 1.35;
-  white-space: nowrap;
-}
-
-/* Fake buttons: inert text styled as buttons. Only the dominant module's is blue. */
-.cta {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 36px;
-  padding: 0 12px;
-  border-radius: 10px;
-  background: var(--base-blue);
-  color: var(--base-gray-0);
-  font-weight: var(--weight-medium);
-  white-space: nowrap;
-}
-.ctaQuiet {
-  background: var(--base-gray-10);
-  color: var(--base-gray-100);
-}
-.actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-.ctaSmall {
-  flex: none;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--base-gray-10);
-  color: var(--base-gray-100);
-  font-size: var(--fs-sm);
-  font-weight: var(--weight-medium);
-  white-space: nowrap;
-}
-
-.ok svg,
-.badgeIcon svg,
-.swapIcon svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-.ok {
-  flex: none;
-  width: 22px;
-  height: 22px;
-  padding: 3px;
-  border-radius: 50%;
-  background: var(--base-green);
-  color: var(--base-gray-100);
-}
-
-.badgeIcon {
-  flex: none;
-  width: 30px;
-  height: 30px;
-  padding: 7px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: var(--accent-ink);
-  box-shadow: inset 0 0 0 1px var(--accent-line);
-}
-
-.dot {
-  flex: none;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent-line);
-}
-
-.field {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 36px;
-  padding: 0 12px;
-  border-radius: 10px;
-  background: var(--base-gray-10);
-  font-variant-numeric: tabular-nums;
-}
-
-.swap {
-  position: relative;
-  display: grid;
-  gap: 6px;
-}
-.swap .field {
-  justify-content: space-between;
-}
-.swapIcon {
-  position: absolute;
-  left: 50%;
-  bottom: -15px;
-  z-index: 1;
-  width: 24px;
-  height: 24px;
-  padding: 4px;
-  transform: translateX(-50%);
-  border-radius: 50%;
-  background: var(--base-gray-0);
-  box-shadow: 0 0 0 1px var(--base-gray-15);
-  color: var(--base-gray-60);
-}
-
-.seg {
-  display: flex;
-  gap: 2px;
-  padding: 2px;
-  border-radius: 999px;
-  background: var(--base-gray-10);
-}
-.seg i {
-  padding: 2px 10px;
-  border-radius: 999px;
-  font-size: var(--fs-sm);
-  font-style: normal;
-  font-weight: var(--weight-medium);
-  color: var(--base-gray-60);
-}
-.seg i[data-on] {
-  background: var(--base-gray-100);
-  color: var(--base-gray-0);
-}
-
-.spark {
-  display: block;
-  height: 28px;
-  color: var(--base-green);
-}
-.spark svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.bar {
-  display: flex;
-  gap: 2px;
-  height: 6px;
-  border-radius: 999px;
-  overflow: hidden;
-  background: var(--base-gray-10);
-}
-.bar i {
-  display: block;
-  flex: 0 0 auto;
-  background: var(--accent);
-  box-shadow: inset 0 0 0 1px var(--accent-line);
-}
-.bar i + i {
-  background: var(--base-gray-30);
-  box-shadow: none;
-}
-
-.qr {
-  flex: none;
-  width: 36px;
-  height: 36px;
-  padding: 2px;
-  border-radius: 6px;
-  background: var(--base-gray-0);
-  box-shadow: inset 0 0 0 1px var(--base-gray-15);
-  fill: var(--base-gray-100);
-}
-
-/*
- * "Made with Pay": shown while a tile is inspected (hover, focus or tap). It sits on the brick's
- * colour strip (straddling the tile's top edge), never over the tile's content.
- */
-.madeWith {
-  position: absolute;
-  top: -6px;
-  right: 10px;
-  z-index: 3;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 20px;
-  padding: 0 2px 0 8px;
-  border-radius: 999px;
-  background: var(--base-gray-100);
-  color: var(--base-gray-0);
-  font-size: var(--fs-sm);
-  line-height: 1.3;
-  white-space: nowrap;
-  pointer-events: none;
-  opacity: 0;
-  transform: translateY(-2px);
-  transition:
-    opacity var(--dur-fast) var(--ease-hover),
-    transform var(--dur-fast) var(--ease-out);
-}
-.madeWith[data-show] {
-  opacity: 1;
-  transform: none;
-}
-.madeWith b {
-  padding: 0 7px;
-  border-radius: 999px;
-  font-weight: var(--weight-medium);
-  line-height: 16px;
-}
-
-/* The whole tile is one inspect target (no fake actionable controls inside). */
-.inspect {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: inherit;
-  background: transparent;
-  cursor: pointer;
-}
-.inspect:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: -2px;
-}
-
-/* ---------------------------------------------------------------- empty slots: faint wireframes, no studs */
-.placeholder {
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 8px;
-  min-height: 60px;
-  padding: 0 16px;
-  border: 1px solid var(--base-gray-15);
-  border-radius: 14px;
-}
-.placeholder[data-big] {
-  min-height: 128px;
-}
-.skelLine {
-  display: block;
-  width: 56%;
-  height: 10px;
-  border-radius: 999px;
-  background: var(--base-gray-15);
-}
-.skelLine[data-short] {
-  width: 34%;
-}
-.tile .skelLine {
-  background: var(--base-gray-10);
-}
-
-/* ---------------------------------------------------------------- tab bar */
-.tabbar {
-  flex: none;
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  height: 40px;
-  padding: 0 18px 4px;
-  border-top: 1px solid var(--base-gray-15);
-  background: var(--base-gray-0);
-  color: var(--base-gray-15);
-}
-.tabbar svg {
-  width: 20px;
-  height: 20px;
-}
-.tabbar[data-live] {
-  color: var(--base-gray-30);
-}
-.tabbar[data-live] svg[data-on] {
-  color: var(--base-gray-100);
+  width: calc(var(--pw) * 0.17);
+  color: inherit;
 }
 
 .home {
   position: absolute;
-  bottom: 5px;
+  z-index: 6;
+  bottom: calc(var(--pw) * 0.018);
   left: 50%;
-  width: 34%;
-  height: 4px;
+  width: 35%;
+  height: max(4px, calc(var(--pw) * 0.012));
   transform: translateX(-50%);
   border-radius: 999px;
   background: var(--base-gray-100);
+  pointer-events: none;
 }
 
 /* ---------------------------------------------------------------- boot (Build app) */
@@ -755,12 +120,12 @@
   content: "";
   position: absolute;
   inset: 0;
-  z-index: 3;
+  z-index: 7;
   background: var(--base-gray-100);
   pointer-events: none;
   animation: boot-dark 360ms linear both;
 }
-/* Paced for a room: a visible 200ms dark hold, the app bar, then the tiles 90ms apart. */
+/* Paced for a room: a visible 200ms dark hold, the shell, then the regions 90ms apart. */
 @keyframes boot-dark {
   0%,
   55% {
@@ -770,14 +135,9 @@
     opacity: 0;
   }
 }
-.screen[data-boot] .appbar {
-  animation: fade-in 200ms var(--ease-hover) 200ms both;
-}
-.screen[data-boot] .tile {
-  animation-delay: calc(260ms + var(--i) * 90ms);
-}
-@keyframes fade-in {
-  from {
+@media (prefers-reduced-motion: reduce) {
+  .screen[data-boot]::after {
+    animation: none;
     opacity: 0;
   }
 }
@@ -785,8 +145,13 @@
 /* ---------------------------------------------------------------- frameless (the phone sheet) */
 .frameless {
   container-type: normal;
+  display: flex;
+  flex-direction: column;
 }
 .frameless .device {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
   width: 100%;
   height: auto;
   padding: 0;
@@ -794,220 +159,34 @@
   background: transparent;
   box-shadow: none;
 }
-.frameless .device::before,
-.frameless .device::after {
+.frameless .buttons {
   display: none;
 }
-/* The sheet is the app's screen: one screen colour edge to edge, the tab bar pinned at the end of the scroll. */
-.frameless,
-.frameless .device {
-  display: flex;
-  flex-direction: column;
-}
-.frameless .device,
 .frameless .screen {
   flex: 1 0 auto;
-}
-.frameless .screen {
   height: auto;
   overflow: visible;
   border-radius: 0;
   background: transparent;
-  box-shadow: none;
-}
-.frameless .appbar {
-  height: 56px;
-  padding: 0;
-}
-.frameless .tiles {
-  flex: 1 0 auto;
-  overflow: visible;
-  padding: 4px 0 16px;
-}
-.frameless .tabbar {
-  position: sticky;
-  bottom: 0;
-  z-index: 4;
-  height: 52px;
-  margin: 0 calc(var(--space-4) * -1);
-  padding: 0 28px;
-}
-
-/* ---------------------------------------------------------------- short phones (by the slot's own height) */
-/* Under 420px tall the tab bar goes too (the tiles come first). */
-@container (max-height: 419.98px) {
-  .slot:not(.frameless) .tabbar,
-  .slot:not(.frameless) .home {
-    display: none;
-  }
-}
-/* Under 540px tall the device keeps its bezel and tab bar but drops the status bar, and the tiles tighten. */
-@container (max-height: 539.98px) {
-  .slot:not(.frameless) .status,
-  .slot:not(.frameless) .island {
-    display: none;
-  }
-  .slot:not(.frameless) .appbar {
-    margin-top: 6px;
-  }
-  .tiles {
-    gap: 4px;
-    padding-top: 4px;
-    padding-bottom: 6px;
-  }
-  .tile[data-role="row"] .body,
-  .tile[data-role="status"] .body {
-    min-height: 40px;
-    padding-top: 3px;
-    padding-bottom: 4px;
-  }
-  .tile[data-role="hero"] .strip {
-    height: 12px;
-  }
-  .tile[data-role="hero"] .cta {
-    min-height: 30px;
-  }
-  .tiles {
-    padding-bottom: 4px;
-  }
-  .tile[data-role="hero"] .body {
-    min-height: 0;
-    gap: 6px;
-    padding: 8px 12px 10px;
-  }
-  .device {
-    border-radius: 36px;
-  }
-  .screen {
-    border-radius: 28px;
-  }
-}
-
-/* A status hero (a status-only stack: Speed + Verify + Sponsor): the big mark keeps a real card's height. */
-.tile[data-role="hero"]:is([data-template="toast"], [data-template="pill"], [data-template="badge"], [data-template="stat"]) .body {
-  min-height: 104px;
-}
-@container (max-height: 539.98px) {
-  .tile[data-role="hero"]:is([data-template="toast"], [data-template="pill"], [data-template="badge"], [data-template="stat"]) .body {
-    min-height: 84px;
-  }
-}
-
-/* ---------------------------------------------------------------- projector */
-@media (min-width: 1600px) {
-  .device {
-    --fs: 16px;
-    --fs-sm: 13px;
-    --fs-money: 24px;
-    --fs-huge: 38px;
-  }
-}
-/* Present mode: read from the back of the room. */
-:global([data-present]) .device {
-  /* Present: read from the back of the room; the type scales with the phone (18/16 at 460px wide). */
-  --fs: clamp(14px, calc(var(--pw) * 0.0391), 18px);
-  --fs-sm: clamp(12px, calc(var(--pw) * 0.0348), 16px);
-  --fs-money: clamp(22px, calc(var(--pw) * 0.061), 28px);
-  --fs-huge: clamp(32px, calc(var(--pw) * 0.0957), 44px);
 }
 
 /* ---------------------------------------------------------------- dark */
 @media (prefers-color-scheme: dark) {
   .device {
-    color: var(--base-gray-0);
+    background: #000;
     box-shadow:
-      0 0 0 1px var(--base-gray-80),
-      0 24px 48px -20px rgb(0 0 0 / 0.6);
+      0 0 0 1.5px var(--base-gray-60),
+      0 0 0 2.5px var(--base-gray-80),
+      0 28px 56px -24px rgb(0 0 0 / 0.7);
   }
-  .device::before,
-  .device::after {
-    background: var(--base-gray-80);
+  .buttons i {
+    background: var(--base-gray-60);
   }
   .screen {
     background: var(--base-gray-100);
-    box-shadow: inset 0 0 0 1px var(--base-gray-80);
-  }
-  .sbIcons {
     color: var(--base-gray-0);
-  }
-  .island {
-    box-shadow: 0 0 0 1px var(--base-gray-80);
-  }
-  .tile {
-    --accent-line: var(--accent-line-dark);
-    --ring: var(--base-cerulean);
-    background: var(--base-gray-80);
-    box-shadow: none;
-  }
-  .tile[data-pale] .strip {
-    box-shadow: none;
-  }
-  .device[data-phase="live"] .tile:nth-last-child(1 of .tile) {
-    background:
-      linear-gradient(to bottom, transparent 0, transparent 72px, color-mix(in srgb, var(--accent) 10%, transparent) 100%),
-      var(--base-gray-80);
-  }
-  .device[data-phase="live"] .tile[data-pale]:nth-last-child(1 of .tile) {
-    background:
-      linear-gradient(to bottom, transparent 0, transparent 72px, color-mix(in srgb, var(--base-gray-60) 30%, transparent) 100%),
-      var(--base-gray-80);
-  }
-  .label,
-  .sub,
-  .wireTitle {
-    color: var(--base-gray-30);
-  }
-  .field,
-  .seg,
-  .bar,
-  .ctaQuiet,
-  .ctaSmall {
-    background: var(--base-gray-100);
-    color: var(--base-gray-0);
-  }
-  .seg i {
-    color: var(--base-gray-30);
-  }
-  .seg i[data-on] {
-    background: var(--base-gray-0);
-    color: var(--base-gray-100);
-  }
-  .swapIcon {
-    background: var(--base-gray-80);
-    box-shadow: 0 0 0 1px var(--base-gray-60);
-    color: var(--base-gray-30);
-  }
-  .placeholder {
-    border-color: var(--base-gray-80);
-  }
-  .skelLine,
-  .skelBar,
-  .skelCoin,
-  .avatar {
-    background: var(--base-gray-80);
-  }
-  .tile .skelLine {
-    background: var(--base-gray-60);
-  }
-  .tabbar {
-    border-top-color: var(--base-gray-80);
-    background: var(--base-gray-100);
-    color: var(--base-gray-80);
-  }
-  .tabbar[data-live] {
-    color: var(--base-gray-60);
-  }
-  .tabbar[data-live] svg[data-on] {
-    color: var(--base-gray-0);
-  }
-  .madeWith {
-    background: var(--base-gray-0);
-    color: var(--base-gray-100);
   }
   .home {
-    background: var(--base-gray-0);
-  }
-  .qr {
     background: var(--base-gray-0);
   }
 }
