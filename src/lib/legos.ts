@@ -70,6 +70,7 @@ export const LEGOS: readonly Lego[] = CATALOG.map((c): Lego => {
   return {
     ...rest,
     kicker: c.verb,
+    sublabel: c.sublabel ?? "",
     title: c.name,
     blurb: c.short,
     role: role ?? c.what,

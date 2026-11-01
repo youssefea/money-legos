@@ -26,7 +26,7 @@ export function toPlacedBricks(ids: readonly (LegoId | string)[]): PlacedBrick[]
       size: [lego.size[0], lego.size[1]],
       kind: "brick",
       level: i * PLATES_PER_BRICK,
-      label: { verb: lego.verb, name: lego.name },
+      label: { verb: lego.verb, name: lego.sublabel },
     };
   });
 }

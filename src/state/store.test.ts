@@ -9,7 +9,7 @@ describe("store", () => {
   it("adds bricks bottom first and announces the count", () => {
     const s = run(add("b20"), add("payments"));
     expect(s.ids).toEqual(["b20", "payments"]);
-    expect(s.announce.text).toBe("Pay added, 2 of 4");
+    expect(s.announce.text).toBe("Payments added, 2 of 4");
     expect(isLive(s)).toBe(false);
     expect(resultOf(s)).toBeNull();
   });
@@ -18,7 +18,7 @@ describe("store", () => {
     const s = run(add("b20"), add("payments"), add("financing"), add("validity"), add("speed"));
     expect(s.ids).toEqual(["payments", "financing", "validity", "speed"]);
     expect(s.swap).toMatchObject({ added: "speed", removed: "b20" });
-    expect(s.announce.text).toBe("Board full: Speed replaced Issue, 4 of 4");
+    expect(s.announce.text).toBe("Board full: Instant replaced Token, 4 of 4");
   });
 
   it("build needs 2 bricks, then the app is live", () => {
@@ -37,7 +37,7 @@ describe("store", () => {
     const more = reducer(built, add("speed"));
     expect(more.built).toBe(true);
     expect(resultOf(more)?.ids).toContain("speed");
-    expect(more.announce.text).toMatch(/^Speed added, 3 of 4\. App: /);
+    expect(more.announce.text).toMatch(/^Instant added, 3 of 4\. App: /);
     // Below 2 bricks there is no app any more: adding a second brick offers Build app again (not Replay).
     const low = reducer(reducer(more, { type: "remove", id: "speed" }), { type: "remove", id: "payments" });
     expect(resultOf(low)).toBeNull();
@@ -50,7 +50,7 @@ describe("store", () => {
   it("Undo reverses only the swap or removal that made the toast; any later edit drops it", () => {
     const full = run(add("b20"), add("payments"), add("speed"), add("financing"));
     const swapped = reducer(full, add("validity"));
-    expect(swapped.toast?.text).toBe(`Full · swapped Issue for ${BY_ID.validity.kicker}`);
+    expect(swapped.toast?.text).toBe(`Full · swapped Token for ${BY_ID.validity.kicker}`);
     // Immediate Undo restores the board before the swap.
     expect(reducer(swapped, { type: "undo" }).ids).toEqual(full.ids);
     // swap -> remove (tray) -> Undo: the toast is gone, so Undo does nothing (Speed stays removed).
@@ -67,7 +67,7 @@ describe("store", () => {
     const added = reducer(boardRemoved, add("validity"));
     expect(added.toast).toBeNull();
     const twice = reducer(reducer(full, add("validity")), add("verify"));
-    expect(twice.toast?.text).toBe(`Full · swapped Pay for ${BY_ID.verify.kicker}`);
+    expect(twice.toast?.text).toBe(`Full · swapped Payments for ${BY_ID.verify.kicker}`);
     expect(reducer(twice, { type: "undo" }).ids).toEqual(reducer(full, add("validity")).ids);
     // Build, Clear, a recipe and Surprise me drop it too.
     for (const a of [{ type: "build" }, { type: "clear" }, { type: "load", ids: ["b20", "payments"], recipe: null, build: true, source: "surprise" }] as Action[]) {

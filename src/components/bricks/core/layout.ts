@@ -224,7 +224,7 @@ function silhouette(b: PlacedBrick, p: BrickPose, project: (q: V3) => [number, n
 export function stackLabel(bricks: readonly PlacedBrick[], nextLevel: number | null): string {
   const sorted = [...bricks].sort((a, b) => a.level - b.level);
   if (sorted.length === 0) return "Empty baseplate. Slot 1 is ready for the first brick.";
-  const names = sorted.map((b) => `${b.label.verb} (${b.label.name})`).join(", ");
+  const names = sorted.map((b) => (b.label.name ? `${b.label.verb} (${b.label.name})` : b.label.verb)).join(", ");
   const count = `${sorted.length} ${sorted.length === 1 ? "brick" : "bricks"}`;
   const next = nextLevel === null ? " The stack is full." : ` Next: slot ${slotNumber(nextLevel)}.`;
   return `Stack of ${count} on the baseplate, bottom to top: ${names}.${next}`;

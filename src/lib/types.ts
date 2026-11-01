@@ -115,7 +115,10 @@ export type UiTile = {
 /** One brick as written in src/data/catalog.ts. */
 export type CatalogEntry = {
   id: LegoId;
+  /** The printed label: the plainest name for what the brick does (Payments, Earn, Swaps...). */
   verb: string;
+  /** Small mono caps under the label on the board: the Base product term, only where it teaches something. */
+  sublabel?: string;
   name: string;
   category: Category;
   tier: Tier;
@@ -141,8 +144,10 @@ export type Lego = {
   id: LegoId;
   tier: Tier;
   category: Category;
-  /** Big verb printed on the brick (Issue, Pay, Grow, Trade, Speed...). */
+  /** The label printed on the brick (Token, Payments, Earn, Limit orders, Instant...). */
   verb: string;
+  /** Board-only sublabel under the label (B20, Base Pay, x402...), or "" when there is none. */
+  sublabel: string;
   /** Same as `verb` (older name, kept for existing components). */
   kicker: string;
   /** Lego name, small mono caps on the brick (B20, Accept payments...). */

@@ -164,11 +164,11 @@ describe("Lego registry", () => {
 
   it("keeps hero verbs, names, 2x4 size and the spec colours", () => {
     const want: [LegoId, string, string, string][] = [
-      ["b20", "Issue", "B20", "#0000FF"],
-      ["payments", "Pay", "Accept payments", "#3C8AFF"],
-      ["financing", "Grow", "Financing", "#66C800"],
-      ["validity", "Trade", "Validity transactions", "#FFD12F"],
-      ["speed", "Speed", "200ms blocks", "#FEA8CD"],
+      ["b20", "Token", "B20", "#0000FF"],
+      ["payments", "Payments", "Accept payments", "#3C8AFF"],
+      ["financing", "Earn", "Financing", "#66C800"],
+      ["validity", "Limit orders", "Validity transactions", "#FFD12F"],
+      ["speed", "Instant", "200ms blocks", "#FEA8CD"],
     ];
     for (const [id, verb, name, hex] of want) {
       const l = BY_ID[id];
@@ -185,12 +185,22 @@ describe("Lego registry", () => {
     for (const c of CATEGORIES) expect(bricksByCategory[c].length, c).toBeGreaterThan(0);
   });
 
-  it("uses only valid footprints; only heroes are 2x4", () => {
+  it("uses only valid footprints; every hero is 2x4", () => {
     const ok = ["4x2", "3x2", "2x2", "4x1", "2x1"];
     for (const l of LEGOS) {
       expect(ok, l.id).toContain(l.size.join("x"));
-      expect(l.size.join("x") === "4x2", l.id).toBe(l.tier === "hero");
+      if (l.tier === "hero") expect(l.size.join("x"), l.id).toBe("4x2");
     }
+  });
+
+  it("prints a unique label on every brick; sublabels only as Base product terms", () => {
+    expect(new Set(LEGOS.map((l) => l.verb.toLowerCase())).size).toBe(39);
+    for (const l of LEGOS) {
+      expect(l.verb.split(" ").length, l.id).toBeLessThanOrEqual(3);
+      expect(l.sublabel.length, l.id).toBeLessThanOrEqual(18);
+    }
+    expect(BY_ID.b20.sublabel).toBe("B20");
+    expect(BY_ID.payments.sublabel).toBe("");
   });
 
   it("has unique prio and flow values", () => {
@@ -219,12 +229,12 @@ describe("brick colours", () => {
 });
 
 describe("copy for the tray, tooltip and set box", () => {
-  it("keeps short <= 42, tag <= 28, step <= 28 and verb <= 10 chars", () => {
+  it("keeps short <= 42, tag <= 28, step <= 28 and label <= 14 chars", () => {
     for (const l of LEGOS) {
       expect(l.short.length, l.id).toBeLessThanOrEqual(42);
       expect(l.tag.length, l.id).toBeLessThanOrEqual(28);
       expect(l.step.length, l.id).toBeLessThanOrEqual(28);
-      expect(l.verb.length, l.id).toBeLessThanOrEqual(10);
+      expect(l.verb.length, l.id).toBeLessThanOrEqual(14);
       expect(l.blurb).toBe(l.short);
       for (const s of [l.what, l.example, l.role, l.build, l.adj, l.noun, l.does]) expect(s.length, l.id).toBeGreaterThan(0);
     }
@@ -572,7 +582,7 @@ describe("placed bricks", () => {
       size: [4, 2],
       kind: "brick",
       level: 0,
-      label: { verb: "Issue", name: "B20" },
+      label: { verb: "Token", name: "B20" },
     });
     expect(bricks.map((b) => b.size)).toEqual([
       [4, 2],

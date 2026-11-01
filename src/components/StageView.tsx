@@ -152,7 +152,7 @@ export default function StageView({ ids, dark, reducedMotion, generation, lastAd
   const next = nextLevel(ids.length);
   const poster = ids.map((id) => {
     const l = BY_ID[id];
-    return { id, color: l.brick.hex, labelColor: l.brick.label, studs: l.size, verb: l.kicker, name: l.title };
+    return { id, color: l.brick.hex, labelColor: l.brick.label, studs: l.size, verb: l.kicker, name: l.sublabel };
   });
 
   return (

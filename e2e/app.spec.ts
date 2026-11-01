@@ -399,9 +399,9 @@ test.describe("desktop", () => {
     await expect(brick(page, "b20")).toHaveAttribute("aria-pressed", "false");
     const toast = page.getByTestId("toast");
     await expect(toast).toHaveAttribute("role", "status");
-    await expect(toast).toContainText("Full · swapped Issue for Speed");
+    await expect(toast).toContainText("Full · swapped Token for Instant");
     expect(await toast.evaluate((el) => getComputedStyle(el).fontSize)).toBe("13px");
-    await expect(live(page)).toHaveText(/Board full: Speed replaced Issue, 4 of 4/);
+    await expect(live(page)).toHaveText(/Board full: Instant replaced Token, 4 of 4/);
     expect(await tileIds(page)).toEqual(["speed", "validity", "financing", "payments"]);
     await toast.getByRole("button", { name: "Undo" }).click();
     await expect(toast).toHaveCount(0);
@@ -419,7 +419,7 @@ test.describe("desktop", () => {
     for (const id of ["b20", "payments", "financing", "validity"]) await brick(page, id).click();
     await brick(page, "speed").click();
     const toast = page.getByTestId("toast");
-    await expect(toast).toContainText("Full · swapped Issue for Speed");
+    await expect(toast).toContainText("Full · swapped Token for Instant");
     await expect(page.getByTestId("toast-undo")).toHaveAttribute("aria-keyshortcuts", /Control\+Z/);
     expect((await page.getByTestId("toast-undo").boundingBox())!.height).toBeGreaterThanOrEqual(44);
     // swap -> remove Pay from the tray: the toast goes; Ctrl+Z does nothing (Pay stays off, Issue stays off).
@@ -905,7 +905,7 @@ test.describe("v6: Replay, inspect from the board, Present mode, the name", () =
     await page.goto("/#b20,payments,speed");
     await expect(phone(page).locator("[data-tile]")).toHaveCount(3);
     const hit = page.locator('[data-board-brick="payments"]');
-    await expect(hit).toHaveAttribute("aria-label", "Pay — remove");
+    await expect(hit).toHaveAttribute("aria-label", "Payments — remove");
     await hit.hover();
     await expect(phone(page).locator('[data-tile="payments"]')).toHaveAttribute("data-inspect", "true");
     const ring = page.getByTestId("brick-ring");
@@ -920,7 +920,7 @@ test.describe("v6: Replay, inspect from the board, Present mode, the name", () =
     expect(made.y + made.height).toBeLessThanOrEqual(body.y + 4);
     await hit.click();
     await expect(brick(page, "payments")).toHaveAttribute("aria-pressed", "false");
-    await expect(page.getByTestId("toast")).toContainText("Pay removed");
+    await expect(page.getByTestId("toast")).toContainText("Payments removed");
     await page.getByTestId("toast-undo").click();
     await expect(brick(page, "payments")).toHaveAttribute("aria-pressed", "true");
     expect(await tileIds(page)).toEqual(["speed", "payments", "b20"]);
