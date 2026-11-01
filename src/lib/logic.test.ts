@@ -16,7 +16,6 @@ import {
   MORE_LEGOS,
   RECIPES,
   RES,
-  RISK_FOOTER,
   WHITE_LABEL_HEXES,
   bricksByCategory,
   buildFakeApp,
@@ -119,7 +118,6 @@ function allContentText(): string {
     ...COMBOS.flatMap((c) => [c.name, c.pitch, ...Object.values(c.why ?? {})]),
     ...RECIPES.map((r) => r.idea),
     ...Object.values(DOCS).map((d) => d.label),
-    RISK_FOOTER,
   ].join("\n");
 }
 
@@ -613,9 +611,4 @@ describe("copy rules", () => {
     for (const re of BANNED) expect(corpus, String(re)).not.toMatch(re);
   });
 
-  it("keeps the risk footer text", () => {
-    expect(RISK_FOOTER).toBe(
-      "Crypto products and NFTs are unregulated and can be highly risky. There may be no regulatory recourse for any loss from such transactions.",
-    );
-  });
 });

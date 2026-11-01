@@ -1094,7 +1094,7 @@ test.describe("v6: Replay, inspect from the board, Present mode, the name", () =
     await expect(page.getByTestId("connectors").locator('[data-line="financing"] path').first()).toHaveAttribute("stroke", /#5B616E/i);
     await page.locator('[data-board-brick="b20"]').click();
     const t = (await page.getByTestId("toast").boundingBox())!;
-    const f = (await page.locator("footer p").boundingBox())!;
+    const f = (await page.locator("footer").boundingBox())!;
     const c = (await build(page).boundingBox())!;
     expect(t.y + t.height).toBeLessThanOrEqual(f.y - 4);
     expect(t.y + t.height).toBeLessThanOrEqual(c.y);
@@ -1296,7 +1296,7 @@ test.describe("v8: compact focus, toast docking, targets", () => {
         await page.waitForTimeout(150);
         const t = (await toast.boundingBox())!;
         const bar = (await page.getByTestId("mobile-bar").boundingBox())!;
-        const foot = (await page.locator("footer p").boundingBox())!;
+        const foot = (await page.locator("footer").boundingBox())!;
         expect(hit(t, bar)).toBe(false);
         expect(hit(t, foot)).toBe(false);
         expect(t.y).toBeGreaterThanOrEqual(0);

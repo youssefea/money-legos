@@ -19,10 +19,6 @@ export const GLOSSARY: readonly { term: string; gloss: string }[] = [
   { term: "MCP", gloss: "a way for AI tools to read docs" },
 ];
 
-/** Risk line shown in the footer on every screen. */
-export const RISK_FOOTER =
-  "Crypto products and NFTs are unregulated and can be highly risky. There may be no regulatory recourse for any loss from such transactions.";
-
 /** The 16 colours in the Base brand guidelines. Bricks use 11 of them; red (#FC401F) never. */
 export const BRAND_PALETTE: readonly string[] = [
   "#0000FF",

@@ -6,7 +6,6 @@ import {
   MAX_LEGOS,
   MIN_LEGOS,
   RECIPES,
-  RISK_FOOTER,
   buildFakeApp,
   generate,
   parseHash,
@@ -531,7 +530,6 @@ export default function MoneyLegosApp() {
       </main>
 
       <footer className={styles.footer}>
-        <p>{RISK_FOOTER}</p>
         <SoundToggle on={sound.on} onChange={sound.setOn} />
       </footer>
 
