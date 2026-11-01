@@ -99,7 +99,7 @@ function SwapCard({ id }: { id: LegoId }) {
 function OrderCard({ id }: { id: LegoId }) {
   return (
     <Region id={id} className={cx(s.card, s.orderCard)}>
-      <span className={s.seg} aria-hidden="true">
+      <span className={s.seg} aria-hidden="true" data-opt>
         <span className={s.t}>Market</span>
         <span className={s.t} data-on="true">
           Limit
@@ -181,7 +181,9 @@ function MeterCard({ id, label, value, of, fill, foot }: { id: LegoId; label: st
         <T className={s.cardSub}>{of}</T>
       </span>
       <Meter value={fill} />
-      <T className={s.cardSub}>{foot}</T>
+      <span data-opt>
+        <T className={s.cardSub}>{foot}</T>
+      </span>
     </Region>
   );
 }
@@ -273,7 +275,8 @@ function Neobank({ m, brand }: P) {
         <ActionRow id={m.slot.actions} items={m.slot.actions ? pay : shell} opt={!m.slot.actions} />
         <FeatureCard id={m.slot.card} />
         <Notices rows={m.notices} />
-        <section className={s.grow}>
+        <section className={s.grow} data-norows={!m.activity.length || undefined}>
+          <i className={s.fillStart} aria-hidden="true" />
           <SectionHead title="Recent activity" />
           <List rows={m.activity} fillers={m.fillers} />
         </section>
@@ -308,13 +311,14 @@ function Earn({ m, brand }: P) {
             <Chip tone="blue">4.12% APY</Chip>
             <T className={s.chipNote}>Variable rate · +$0.38 this week</T>
           </span>
-          <Spark seed={11} from={471.4} to={480.2} className={s.heroSpark} dot />
+          <Spark seed={11} from={471.4} to={480.2} className={s.heroSpark} dot opt />
         </Region>
         <HeroChip id={m.slot.heroChip} />
         <ActionRow id={m.slot.actions} items={m.slot.actions ? pay : shell} opt={!m.slot.actions} />
         <FeatureCard id={m.slot.card} />
         <Notices rows={m.notices} />
-        <section className={s.grow}>
+        <section className={s.grow} data-norows={!m.activity.length || undefined}>
+          <i className={s.fillStart} aria-hidden="true" />
           <SectionHead title="Activity" />
           <List rows={m.activity} fillers={m.fillers} />
         </section>
@@ -363,7 +367,7 @@ function Trade({ m, brand }: P) {
           ))}
         </div>
         <FeatureCard id={m.slot.card} />
-        <section className={s.positions}>
+        <section className={s.positions} data-opt={!m.positions.length || undefined}>
           <SectionHead title="Positions" />
           <List rows={m.positions} fillers={m.fillers} fixed />
         </section>
@@ -491,7 +495,8 @@ function Payroll({ m, brand }: P) {
         <HeroChip id={m.slot.heroChip} />
         <FeatureCard id={m.slot.card} />
         <Notices rows={m.notices} />
-        <section className={s.grow}>
+        <section className={s.grow} data-norows={!m.activity.length || undefined}>
+          <i className={s.fillStart} aria-hidden="true" />
           <SectionHead title="This run" />
           <List rows={m.activity} fillers={m.fillers} />
         </section>
@@ -524,7 +529,7 @@ function Agent({ m, brand }: P) {
           <span className={s.heroMeta}>
             <T className={s.delta}>+$38.20 vs yesterday</T>
           </span>
-          <span className={s.bars} aria-hidden="true">
+          <span className={s.bars} aria-hidden="true" data-opt>
             {BARS.map((h, i) => (
               <i key={i} style={{ height: `${h}%` }} />
             ))}
@@ -534,7 +539,8 @@ function Agent({ m, brand }: P) {
         <HeroChip id={m.slot.heroChip} />
         <FeatureCard id={m.slot.card} />
         <Notices rows={m.notices} />
-        <section className={s.grow}>
+        <section className={s.grow} data-norows={!m.activity.length || undefined}>
+          <i className={s.fillStart} aria-hidden="true" />
           <SectionHead title="Recent calls" />
           <List rows={m.activity} fillers={m.fillers} />
         </section>

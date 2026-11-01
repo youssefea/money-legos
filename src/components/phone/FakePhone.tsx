@@ -29,8 +29,11 @@ export type FakePhoneProps = {
   className?: string;
 };
 
-/** Densities, loosest first: 1 tightens the gaps, 2 the rows and cards, 3 drops optional shell (range picker, items), 4 shrinks type. */
-const DENSITIES = ["0", "1", "2", "3", "4"] as const;
+/**
+ * Densities, loosest first: 1 tightens the gaps, 2 the rows and cards, 3 drops optional shell (range
+ * picker, sample items, the revenue bars), 4 shrinks the hero and rows, 5 is the tightest rhythm.
+ */
+const DENSITIES = ["0", "1", "2", "3", "4", "5"] as const;
 
 /**
  * The fake phone: ONE coherent app screen picked from the stack (neobank, checkout, trade, earn,

@@ -301,7 +301,7 @@ export function ActionRow({ id, items, opt }: { id?: LegoId; items: readonly Act
 }
 
 /** A smooth line (and optional fill) through seeded data; stretches to its box. */
-export function Spark({ seed, from, to, n = 28, wobble = 0.05, area = true, className, dot, limit }: { seed: number; from: number; to: number; n?: number; wobble?: number; area?: boolean; className?: string; dot?: boolean; limit?: { value: number; label: string } }) {
+export function Spark({ seed, from, to, n = 28, wobble = 0.05, area = true, className, dot, limit, opt }: { seed: number; from: number; to: number; n?: number; wobble?: number; area?: boolean; className?: string; dot?: boolean; limit?: { value: number; label: string }; opt?: boolean }) {
   const W = 300;
   const H = 100;
   const v = series(seed, n, from, to, wobble);
@@ -313,7 +313,7 @@ export function Spark({ seed, from, to, n = 28, wobble = 0.05, area = true, clas
   const gid = `g${seed}`;
   const ly = limit ? toPoints([limit.value, limit.value], W, H, 8, lo - (hi - lo) * 0.05, hi + (hi - lo) * 0.05)[0]![1] : 0;
   return (
-    <span className={cx(s.spark, className)} aria-hidden="true">
+    <span className={cx(s.spark, className)} aria-hidden="true" data-opt={opt || undefined}>
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" focusable="false">
         <defs>
           <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">

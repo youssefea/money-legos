@@ -29,7 +29,7 @@ async function open(page: Page, w: number, state: string) {
   }
   if (state === "inspect") {
     // Hover the brick on the board: its tile lights up and its silhouette is outlined.
-    if (compact) await page.getByTestId("result-sheet").locator('[data-tile="payments"] button').click();
+    if (compact) await page.getByTestId("result-sheet").locator('[data-region="payments"] > button').click();
     else await page.locator('[data-board-brick="payments"]').hover();
   }
   // Compact: "built" is the bricks screen with the built app in the bar; "sheet" keeps the app sheet open.

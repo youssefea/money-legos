@@ -3,7 +3,8 @@ import { expect, test, type Page } from "@playwright/test";
 const brick = (page: Page, id: string) => page.locator(`button[data-lego="${id}"]`);
 const live = (page: Page) => page.locator('p[aria-live="polite"]');
 const phone = (page: Page) => page.getByTestId("phone");
-const tileIds = (page: Page) => phone(page).locator("[data-tile]").evaluateAll((els) => els.map((e) => e.getAttribute("data-tile")));
+/** Brick regions on the app screen, top to bottom (screen order, not stack order). */
+const regionIds = (page: Page) => phone(page).locator("[data-region]").evaluateAll((els) => els.map((e) => e.getAttribute("data-region")));
 const build = (page: Page) => page.getByTestId("build");
 const count = (page: Page) => page.getByTestId("board-count").locator("visible=true");
 
@@ -23,7 +24,10 @@ test.describe("desktop", () => {
     await expect(build(page)).toHaveAttribute("aria-disabled", "true");
     for (const gone of ["Pick 2+", "Tap a Lego", "Your board", "0 of 4"]) await expect(page.getByText(gone, { exact: true })).toHaveCount(0);
     await expect(phone(page)).toHaveAttribute("aria-label", /empty/);
-    await expect(phone(page).locator("[data-slot]")).toHaveCount(3);
+    // An empty board shows a skeleton of an app (header, balance, round actions, list rows), no regions.
+    await expect(phone(page)).toHaveAttribute("data-phase", "empty");
+    await expect(phone(page).locator("[data-skel]")).toHaveCount(1);
+    await expect(phone(page).locator("[data-region]")).toHaveCount(0);
     await expect(page.getByTestId("copy")).toHaveAttribute("aria-disabled", "true");
     await expect(page.getByTestId("app-name")).toHaveText("Your app");
     await expect(page.getByTestId("demo-label")).toHaveCount(0);
@@ -47,14 +51,14 @@ test.describe("desktop", () => {
     expect(await page.evaluate(() => (document.activeElement as HTMLElement).dataset.lego)).toBe("b20");
   });
 
-  test("before Build app the phone shows wireframes; Build app boots it; then it stays live", async ({ page }) => {
+  test("before Build app the phone shows a skeleton of the screen; Build app boots it; then it stays live", async ({ page }) => {
     await brick(page, "b20").click();
     await expect(count(page)).toHaveAttribute("aria-label", "1 of 4 bricks");
     await expect(live(page)).toHaveText(/Token added, 1 of 4/);
-    expect(await tileIds(page)).toEqual(["b20"]);
+    expect(await regionIds(page)).toEqual(["b20"]);
     await expect(phone(page)).toHaveAttribute("data-phase", "wire");
-    await expect(phone(page).locator("[data-tile]").first()).toHaveAttribute("data-wire", "true");
-    await expect(phone(page).locator("[data-tile]").first()).toContainText("Balance");
+    await expect(phone(page).locator("[data-skel]")).toHaveCount(1);
+    await expect(phone(page).locator('[data-region="b20"]')).toContainText("Total balance");
     await brick(page, "payments").click();
     await expect(build(page)).toHaveAttribute("aria-disabled", "false");
     await expect(page.getByTestId("app-name")).toHaveText("Your app");
@@ -67,13 +71,14 @@ test.describe("desktop", () => {
     // The Build button stays in its slot as Replay (the toolbar never jumps).
     await expect(build(page)).toHaveText("Replay");
     await expect(page.getByTestId("copy")).not.toHaveAttribute("data-quiet", "true");
-    expect(await tileIds(page)).toEqual(["payments", "b20"]);
+    expect(await regionIds(page)).toEqual(["b20", "payments"]);
+    await expect(phone(page).locator("[data-skel]")).toHaveCount(0);
     await expect(page.locator('[aria-label="Steps"] li').nth(1)).toHaveAttribute("data-state", "done");
     await expect(page).toHaveURL(/#b20,payments$/);
-    // Live: adding a brick updates name and tiles at once, no Regenerate.
+    // Live: adding a brick updates name and screen at once, no Regenerate.
     const before = await page.getByTestId("app-name").textContent();
     await brick(page, "speed").click();
-    expect(await tileIds(page)).toEqual(["speed", "payments", "b20"]);
+    expect(await regionIds(page)).toEqual(["b20", "payments", "speed"]);
     await expect(phone(page)).toHaveAttribute("data-phase", "live");
     await expect(page.getByTestId("app-name")).not.toHaveText(before!);
     await expect(page.getByRole("button", { name: "Details" })).toHaveAttribute("aria-disabled", "false");
@@ -103,7 +108,7 @@ test.describe("desktop", () => {
     await brick(page, "b20").click();
     await expect(brick(page, "b20")).toHaveAttribute("aria-pressed", "false");
     await expect(live(page)).toHaveText(/Token removed, 1 of 4/);
-    await expect(phone(page).locator("[data-tile]")).toHaveCount(1);
+    await expect(phone(page).locator("[data-region]")).toHaveCount(1);
   });
 
   test("hero shelf: 3 + 2 above the bin, each hero its whole brick (no overlap), rows never overlap", async ({ page }) => {
@@ -294,60 +299,72 @@ test.describe("desktop", () => {
     await expect(pay).toHaveAttribute("tabindex", "0");
   });
 
-  test("4-brick stack: tiles in order, one dominant module, dotted connectors that never cross", async ({ page }) => {
+  test("4-brick stack: one screen, one region per brick in screen order; each dotted line ends on its own region", async ({ page }) => {
     await page.goto("/#b20,payments,speed,validity");
-    await expect(phone(page).locator("[data-tile]")).toHaveCount(4);
-    expect(await tileIds(page)).toEqual(["validity", "speed", "payments", "b20"]);
-    await expect(phone(page).locator('[data-role="hero"]')).toHaveCount(1);
-    // The anchor task (Checkout, lowest prio) is the hero wherever it sits; the rest are compact rows.
-    await expect(phone(page).locator('[data-role="hero"]')).toHaveAttribute("data-tile", "payments");
-    const hh = (await phone(page).locator('[data-role="hero"]').boundingBox())!.height;
-    expect(hh).toBeGreaterThanOrEqual(110);
-    expect(hh).toBeLessThanOrEqual(144);
-    await expect(phone(page).locator('[data-role="status"]')).toHaveAttribute("data-tile", "speed");
+    await expect(phone(page)).toHaveAttribute("data-archetype", "trade");
+    await expect(phone(page).locator("[data-region]")).toHaveCount(4);
+    // Screen order (price line, order card, positions, notices), not stack order.
+    expect(await regionIds(page)).toEqual(["speed", "validity", "b20", "payments"]);
     const lines = page.getByTestId("connectors").locator("[data-line]");
     await expect(lines).toHaveCount(4);
-    const ends = await lines.evaluateAll((gs) =>
-      gs.map((g) => {
-        const d = g.querySelector("path")!.getAttribute("d")!;
-        const [, y0] = /^M[\d.]+ ([\d.]+)/.exec(d)!;
-        const c = g.querySelectorAll("circle");
-        return { id: g.getAttribute("data-line"), y0: Number(y0), y1: Number(c[1]!.getAttribute("cy")) };
-      }),
-    );
-    const byStart = [...ends].sort((a, b) => a.y0 - b.y0).map((e) => e.id);
-    const byEnd = [...ends].sort((a, b) => a.y1 - b.y1).map((e) => e.id);
-    expect(byStart).toEqual(byEnd);
-    expect(byEnd).toEqual(["validity", "speed", "payments", "b20"]);
+    const ends = await page.evaluate(() => {
+      const svg = document.querySelector('[data-testid="connectors"]')!.getBoundingClientRect();
+      return [...document.querySelectorAll("[data-line]")].map((g) => {
+        const c = g.querySelectorAll("circle")[1]!;
+        const r = document.querySelector(`[data-testid="phone"] [data-region="${g.getAttribute("data-line")}"]`)!.getBoundingClientRect();
+        return { id: g.getAttribute("data-line"), x: svg.left + Number(c.getAttribute("cx")), y: svg.top + Number(c.getAttribute("cy")), r: { left: r.left, top: r.top, bottom: r.bottom } };
+      });
+    });
+    for (const e of ends) {
+      // The disc sits just left of its region, level with it.
+      expect(e.r.left - e.x, e.id!).toBeGreaterThanOrEqual(0);
+      expect(e.r.left - e.x, e.id!).toBeLessThanOrEqual(14);
+      expect(e.y, e.id!).toBeGreaterThanOrEqual(e.r.top - 1);
+      expect(e.y, e.id!).toBeLessThanOrEqual(e.r.bottom + 1);
+    }
   });
 
-  test("inspect: hovering a tile highlights its line and brick; hovering a placed brick highlights its tile", async ({ page }) => {
+  test("inspect: hovering a region highlights its line and brick and dims the rest; hovering a placed brick highlights its region", async ({ page }) => {
     await page.goto("/#b20,payments,speed");
-    await expect(phone(page).locator("[data-tile]")).toHaveCount(3);
-    await phone(page).locator('[data-tile="payments"]').hover();
+    await expect(phone(page).locator("[data-region]")).toHaveCount(3);
+    await phone(page).locator('[data-region="payments"]').hover();
     await expect(page.getByTestId("connectors")).toHaveAttribute("data-inspect", "payments");
+    await expect(page.getByTestId("connectors").locator('[data-line="b20"]')).toHaveAttribute("data-dim", "true");
     await expect(page.getByTestId("brick-ring")).toBeVisible();
-    await expect(phone(page).locator('[data-tile="payments"]')).toContainText("Made with");
+    await expect(phone(page).locator('[data-region="payments"]')).toContainText("Made with");
     await brick(page, "b20").hover();
-    await expect(phone(page).locator('[data-tile="b20"]')).toHaveAttribute("data-inspect", "true");
+    await expect(phone(page).locator('[data-region="b20"]')).toHaveAttribute("data-inspect", "true");
   });
 
-  test("every recipe opens on a task hero card with one primary action (never a toast, pill or badge)", async ({ page }) => {
-    // (The pyramid order, largest footprint at the bottom, is checked for every recipe in logic.test.ts.)
+  test("every recipe opens on a full app screen: chrome, one region per brick, all inside the screen, no inner scroll", async ({ page }) => {
     for (const slug of ["neobank", "neobroker", "stablecoin-checkout", "creator-payouts", "pay-a-name", "agent-data-market", "escrow-marketplace", "gas-free-onboarding"]) {
       await page.goto(`/#recipe=${slug}`);
-      await expect(phone(page).locator("[data-tile]").first()).toBeVisible();
-      const hero = phone(page).locator('[data-role="hero"]');
-      await expect(hero, slug).toHaveCount(1);
-      expect(["toast", "pill", "badge"], slug).not.toContain(await hero.getAttribute("data-template"));
-      await expect(hero.locator('[class*="cta"]:not([class*="ctaQuiet"]):not([class*="ctaSmall"])').first(), slug).toBeVisible();
+      await expect(phone(page), slug).toHaveAttribute("data-phase", "live");
+      const n = await page.getByTestId("board-count").locator("visible=true").getAttribute("aria-label");
+      expect((await regionIds(page)).length, slug).toBe(Number(/^(\d)/.exec(n!)![1]));
+      const g = await phone(page).evaluate((ph) => {
+        const screen = ph.querySelector("[data-screen]")!.getBoundingClientRect();
+        const body = ph.querySelector<HTMLElement>("[data-body]")!;
+        return {
+          header: !!ph.querySelector("header"),
+          inner: body.scrollHeight - body.clientHeight,
+          inside: [...ph.querySelectorAll("[data-region]")].every((r) => {
+            const b = r.getBoundingClientRect();
+            return b.top >= screen.top - 1 && b.bottom <= screen.bottom + 1;
+          }),
+        };
+      });
+      expect(g.header, slug).toBe(true);
+      expect(g.inner, slug).toBeLessThanOrEqual(1);
+      expect(g.inside, slug).toBe(true);
     }
   });
 
   test("money values carry a currency and are never cut off", async ({ page }) => {
     await page.goto("/#b20,payments");
     await expect(phone(page)).toContainText("$1,240.00");
-    await expect(phone(page)).toContainText("$12.00");
+    await page.goto("/#payments,speed");
+    await expect(phone(page)).toContainText("Pay $12.00");
     const cut = await phone(page).evaluate((ph) =>
       [...ph.querySelectorAll("span")].some((s) => /\$/.test(s.textContent ?? "") && s.children.length === 0 && s.scrollWidth > s.clientWidth + 1),
     );
@@ -429,12 +446,12 @@ test.describe("desktop", () => {
     await expect(toast).toContainText("Full · swapped Token for Instant");
     expect(await toast.evaluate((el) => getComputedStyle(el).fontSize)).toBe("13px");
     await expect(live(page)).toHaveText(/Board full: Instant replaced Token, 4 of 4/);
-    expect(await tileIds(page)).toEqual(["speed", "validity", "financing", "payments"]);
+    expect((await regionIds(page)).sort()).toEqual(["speed", "validity", "financing", "payments"].sort());
     await toast.getByRole("button", { name: "Undo" }).click();
     await expect(toast).toHaveCount(0);
     await expect(brick(page, "b20")).toHaveAttribute("aria-pressed", "true");
     await expect(brick(page, "speed")).toHaveAttribute("aria-pressed", "false");
-    expect(await tileIds(page)).toEqual(["validity", "financing", "payments", "b20"]);
+    expect((await regionIds(page)).sort()).toEqual(["validity", "financing", "payments", "b20"].sort());
     // It goes away by itself after 6s.
     await brick(page, "speed").click();
     await expect(toast).toBeVisible();
@@ -491,9 +508,9 @@ test.describe("deep links", () => {
   test("hash restores the board and builds the app, including new ids", async ({ page }) => {
     await page.goto("/#basenames,base-pay,speed");
     for (const id of ["basenames", "base-pay", "speed"]) await expect(brick(page, id)).toHaveAttribute("aria-pressed", "true");
-    await expect(phone(page).locator("[data-tile]")).toHaveCount(3);
+    await expect(phone(page).locator("[data-region]")).toHaveCount(3);
     await expect(count(page)).toHaveAttribute("aria-label", "3 of 4 bricks");
-    expect(await tileIds(page)).toEqual(["speed", "base-pay", "basenames"]);
+    expect((await regionIds(page)).sort()).toEqual(["speed", "base-pay", "basenames"].sort());
     await expect(page.getByTestId("app-name")).not.toHaveText("Your app");
     await expect(phone(page)).toHaveAttribute("data-phase", "live");
   });
@@ -551,10 +568,10 @@ test.describe("fits one screen", () => {
     [1440, 900],
     [1920, 1080],
   ] as const) {
-    test(`no page scroll; phone, its dominant module and Copy in view at ${w}x${h}`, async ({ page }) => {
+    test(`no page scroll; phone, every region and Copy in view at ${w}x${h}`, async ({ page }) => {
       await page.setViewportSize({ width: w, height: h });
       await page.goto("/#b20,payments,speed,validity");
-      await expect(phone(page).locator("[data-tile]")).toHaveCount(4);
+      await expect(phone(page).locator("[data-region]")).toHaveCount(4);
       expect(await page.evaluate(() => document.documentElement.scrollHeight - innerHeight)).toBeLessThanOrEqual(0);
       await expect(phone(page)).toBeInViewport({ ratio: 1 });
       const copy = page.getByTestId("copy");
@@ -564,10 +581,10 @@ test.describe("fits one screen", () => {
       const box = (await phone(page).boundingBox())!;
       expect(box.width).toBeGreaterThanOrEqual(270);
       expect(box.height / box.width).toBeGreaterThanOrEqual(1.55);
-      // Every tile is inside the phone screen.
+      // Every region is inside the phone screen.
       const fit = await phone(page).evaluate((ph) => {
-        const screen = ph.querySelector("ol")!.getBoundingClientRect();
-        return [...ph.querySelectorAll("[data-tile]")].every((t) => {
+        const screen = ph.querySelector("[data-screen]")!.getBoundingClientRect();
+        return [...ph.querySelectorAll("[data-region]")].every((t) => {
           const r = t.getBoundingClientRect();
           return r.top >= screen.top - 1 && r.bottom <= screen.bottom + 1;
         });
@@ -594,22 +611,22 @@ test.describe("Present geometry", () => {
     [1920, 1080],
   ] as const) {
     for (const mode of ["present", "normal"] as const) {
-      test(`${mode} ${w}x${h}: a phone-shaped phone with all 4 tiles and their connectors in view, no inner scroll`, async ({ page }) => {
+      test(`${mode} ${w}x${h}: a phone-shaped phone with all 4 regions and their connectors in view, no inner scroll`, async ({ page }) => {
         await page.setViewportSize({ width: w, height: h });
         if (mode === "present") await page.addInitScript(() => sessionStorage.setItem("money-legos:present", "1"));
         await page.goto("/#recipe=neobank");
-        await expect(phone(page).locator("[data-tile]")).toHaveCount(4);
+        await expect(phone(page).locator("[data-region]")).toHaveCount(4);
         if (mode === "present") await expect(page.getByTestId("present-drawer")).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollHeight - innerHeight)).toBeLessThanOrEqual(0);
         const g = await phone(page).evaluate((ph) => {
-          const ol = ph.querySelector("ol")!;
-          const s = ol.getBoundingClientRect();
+          const body = ph.querySelector<HTMLElement>("[data-body]")!;
+          const s = ph.querySelector("[data-screen]")!.getBoundingClientRect();
           const d = ph.getBoundingClientRect();
           return {
             w: d.width,
             h: d.height,
-            inner: ol.scrollHeight - ol.clientHeight,
-            inside: [...ph.querySelectorAll("[data-tile]")].every((t) => {
+            inner: body.scrollHeight - body.clientHeight,
+            inside: [...ph.querySelectorAll("[data-region]")].every((t) => {
               const r = t.getBoundingClientRect();
               return r.top >= s.top - 1 && r.bottom <= s.bottom + 1;
             }),
@@ -623,7 +640,7 @@ test.describe("Present geometry", () => {
         // A phone 420px or taller keeps its tab bar.
         if (g.h >= 420) expect(g.tabbar).toBe(true);
         await expect(page.getByTestId("connectors").locator("[data-line]")).toHaveCount(4);
-        for (const t of await phone(page).locator("[data-tile]").all()) await expect(t).toBeInViewport({ ratio: 1 });
+        for (const t of await phone(page).locator("[data-region]").all()) await expect(t).toBeInViewport({ ratio: 1 });
         if (mode === "present") {
           // The drawer is a strip: 5 heroes + every other brick (no chips), a small Recipes button, every printed verb >= 12px.
           const drawer = page.getByTestId("present-drawer");
@@ -668,7 +685,7 @@ test.describe("accessibility", () => {
     const context = await browser.newContext({ reducedMotion: "reduce", viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
     await page.goto("/#b20,payments");
-    await expect(phone(page).locator("[data-tile]")).toHaveCount(2);
+    await expect(phone(page).locator("[data-region]")).toHaveCount(2);
     const durations = await page.evaluate(() =>
       [...document.querySelectorAll("*")]
         .map((el) => getComputedStyle(el))
@@ -682,7 +699,12 @@ test.describe("accessibility", () => {
 
   test("the phone is a labelled region summarising the app", async ({ page }) => {
     await page.goto("/#b20,payments");
-    await expect(page.getByRole("region", { name: /^Base [A-Za-z]+ app: Order #1042 · 1 item, USDC$/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Base Neobank app: balance, Send, Request and Pay" })).toBeVisible();
+    // Fake controls are inert: the only buttons on the screen are the inspect overlays, one per region.
+    const ph = phone(page);
+    await expect(ph.locator("button")).toHaveCount(2);
+    await expect(ph.locator("[data-region] > button")).toHaveCount(2);
+    await expect(ph.locator("svg:not([aria-hidden='true'])")).toHaveCount(0);
   });
 
   test("one polite live region announces every change", async ({ page }) => {
@@ -735,7 +757,7 @@ test.describe("compact tablet", () => {
     await bar.getByRole("button", { name: "Build app" }).click();
     const sheet = page.getByTestId("result-sheet");
     await expect(sheet).toBeFocused();
-    await expect(sheet.locator("[data-tile]")).toHaveCount(2);
+    await expect(sheet.locator("[data-region]")).toHaveCount(2);
     await expect(sheet.getByTestId("demo-label")).toHaveCount(0);
     const copy = sheet.getByRole("button", { name: "Copy prompt" });
     await expect(copy).toBeInViewport({ ratio: 1 });
@@ -775,7 +797,7 @@ test.describe("phone", () => {
     await page.goto("/#b20,payments,speed");
     const sheet = page.getByTestId("result-sheet");
     await expect(sheet).toBeVisible();
-    await expect(sheet.locator("[data-tile]")).toHaveCount(3);
+    await expect(sheet.locator("[data-region]")).toHaveCount(3);
     await expect(sheet.getByTestId("app-name")).not.toHaveText("Your app");
     // No device frame inside the sheet: the phone fills the sheet's width.
     const ph = (await sheet.getByTestId("phone").boundingBox())!;
@@ -786,17 +808,17 @@ test.describe("phone", () => {
     const actions = (await sheet.getByRole("button", { name: "Back to bricks" }).locator("..").boundingBox())!;
     expect(Math.abs(tab.y + tab.height - actions.y)).toBeLessThan(2);
     expect(actions.height).toBeGreaterThanOrEqual(72);
-    // Tapping a tile names its brick.
-    await sheet.locator('[data-tile="payments"] button').tap();
-    await expect(sheet.locator('[data-tile="payments"]')).toContainText("Made with Pay");
-    await expect(sheet.locator('[data-tile="payments"]')).toHaveAttribute("data-inspect", "true");
-    // Tapping it again turns it off; tapping another tile moves it; tapping the screen clears it.
-    await sheet.locator('[data-tile="payments"] button').tap();
-    await expect(sheet.locator("[data-tile][data-inspect]")).toHaveCount(0);
-    await sheet.locator('[data-tile="speed"] button').tap();
-    await expect(sheet.locator('[data-tile="speed"]')).toHaveAttribute("data-inspect", "true");
+    // Tapping a region names its brick.
+    await sheet.locator('[data-region="payments"] > button').tap();
+    await expect(sheet.locator('[data-region="payments"]')).toContainText("Made with");
+    await expect(sheet.locator('[data-region="payments"]')).toHaveAttribute("data-inspect", "true");
+    // Tapping it again turns it off; tapping another region moves it; tapping the screen clears it.
+    await sheet.locator('[data-region="payments"] > button').tap();
+    await expect(sheet.locator("[data-region][data-inspect]")).toHaveCount(0);
+    await sheet.locator('[data-region="speed"] > button').tap();
+    await expect(sheet.locator('[data-region="speed"]')).toHaveAttribute("data-inspect", "true");
     await sheet.getByTestId("phone-brand").tap();
-    await expect(sheet.locator("[data-tile][data-inspect]")).toHaveCount(0);
+    await expect(sheet.locator("[data-region][data-inspect]")).toHaveCount(0);
   });
 
   test("the sheet shows the full app name at once (never typed in), on Build and on reopening", async ({ page }) => {
@@ -928,32 +950,31 @@ test.describe("v6: Replay, inspect from the board, Present mode, the name", () =
     expect(await hidden()).toBe(0);
   });
 
-  test("board bricks are controls: hover highlights the tile and outlines the brick; click removes with Undo", async ({ page }) => {
+  test("board bricks are controls: hover highlights the region and outlines the brick; click removes with Undo", async ({ page }) => {
     await page.goto("/#b20,payments,speed");
-    await expect(phone(page).locator("[data-tile]")).toHaveCount(3);
+    await expect(phone(page).locator("[data-region]")).toHaveCount(3);
     const hit = page.locator('[data-board-brick="payments"]');
     await expect(hit).toHaveAttribute("aria-label", "Payments — remove");
     await hit.hover();
-    await expect(phone(page).locator('[data-tile="payments"]')).toHaveAttribute("data-inspect", "true");
+    await expect(phone(page).locator('[data-region="payments"]')).toHaveAttribute("data-inspect", "true");
     const ring = page.getByTestId("brick-ring");
     await expect(ring).toBeVisible();
     const shape = await ring.getAttribute("data-shape");
     expect(["hull", "rect"]).toContain(shape);
     if (shape === "hull") expect((await ring.getAttribute("points"))!.trim().split(/\s+/).length).toBeGreaterThanOrEqual(3);
-    // "Made with" sits on the colour strip, not over the tile's text.
-    const tile = phone(page).locator('[data-tile="payments"]');
-    const made = (await tile.getByText("Made with").boundingBox())!;
-    const body = (await tile.locator('[class*="body"]').first().boundingBox())!;
-    expect(made.y + made.height).toBeLessThanOrEqual(body.y + 4);
+    // "Made with" shows on the region, inside the screen.
+    const made = (await phone(page).locator('[data-region="payments"]').getByText("Made with").boundingBox())!;
+    const screen = (await phone(page).locator("[data-screen]").boundingBox())!;
+    expect(made.x + made.width).toBeLessThanOrEqual(screen.x + screen.width);
     await hit.click();
     await expect(brick(page, "payments")).toHaveAttribute("aria-pressed", "false");
     await expect(page.getByTestId("toast")).toContainText("Payments removed");
     await page.getByTestId("toast-undo").click();
     await expect(brick(page, "payments")).toHaveAttribute("aria-pressed", "true");
-    expect(await tileIds(page)).toEqual(["speed", "payments", "b20"]);
+    expect(await regionIds(page)).toEqual(["b20", "payments", "speed"]);
     // Keyboard: Enter on a focused board brick removes it too.
     await page.locator('[data-board-brick="speed"]').focus();
-    await expect(phone(page).locator('[data-tile="speed"]')).toHaveAttribute("data-inspect", "true");
+    await expect(phone(page).locator('[data-region="speed"]')).toHaveAttribute("data-inspect", "true");
     await page.keyboard.press("Enter");
     await expect(brick(page, "speed")).toHaveAttribute("aria-pressed", "false");
   });
@@ -982,7 +1003,7 @@ test.describe("v6: Replay, inspect from the board, Present mode, the name", () =
 
   test("focus never drops to <body>: after a board removal (keyboard or click), after Undo", async ({ page }) => {
     await page.goto("/#b20,payments,speed");
-    await expect(phone(page).locator("[data-tile]")).toHaveCount(3);
+    await expect(phone(page).locator("[data-region]")).toHaveCount(3);
     const focused = () => page.evaluate(() => {
       const a = document.activeElement as HTMLElement;
       return a.dataset.boardBrick ?? a.dataset.testid ?? a.tagName;
@@ -1007,7 +1028,7 @@ test.describe("v6: Replay, inspect from the board, Present mode, the name", () =
   test("Present mode: P or the toggle; the tray slides away, a drawer keeps the bricks; Esc leaves; remembered for the tab, not the URL", async ({ page }) => {
     await page.setViewportSize({ width: 1920, height: 1080 });
     await page.goto("/#b20,payments");
-    await expect(phone(page).locator("[data-tile]")).toHaveCount(2);
+    await expect(phone(page).locator("[data-region]")).toHaveCount(2);
     const toggle = page.getByTestId("present-toggle");
     await expect(toggle).toHaveAttribute("aria-pressed", "false");
     await page.locator("body").press("p");
@@ -1192,7 +1213,7 @@ test.describe("v8: desktop", () => {
 
   test("desktop targets are >= 32px: empty, built, Details, Present", async ({ page }) => {
     await page.goto("/#recipe=neobank");
-    await expect(phone(page).locator("[data-tile]")).toHaveCount(4);
+    await expect(phone(page).locator("[data-region]")).toHaveCount(4);
     for (const t of await targets(page)) expect(t.h, t.name).toBeGreaterThanOrEqual(32);
     await page.getByRole("button", { name: "Details" }).click();
     for (const t of await targets(page)) expect(t.h, t.name).toBeGreaterThanOrEqual(32);
@@ -1238,29 +1259,31 @@ test.describe("v8: desktop", () => {
     await expect(page).toHaveURL(/#recipe=neobroker$/);
   });
 
-  test("status-only stack (Speed + Verify + Sponsor): the most prominent status is a hero card, never 3 identical rows", async ({ page }) => {
+  test("a status-only stack (Speed + Verify + Sponsor) still makes a full screen with a primary action", async ({ page }) => {
     await page.goto("/#sponsored-gas,verify,speed");
-    const tiles = phone(page).locator("[data-tile]");
-    await expect(tiles).toHaveCount(3);
-    await expect(phone(page).locator('[data-tile="speed"]')).toHaveAttribute("data-role", "hero");
-    const hs = await tiles.evaluateAll((els) => els.map((e) => e.getBoundingClientRect().height));
-    expect(hs[0]!).toBeGreaterThanOrEqual(110);
-    expect(hs[0]!).toBeGreaterThan(hs[1]! * 1.6);
+    await expect(phone(page)).toHaveAttribute("data-archetype", "identity");
+    await expect(phone(page).locator("[data-region]")).toHaveCount(3);
+    await expect(phone(page).getByText("Continue", { exact: true })).toBeInViewport();
   });
 
-  test("the bottom tile fills the phone: no empty band under a 2- or 3-tile app", async ({ page }) => {
-    for (const hash of ["#b20,payments", "#b20,payments,speed", "#recipe=pay-a-name"]) {
+  test("the screen is full: no empty band under the last region or list (2, 3 and 4 bricks, every archetype)", async ({ page }) => {
+    for (const hash of ["#b20,payments", "#b20,payments,speed", "#recipe=pay-a-name", "#recipe=neobroker", "#recipe=creator-payouts", "#recipe=agent-data-market", "#recipe=gas-free-onboarding", "#financing,borrow"]) {
       await page.goto("/" + hash);
       await expect(phone(page)).toHaveAttribute("data-phase", "live");
       await page.waitForTimeout(100);
       const gap = await phone(page).evaluate((ph) => {
-        const ol = ph.querySelector("ol")!;
-        const tiles = [...ol.querySelectorAll("[data-tile]")];
-        const last = tiles[tiles.length - 1]!.getBoundingClientRect();
-        const slots = [...ol.querySelectorAll("[data-slot]")].map((s) => s.getBoundingClientRect().bottom);
-        return (ol.getBoundingClientRect().bottom - Math.max(last.bottom, ...slots)) / ph.getBoundingClientRect().height;
+        const body = ph.querySelector<HTMLElement>("[data-body]")!;
+        const br = body.getBoundingClientRect();
+        const kids = [...body.children].filter((k) => getComputedStyle(k).display !== "none" && !k.querySelector("li"));
+        // A filling list counts down to its last row in view (rows that do not fit wrap out of view).
+        const rows = [...body.querySelectorAll("li")].filter((li) => {
+          const r = li.getBoundingClientRect();
+          return r.height > 0 && r.left < br.right - 1;
+        });
+        const bottoms = [...kids, ...rows].map((k) => k.getBoundingClientRect().bottom);
+        return (br.bottom - Math.max(...bottoms)) / ph.getBoundingClientRect().height;
       });
-      expect(gap, hash).toBeLessThanOrEqual(0.04);
+      expect(gap, hash).toBeLessThanOrEqual(0.09);
     }
   });
 
@@ -1316,7 +1339,7 @@ test.describe("v8: Present uses the screen", () => {
     test(`${w}x${h}: no header row, a one-line name, a bigger phone, a toolbar on one row`, async ({ page }) => {
       await page.setViewportSize({ width: w, height: h });
       await page.goto("/#recipe=neobank");
-      await expect(phone(page).locator("[data-tile]")).toHaveCount(4);
+      await expect(phone(page).locator("[data-region]")).toHaveCount(4);
       const normal = (await phone(page).boundingBox())!;
       await page.keyboard.press("p");
       await expect(page.getByTestId("present-drawer")).toBeVisible();
@@ -1325,7 +1348,7 @@ test.describe("v8: Present uses the screen", () => {
       expect(pres.width).toBeGreaterThanOrEqual(Math.min(normal.width + 20, 460));
       expect(pres.height / pres.width).toBeGreaterThanOrEqual(1.6 - 0.01);
       expect(await page.evaluate(() => document.documentElement.scrollHeight - innerHeight)).toBeLessThanOrEqual(0);
-      for (const t of await phone(page).locator("[data-tile]").all()) await expect(t).toBeInViewport({ ratio: 1 });
+      for (const t of await phone(page).locator("[data-region]").all()) await expect(t).toBeInViewport({ ratio: 1 });
       // The toolbar (lockup, Docs, Present) is one row and sits above the stage, not in a header row.
       const bar = await page.locator("header:has([data-testid=present-toggle])").evaluate((el) => {
         const kids = [...el.querySelectorAll("a, button, svg")].map((k) => k.getBoundingClientRect()).filter((r) => r.width > 0);
