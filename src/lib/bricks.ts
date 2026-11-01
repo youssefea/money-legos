@@ -47,7 +47,7 @@ export type BrickSpec = {
   hero: boolean;
 };
 
-/** All 40 bricks in tray order, with footprint, colours and the printed verb. */
+/** All 39 bricks in tray order, with footprint, colours and the printed verb. */
 export const ALL_BRICKS: readonly BrickSpec[] = LEGOS.map((l) => ({
   id: l.id,
   size: [l.size[0], l.size[1]] as BrickSize,

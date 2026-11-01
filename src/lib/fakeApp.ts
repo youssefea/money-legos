@@ -2,9 +2,9 @@ import { flowOrder } from "./generate";
 import { BY_ID, resolveId } from "./legos";
 import type { FakeApp, FakeTile, LegoId, UiTemplate } from "./types";
 
-/** Invented brand used on every fake-app screen. Never a real company. */
-export const FAKE_BRAND = "Acme";
-export const MAX_BRAND_LENGTH = 18;
+/** Brand prefix on every fake-app screen: "Base Neobank", "Base Pay"... */
+export const FAKE_BRAND = "Base";
+export const MAX_BRAND_LENGTH = 16;
 
 /** Keeps known ids (aliases resolved), drops duplicates, keeps order, caps at 4. */
 function clean(ids: readonly string[]): LegoId[] {
@@ -16,7 +16,7 @@ function clean(ids: readonly string[]): LegoId[] {
   return out;
 }
 
-/** "Acme <word>" from the Lego that names the app (lowest prio). Deterministic and order-free. */
+/** "Base <word>" from the Lego that names the app (lowest prio). Deterministic and order-free. */
 export function fakeBrand(ids: readonly LegoId[]): string {
   if (!ids.length) return FAKE_BRAND;
   const anchor = ids.slice().sort((a, b) => BY_ID[a].prio - BY_ID[b].prio)[0]!;
@@ -42,7 +42,7 @@ export function buildFakeAppInFlowOrder(ids: readonly string[]): FakeApp {
   return buildFakeApp(flowOrder(clean(ids)).reverse());
 }
 
-/** Short screen-reader summary for the phone region: "Acme Pay app: Order #1042, Confirmed in 0.2s". */
+/** Short screen-reader summary for the phone region: "Base Pay app: Order #1042, Confirmed in 0.2s". */
 export function describeFakeApp(app: FakeApp): string {
   if (!app.tiles.length) return `${app.brand} app, empty`;
   return `${app.brand} app: ` + app.tiles.map((t) => t.title).join(", ");

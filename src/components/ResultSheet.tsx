@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { FakeApp, LegoId } from "@/lib";
 import FakePhone from "./phone/FakePhone";
-import { AppName, CopyButton, DemoLabel } from "./ResultPanel";
+import { AppName, CopyButton } from "./ResultPanel";
 import styles from "./ResultSheet.module.css";
 
 export type ResultSheetProps = {
@@ -19,7 +19,7 @@ export type ResultSheetProps = {
 
 /**
  * Compact layouts (<1024px): the built app opens as a bottom sheet. The sheet is the screen (no device
- * frame inside a device): the name as its title, the demo label, the app scrolling, and Copy prompt
+ * frame inside a device): the name as its title, the app scrolling, and Copy prompt
  * pinned in a 72px action bar with "Back to bricks". Tapping a tile shows "Made with <brick>".
  * Native modal <dialog>: focus trapped, Escape closes.
  */
@@ -65,7 +65,6 @@ export default function ResultSheet({ open, app, name, copied, onCopy, onDetails
         <div className={styles.heading}>
           {/* The full name at once: the sheet never types it in (it opens over a finished app). */}
           <AppName id="sheet-h" name={name} typing={null} className={styles.title} />
-          <DemoLabel className={styles.demo} />
         </div>
         <button type="button" className={styles.details} onClick={onDetails} aria-haspopup="dialog">
           Details

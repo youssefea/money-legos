@@ -14,7 +14,6 @@ import BrickSprite from "@/components/bricks/BrickSprite";
 import { SPRITE_DPR, SPRITE_META, SPRITE_STUD_PX } from "@/components/bricks/spriteMeta";
 import { CATEGORIES, HERO_LEGOS, MORE_LEGOS, type Category, type Lego, type LegoId } from "@/lib";
 import { BrickGlyph } from "./BrickArt";
-import { statusChip } from "./statusChip";
 import styles from "./Tray.module.css";
 
 export type TrayProps = {
@@ -111,12 +110,8 @@ function TipBox({ tip, lego }: { tip: Tip; lego: Lego }) {
     <div ref={ref} id={TIP_ID} role="tooltip" className={styles.tip} style={{ visibility: "hidden" }}>
       <span className={styles.tipHead}>
         <span className={styles.tipName}>{lego.name}</span>
-        <span className={styles.tipChip} data-kind={lego.statusKind}>
-          {statusChip(lego)}
-        </span>
       </span>
       <span className={styles.tipTag}>{lego.tag}</span>
-      {lego.note && <span className={styles.tipNote}>{lego.note}</span>}
     </div>
   );
 }
@@ -124,7 +119,7 @@ function TipBox({ tip, lego }: { tip: Tip; lego: Lego }) {
 /**
  * The brick bin on one stud scale: the 5 hero 2x4s always on top (dimmed when a filter leaves them
  * out), then the rest on a true stud grid. Bricks are buttons (one Tab stop, arrow keys move, Enter
- * adds); name, tag and status show in a tooltip on hover, keyboard focus or a long press. Category
+ * adds); name and tag show in a tooltip on hover, keyboard focus or a long press. Category
  * chips come after the bricks in tab order (shown above them) and are one Tab stop too.
  */
 export default function Tray({ ids, onToggle, onPointerDown, wasDrag, dragging, inspect = null, onInspect, onHover, layout = "bin", initialCategory }: TrayProps) {

@@ -1,7 +1,7 @@
 /** Shared data types for the Money Legos content, the generator and the fake app. */
 import type { DOCS } from "../data/catalog";
 
-/** All 40 Lego ids. The first 13 are the original ids and must keep working in URLs. */
+/** All 39 Lego ids. The first 13 are the original ids and must keep working in URLs. */
 export type LegoId =
   | "b20"
   | "payments"
@@ -41,18 +41,12 @@ export type LegoId =
   | "agent-codes"
   | "docs-mcp"
   | "skills"
-  | "vibenet"
   | "local-devnet";
 
 /** Key of a docs page in DOCS (src/data/catalog.ts). */
 export type DocKey = keyof typeof DOCS;
 
 export type DocLink = { label: string; url: string };
-
-/** live = on mainnet; testnet = Base Sepolia or a preview network; announced = dates not set yet. */
-export type StatusKind = "live" | "testnet" | "available" | "announced";
-
-export type LegoStatus = { kind: StatusKind; label: string };
 
 /** hero = the 5 big 2x4 bricks pinned on top of the tray. */
 export type Tier = "hero" | "secondary";
@@ -105,7 +99,7 @@ export type UiTemplate =
 
 /**
  * Data for one fake-app tile. Text diet: at most 3 short strings (title, value, cta, chip and
- * each row count as one). Numbers are obviously fake and the brand is always "Acme".
+ * each row count as one). Numbers are obviously fake and the brand is always "Base <word>".
  */
 export type UiTile = {
   template: UiTemplate;
@@ -128,7 +122,6 @@ export type CatalogEntry = {
   tag: string;
   short: string;
   what: string;
-  status: LegoStatus;
   example: string;
   docs: DocKey[];
   size: BrickSize;
@@ -137,7 +130,6 @@ export type CatalogEntry = {
   step: string;
   role?: string;
   build: string;
-  note?: string;
   prio: number;
   flow: number;
   brand: string;
@@ -165,12 +157,7 @@ export type Lego = {
   blurb: string;
   /** Build-step tile text (<= 28 chars). */
   step: string;
-  /** Short status line for one-line UI spots (Speed and BaseTime: the short Denim line). */
-  note?: string;
   what: string;
-  status: LegoStatus;
-  /** Same as `status.kind`. */
-  statusKind: StatusKind;
   example: string;
   /** What this Lego does in a generated app (step "why"). */
   role: string;
@@ -188,7 +175,7 @@ export type Lego = {
   prio: number;
   /** Position in a money flow (sign in first, attribution and speed last). */
   flow: number;
-  /** One word for the fake app brand: "Acme <brand>". */
+  /** One word for the fake app brand: "Base <brand>". */
   brand: string;
   /** Catalog description of the tile, for reference. */
   uiModule: string;
@@ -233,7 +220,7 @@ export type GenerateResult = {
 export type FakeTile = UiTile & { legoId: LegoId; order: number };
 
 export type FakeApp = {
-  /** Invented brand, e.g. "Acme Pay" (<= 18 chars). */
+  /** Fake app brand, e.g. "Base Pay" (<= 16 chars). */
   brand: string;
   /** Top brick first. */
   tiles: FakeTile[];

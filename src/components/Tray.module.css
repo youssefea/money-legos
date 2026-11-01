@@ -1,6 +1,6 @@
 /*
- * The brick bin. Top: the 5 heroes on a pinned shelf (a Gray 10 recess over a hairline), 3 + 2 on desktop.
- * Below: the other 35 on ONE stud scale (--stud, 24px; 26px on a projector) in a tight stud grid: a cell
+ * The brick bin. Top: the 5 heroes pinned above a hairline (no box behind them), 3 + 2 on desktop.
+ * Below: the other 34 on ONE stud scale (--stud, 24px; 26px on a projector) in a tight stud grid: a cell
  * is 3 studs wide (a 2x2 plus its side face), wider bricks span two cells, rows are as tall as the tallest
  * sprite so no two rows overlap, every brick sits on its row's baseline. At 24px a stud, every printed verb
  * is >= 12 CSS px on a small face and ~21px on a hero (spriteMeta `verb`).
@@ -97,9 +97,7 @@
   grid-template-columns: repeat(3, max-content);
   gap: 4px var(--gap);
   align-items: end;
-  border-radius: var(--radius-md);
-  background: var(--base-gray-10);
-  box-shadow: inset 0 -1px 0 var(--base-gray-15);
+  box-shadow: inset 0 -1px 0 var(--color-hairline);
 }
 .heroShelf .cell.cell {
   --stud: var(--hero-stud);
@@ -110,7 +108,7 @@
 .heroShelf .cell[data-span] {
   grid-column: auto;
 }
-/* ---------------------------------------------------------------- scroll area (the other 35) */
+/* ---------------------------------------------------------------- scroll area (the other 34) */
 .scroll {
   flex: 1;
   min-height: 0;
@@ -424,32 +422,8 @@
 .tipName {
   font-weight: var(--weight-medium);
 }
-.tipChip {
-  padding: 1px 6px;
-  border: 1px solid var(--base-gray-60);
-  border-radius: var(--radius-xs);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--base-gray-30);
-  white-space: nowrap;
-}
-.tipChip[data-kind="live"] {
-  border-color: var(--base-green);
-  color: var(--base-lime);
-}
-.tipChip[data-kind="testnet"] {
-  border-color: var(--base-pink);
-  color: var(--base-pink);
-}
 .tipTag {
   color: var(--base-gray-30);
-}
-.tipNote {
-  margin-top: 2px;
-  font-size: 13px;
-  color: var(--base-gray-0);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -469,10 +443,6 @@
   .check {
     background: var(--base-cerulean);
     color: var(--base-gray-100);
-  }
-  .heroShelf {
-    background: var(--base-gray-80);
-    box-shadow: inset 0 -1px 0 var(--base-gray-60);
   }
   .check {
     box-shadow: 0 0 0 2px var(--base-gray-100);

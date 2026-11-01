@@ -110,8 +110,7 @@
 }
 
 .why,
-.docs,
-.status {
+.docs {
   margin: 0;
   padding: 0;
   list-style: none;
@@ -129,8 +128,7 @@
   height: auto;
   margin-top: 2px;
 }
-.why b,
-.status b {
+.why b {
   font-weight: var(--weight-medium);
 }
 
@@ -206,25 +204,6 @@
   text-underline-offset: 3px;
 }
 
-.status li {
-  display: grid;
-  grid-template-columns: 92px 1fr;
-  gap: var(--space-3);
-  align-items: start;
-}
-.chip {
-  justify-self: start;
-  padding: 2px 6px;
-  border: 1px solid var(--color-hairline);
-  border-radius: var(--radius-xs);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--color-fg-muted);
-  white-space: nowrap;
-}
-
 .terms {
   margin: 0;
   display: grid;
@@ -257,9 +236,6 @@
   }
   .close:hover {
     background: var(--base-gray-80);
-  }
-  .chip {
-    border-color: var(--base-gray-60);
   }
 }
 

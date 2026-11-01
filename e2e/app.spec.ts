@@ -26,11 +26,12 @@ test.describe("desktop", () => {
     await expect(phone(page).locator("[data-slot]")).toHaveCount(3);
     await expect(page.getByTestId("copy")).toHaveAttribute("aria-disabled", "true");
     await expect(page.getByTestId("app-name")).toHaveText("Your app");
-    await expect(page.getByTestId("demo-label")).toHaveText("Demo · no real funds");
+    await expect(page.getByTestId("demo-label")).toHaveCount(0);
+    await expect(page.getByText(/no real funds/i)).toHaveCount(0);
     await expect(page.locator('[aria-label="Steps"] li')).toHaveText(["1Pick", "2Build", "3Copy"]);
-    // Text diet: no blurbs in the tray, the Denim line only lives in the Speed and BaseTime tooltips.
-    await expect(page.getByText(/mainnet targeting/)).toHaveCount(0);
-    await expect(page.locator("button[data-lego]")).toHaveCount(40);
+    // Every brick is presented as available: no status or test-network wording anywhere on the page.
+    await expect(page.locator("body")).not.toContainText(/coming soon|announced|sepolia|testnet|early access|mainnet targeting|acme/i);
+    await expect(page.locator("button[data-lego]")).toHaveCount(39);
     // Brick copy, not "Lego", in the bin's names.
     await expect(page.getByRole("group", { name: "Filter bricks" })).toBeVisible();
   });
@@ -146,7 +147,7 @@ test.describe("desktop", () => {
           px: e.querySelector("[data-sprite]")!.getBoundingClientRect().width * Number(e.getAttribute("data-print")),
         })),
       );
-      expect(sizes).toHaveLength(40);
+      expect(sizes).toHaveLength(39);
       for (const s of sizes) expect(s.px, s.id).toBeGreaterThanOrEqual(s.hero ? 14 : 12);
       expect(await page.evaluate(() => document.documentElement.scrollHeight - innerHeight)).toBeLessThanOrEqual(0);
       const sc = page.getByTestId("tray-scroll");
@@ -217,10 +218,10 @@ test.describe("desktop", () => {
     await expect(brick(page, "flashblocks")).toBeVisible();
     // Pressing the active chip again shows everything.
     await page.getByRole("button", { name: "Speed", exact: true }).click();
-    await expect(page.locator("button[data-lego]")).toHaveCount(40);
+    await expect(page.locator("button[data-lego]")).toHaveCount(39);
   });
 
-  test("tooltip: name, tag and status (with the Denim line for Speed and BaseTime); stays on screen", async ({ page }) => {
+  test("tooltip: name and tag only, no status line; stays on screen", async ({ page }) => {
     await brick(page, "b20").focus();
     await page.keyboard.press("ArrowRight"); // keyboard focus is :focus-visible
     await page.keyboard.press("Home");
@@ -229,7 +230,7 @@ test.describe("desktop", () => {
     const tip = page.getByRole("tooltip");
     await expect(tip).toBeVisible();
     await expect(tip).toContainText("200ms blocks");
-    await expect(tip).toContainText("Live on Base Sepolia; mainnet targeting November 2026");
+    await expect(tip).not.toContainText(/sepolia|mainnet|announced|testnet/i);
     await expect(brick(page, "speed")).toHaveAttribute("aria-describedby", "brick-tip brick-keys");
     const box = (await tip.boundingBox())!;
     expect(box.x).toBeGreaterThanOrEqual(15);
@@ -238,10 +239,11 @@ test.describe("desktop", () => {
     await expect(brick(page, "speed")).toBeFocused();
     await brick(page, "basetime").scrollIntoViewIfNeeded();
     await brick(page, "basetime").hover();
-    await expect(tip).toContainText("mainnet targeting November 2026");
+    await expect(tip).toContainText("BaseTime");
+    await expect(tip).not.toContainText(/sepolia|mainnet|announced|testnet/i);
     await brick(page, "b20").hover();
     await expect(tip).toContainText("B20");
-    await expect(tip).not.toContainText("mainnet targeting");
+    await expect(tip).not.toContainText(/mainnet/i);
   });
 
   test("recipes popover: brick glyph rows, arrow keys, Escape returns focus, picking one builds it", async ({ page }) => {
@@ -370,7 +372,9 @@ test.describe("desktop", () => {
     await expect(drawer.getByText("Why each brick")).toBeVisible();
     await expect(drawer.getByText("Build steps")).toBeVisible();
     await expect(drawer.getByTestId("prompt")).toContainText("Build a first working version of");
-    await expect(drawer).toContainText("Live on Base Sepolia since Oct 21, 2026; mainnet targeting November 2026");
+    await expect(drawer.getByText("Status", { exact: true })).toHaveCount(0);
+    await expect(drawer).not.toContainText(/sepolia|testnet|vibenet|announced|early access|coming soon|acme/i);
+    await expect(drawer.getByTestId("prompt")).toContainText("Target Base mainnet.");
     await expect(drawer.getByRole("link", { name: "B20 token standard" })).toBeVisible();
     await expect(drawer.locator("dt", { hasText: "B20" })).toBeVisible();
     for (let i = 0; i < 25; i++) {
@@ -650,7 +654,7 @@ test.describe("accessibility", () => {
 
   test("the phone is a labelled region summarising the app", async ({ page }) => {
     await page.goto("/#b20,payments");
-    await expect(page.getByRole("region", { name: /^Acme .+ app: Order #1042 · 1 item, ACME USD$/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /^Base [A-Za-z]+ app: Order #1042 · 1 item, USDC$/ })).toBeVisible();
   });
 
   test("one polite live region announces every change", async ({ page }) => {
@@ -704,7 +708,7 @@ test.describe("compact tablet", () => {
     const sheet = page.getByTestId("result-sheet");
     await expect(sheet).toBeFocused();
     await expect(sheet.locator("[data-tile]")).toHaveCount(2);
-    await expect(sheet.getByTestId("demo-label")).toBeVisible();
+    await expect(sheet.getByTestId("demo-label")).toHaveCount(0);
     const copy = sheet.getByRole("button", { name: "Copy prompt" });
     await expect(copy).toBeInViewport({ ratio: 1 });
     const back = sheet.getByRole("button", { name: "Back to bricks" });

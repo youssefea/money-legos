@@ -8,8 +8,6 @@ import {
   CATEGORIES,
   COMBOS,
   COMBO_BY_KEY,
-  DENIM_SHORT,
-  DENIM_STATUS,
   DOCS,
   GLOSSARY,
   HERO_LEGOS,
@@ -96,7 +94,7 @@ function textOf(r: GenerateResult): string {
     r.name,
     r.pitch,
     r.prompt,
-    ...r.steps.flatMap((s) => [s.why, s.lego.name, s.lego.verb, s.lego.short, s.lego.what, s.lego.status.label, s.lego.example]),
+    ...r.steps.flatMap((s) => [s.why, s.lego.name, s.lego.verb, s.lego.short, s.lego.what, s.lego.example]),
     ...r.docs.map((d) => d.label),
   ].join("\n");
 }
@@ -109,7 +107,6 @@ function allContentText(): string {
       l.tag,
       l.short,
       l.what,
-      l.status.label,
       l.example,
       l.role,
       l.build,
@@ -117,7 +114,6 @@ function allContentText(): string {
       l.noun,
       l.does,
       l.step,
-      l.note ?? "",
       ...tileStrings(l.ui),
     ]),
     ...COMBOS.flatMap((c) => [c.name, c.pitch, ...Object.values(c.why ?? {})]),
@@ -126,6 +122,9 @@ function allContentText(): string {
     RISK_FOOTER,
   ].join("\n");
 }
+
+/** Availability qualifiers the UI and prompt never show: every brick is presented as available. */
+const AVAILABILITY = /coming soon|announced|sepolia|testnet|early access|request access|mainnet targeting|\bsoon\b/i;
 
 const BANNED: RegExp[] = [
   /₹/,
@@ -151,12 +150,12 @@ const BANNED: RegExp[] = [
 ];
 
 describe("Lego registry", () => {
-  it("has 40 Legos with unique ids, the 5 heroes first", () => {
-    expect(LEGOS).toHaveLength(40);
-    expect(new Set(ALL_IDS).size).toBe(40);
+  it("has 39 Legos with unique ids, the 5 heroes first", () => {
+    expect(LEGOS).toHaveLength(39);
+    expect(new Set(ALL_IDS).size).toBe(39);
     expect(LEGOS.slice(0, 5).map((l) => l.id)).toEqual(HERO_IDS);
     expect(HERO_LEGOS.map((l) => l.id)).toEqual(HERO_IDS);
-    expect(MORE_LEGOS).toHaveLength(35);
+    expect(MORE_LEGOS).toHaveLength(34);
   });
 
   it("keeps all 13 original ids", () => {
@@ -195,8 +194,8 @@ describe("Lego registry", () => {
   });
 
   it("has unique prio and flow values", () => {
-    expect(new Set(LEGOS.map((l) => l.prio)).size).toBe(40);
-    expect(new Set(LEGOS.map((l) => l.flow)).size).toBe(40);
+    expect(new Set(LEGOS.map((l) => l.prio)).size).toBe(39);
+    expect(new Set(LEGOS.map((l) => l.flow)).size).toBe(39);
   });
 });
 
@@ -247,23 +246,24 @@ describe("copy for the tray, tooltip and set box", () => {
 });
 
 describe("statuses", () => {
-  it("uses the exact Denim line for 200ms blocks and BaseTime, and the short one as their note", () => {
-    expect(DENIM_STATUS).toBe("Live on Base Sepolia since Oct 21, 2026; mainnet targeting November 2026");
-    expect(DENIM_SHORT).toBe(DENIM_STATUS.replace(" since Oct 21, 2026", ""));
-    for (const id of ["speed", "basetime"] as const) {
-      expect(BY_ID[id].status).toEqual({ kind: "testnet", label: DENIM_STATUS });
-      expect(BY_ID[id].note).toBe(DENIM_SHORT);
+  it("presents every brick as available: no status data and no availability qualifiers in any UI string", () => {
+    for (const l of LEGOS) {
+      expect(l, l.id).not.toHaveProperty("status");
+      expect(l, l.id).not.toHaveProperty("statusKind");
+      expect(l, l.id).not.toHaveProperty("note");
     }
-    expect(LEGOS.filter((l) => l.note).map((l) => l.id)).toEqual(["speed", "basetime"]);
+    expect(allContentText()).not.toMatch(AVAILABILITY);
+    expect(allContentText()).not.toMatch(/acme/i);
   });
 
-  it("marks Base Transactions bricks as announced and Base Ledgers as early access", () => {
-    for (const id of ["batch-calls", "sponsored-gas"] as const) {
-      expect(BY_ID[id].status).toEqual({ kind: "announced", label: "Announced with Everest; dates to be announced" });
+  it("keeps availability caveats and test networks out of every prompt: it targets Base mainnet", () => {
+    for (const ids of SAMPLE) {
+      const p = generate(ids)!.prompt;
+      const tag = ids.join(",");
+      expect(p, tag).toContain("Target Base mainnet.");
+      expect(p, tag).not.toMatch(AVAILABILITY);
+      expect(p, tag).not.toMatch(/acme|vibenet|faucet|where each brick stands/i);
     }
-    expect(BY_ID["private-ledgers"].status.label).toBe("Early access: request access");
-    expect(BY_ID.vibenet.statusKind).toBe("testnet");
-    expect(BY_ID.flashblocks.status.label).toMatch(/replaced by 200ms blocks with Denim/);
   });
 
   it("splits Refunds and Payouts into two bricks", () => {
@@ -302,15 +302,9 @@ describe("generate", () => {
       const p = r!.prompt;
       for (const d of r!.docs) expect(p, tag).toContain(d.url);
       for (const s of r!.steps) for (const d of s.lego.links) expect(p, tag).toContain(d.url);
-      for (const s of [RES.mcp, RES.ai, RES.vibenet, "Base Sepolia", "Vibenet"]) expect(p, tag).toContain(s);
-      for (const s of r!.steps) {
-        if (s.lego.id === "speed" || s.lego.id === "basetime") expect(p, tag).toContain(DENIM_STATUS);
-        else expect(p, tag).toContain(`${s.lego.name}: ${s.lego.status.label}.`);
-      }
-      if (r!.steps.some((s) => s.lego.statusKind === "announced")) expect(p, tag).toMatch(/announced but not released/);
+      for (const s of [RES.mcp, RES.ai, "Target Base mainnet."]) expect(p, tag).toContain(s);
       if (ids.includes("financing")) expect(p, tag).toContain("yield is variable, not guaranteed");
       if (ids.includes("stocks")) expect(p, tag).toContain("outside the US only");
-      if (ids.includes("private-ledgers")) expect(p, tag).toContain("request access");
       const text = textOf(r!);
       for (const re of BANNED) expect(text, `${tag} ${re}`).not.toMatch(re);
     }
@@ -436,7 +430,7 @@ describe("URL hash", () => {
 });
 
 describe("fake app", () => {
-  const REAL_NAMES = /\b(Coinbase|USDC|Visa|Mastercard|Stripe|PayPal|Apple|Google|Amazon|Base|Morpho|Aave|Tesla)\b/;
+  const REAL_NAMES = /\b(Coinbase|Visa|Mastercard|Stripe|PayPal|Apple|Google|Amazon|Base|Morpho|Aave|Tesla)\b/;
 
   function checkTile(t: ReturnType<typeof buildFakeApp>["tiles"][number], tag: string) {
     const strings = tileStrings(t);
@@ -463,7 +457,7 @@ describe("fake app", () => {
       const app = buildFakeApp([id]);
       expect(app.tiles).toHaveLength(1);
       expect(app.tiles[0]).toMatchObject({ legoId: id, order: 0 });
-      expect(app.brand.startsWith("Acme")).toBe(true);
+      expect(app.brand.startsWith("Base ")).toBe(true);
       checkTile(app.tiles[0]!, id);
       templates.add(app.tiles[0]!.template);
     }
@@ -471,9 +465,9 @@ describe("fake app", () => {
   });
 
   it("matches the spec examples for the hero tiles", () => {
-    expect(BY_ID.b20.ui).toMatchObject({ template: "balance", title: "ACME USD", value: "$1,240.00" });
+    expect(BY_ID.b20.ui).toMatchObject({ template: "balance", title: "USDC", value: "$1,240.00" });
     expect(BY_ID.payments.ui).toMatchObject({ template: "checkout", cta: "Pay $12.00" });
-    expect(BY_ID.speed.ui).toMatchObject({ template: "toast", title: "Confirmed on Sepolia", chip: "200ms" });
+    expect(BY_ID.speed.ui).toMatchObject({ template: "toast", title: "Confirmed in 0.2s", chip: "200ms" });
     expect(BY_ID.financing.ui).toMatchObject({ template: "earn", value: "Variable APY" });
     expect(BY_ID.validity.ui).toMatchObject({ template: "order", cta: "Place order" });
     expect(BY_ID["sponsored-gas"].ui.title).toBe("No gas fee");
@@ -487,8 +481,8 @@ describe("fake app", () => {
       expect(app.tiles, tag).toHaveLength(ids.length);
       expect(app.tiles.map((t) => t.order), tag).toEqual(ids.map((_, i) => i));
       expect(app.tiles.map((t) => t.legoId), tag).toEqual(ids.slice().reverse());
-      expect(app.brand.length, tag).toBeLessThanOrEqual(18);
-      expect(app.brand, tag).toMatch(/^Acme( [A-Za-z]+)?$/);
+      expect(app.brand.length, tag).toBeLessThanOrEqual(16);
+      expect(app.brand, tag).toMatch(/^Base( [A-Za-z]+)?$/);
       expect(buildFakeApp(ids.slice().reverse()).brand, tag).toBe(app.brand);
       expect(buildFakeApp(ids), tag).toEqual(app);
       for (const t of app.tiles) checkTile(t, tag);
@@ -562,7 +556,7 @@ describe("fake app", () => {
   });
 
   it("handles empty boards, unknown ids and aliases", () => {
-    expect(buildFakeApp([])).toEqual({ brand: "Acme", tiles: [] });
+    expect(buildFakeApp([])).toEqual({ brand: "Base", tiles: [] });
     expect(buildFakeApp(["nope", "denim"]).tiles.map((t) => t.legoId)).toEqual(["speed"]);
   });
 });
@@ -594,7 +588,7 @@ describe("placed bricks", () => {
     expect(nextLevel(4)).toBeNull();
   });
 
-  it("lists all 40 bricks for the sprite baker", () => {
+  it("lists all 39 bricks for the sprite baker", () => {
     expect(ALL_BRICKS.map((b) => b.id)).toEqual(ALL_IDS);
     for (const b of ALL_BRICKS) {
       expect(b.size).toEqual(BY_ID[b.id].size);

@@ -63,13 +63,6 @@
   }
 }
 
-.demo {
-  margin: 0;
-  font-size: 12px;
-  line-height: 16px;
-  color: var(--base-gray-60);
-}
-
 .phone {
   flex: 1;
   min-height: 0;
@@ -158,9 +151,6 @@
   .name[data-empty] {
     color: var(--base-gray-60);
   }
-  .demo {
-    color: var(--base-gray-30);
-  }
   .copy[aria-disabled="true"] {
     background: var(--base-gray-80);
     border-color: var(--base-gray-80);
@@ -186,10 +176,6 @@
     --name-fs: 28px;
     --demo-lh: 18px;
     --act-h: 60px;
-  }
-  .demo {
-    font-size: 14px;
-    line-height: 18px;
   }
   .copy,
   .details {

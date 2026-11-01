@@ -18,7 +18,7 @@
       "base-pay",
       "speed"
     ],
-    "idea": "Send USDC to alice.base.eth and see it confirmed in the next 200ms block on Base Sepolia."
+    "idea": "Send USDC to alice.base.eth and see it confirmed in the next 200ms block."
   },
   {
     "id": "fair-airdrop",
@@ -101,7 +101,7 @@
       "batch-calls",
       "bridge"
     ],
-    "idea": "New users connect, bring funds in, and make their first payment in one tap with the app paying fees (sponsorship arrives with Everest)."
+    "idea": "New users connect, bring funds in, and make their first payment in one tap with the app paying fees."
   },
   {
     "id": "live-merchant-screen",

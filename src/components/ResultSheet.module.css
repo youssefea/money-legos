@@ -62,10 +62,6 @@
   font-size: 22px;
   line-height: 1.2;
 }
-.demo.demo {
-  font-size: 14px;
-  line-height: 18px;
-}
 .details {
   flex: none;
   min-height: var(--hit-target);

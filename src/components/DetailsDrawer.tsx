@@ -5,7 +5,6 @@ import { GLOSSARY, type GenerateResult } from "@/lib";
 import { selectContents } from "@/hooks/useCopy";
 import { BrickGlyph } from "./BrickArt";
 import { CopyButton } from "./ResultPanel";
-import { statusChip } from "./statusChip";
 import styles from "./DetailsDrawer.module.css";
 
 export type DetailsDrawerProps = {
@@ -135,24 +134,6 @@ export default function DetailsDrawer({ open, result, copied, onCopy, onClose, s
                       {d.label}
                     </a>
                   ))}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section aria-labelledby="d-status">
-          <h3 id="d-status" className={styles.h3}>
-            Status
-          </h3>
-          <ul className={styles.status}>
-            {result.steps.map((s) => (
-              <li key={s.lego.id}>
-                <span className={styles.chip} data-kind={s.lego.statusKind}>
-                  {statusChip(s.lego)}
-                </span>
-                <span>
-                  <b>{s.lego.name}</b> {s.lego.status.label}
                 </span>
               </li>
             ))}

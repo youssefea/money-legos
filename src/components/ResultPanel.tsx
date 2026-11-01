@@ -50,15 +50,6 @@ export function CopyButton({ copied, disabled, onCopy, quiet, className, testId 
   );
 }
 
-/** "Demo · no real funds": always next to the fake screen. */
-export function DemoLabel({ className }: { className?: string }) {
-  return (
-    <p className={[styles.demo, className].filter(Boolean).join(" ")} data-testid="demo-label">
-      Demo · no real funds
-    </p>
-  );
-}
-
 /** Typing pace for the app name: 28ms a character after the boot's dark hold, the whole name within 1.4s. */
 export function typePace(name: string): number {
   return Math.max(8, Math.min(28, Math.floor((1400 - 300 - 90) / Math.max(1, Array.from(name).length))));
@@ -130,13 +121,12 @@ export type ResultPanelProps = {
   copyRef?: Ref<HTMLButtonElement>;
 };
 
-/** Right column: the app name as the column title, the demo label, the fake phone, Copy prompt and Details. */
+/** Right column: the app name as the column title, the fake phone, Copy prompt and Details. */
 export default function ResultPanel({ app, phase, boot, play, typing, slots, tileRef, name, ready, copied, onCopy, onDetails, inspect, onInspect, detailsRef, copyRef }: ResultPanelProps) {
   return (
     <section className={styles.panel} aria-labelledby="app-name">
       <div className={styles.head}>
         <AppName id="app-name" name={name} typing={typing} />
-        <DemoLabel />
       </div>
       <FakePhone className={styles.phone} app={app} phase={phase} boot={boot} play={play} slots={slots} tileRef={tileRef} inspect={inspect} onInspect={onInspect} />
       <div className={styles.actions}>

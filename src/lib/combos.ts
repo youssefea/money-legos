@@ -1,4 +1,4 @@
-import { BY_ID, DENIM_STATUS } from "./legos";
+import { BY_ID } from "./legos";
 import type { Combo, LegoId, Recipe } from "./types";
 
 /** Order-independent key for a set of Lego ids. */
@@ -46,7 +46,7 @@ export const COMBOS: readonly Combo[] = [
     why: {
       b20: "Pays out in a B20 stablecoin, with roles and memos built in.",
       payments: "Usage-based, batched settlement turns time worked into regular payouts.",
-      speed: `Five blocks per second make by-the-second pay feel continuous. Denim: ${DENIM_STATUS}.`,
+      speed: `Five blocks per second make by-the-second pay feel continuous.`,
     },
   },
   {
@@ -69,8 +69,8 @@ export const COMBOS: readonly Combo[] = [
     recipe: "Pay a name",
     ids: ["basenames", "base-pay", "speed"],
     name: "Pay a name",
-    pitch: "Send USDC to alice.base.eth and see it confirmed in the next 200ms block on Base Sepolia.",
-    why: { speed: `Shows the payment confirmed in the next 200ms block. Denim: ${DENIM_STATUS}.` },
+    pitch: "Send USDC to alice.base.eth and see it confirmed in the next 200ms block.",
+    why: { speed: "Shows the payment confirmed in the next 200ms block." },
   },
   {
     recipe: "Fair airdrop",
@@ -95,14 +95,14 @@ export const COMBOS: readonly Combo[] = [
     ids: ["usage-billing", "basetime", "docs-mcp"],
     name: "Metered AI API",
     pitch: "An AI API that holds a maximum, then charges only for the exact usage, timed to the millisecond.",
-    why: { basetime: `Times each request to the millisecond. BaseTime comes with Denim: ${DENIM_STATUS}.` },
+    why: { basetime: "Times each request to the millisecond." },
   },
   {
     recipe: "Private payroll",
     ids: ["private-ledgers", "payouts", "memos"],
     name: "Private payroll",
     pitch: "Run payroll without publishing every salary, with each payment tagged to its pay period.",
-    why: { "private-ledgers": "Keeps salaries off public explorers. Base Ledgers is early access, so request access first." },
+    why: { "private-ledgers": "Keeps salaries off public explorers." },
   },
   {
     recipe: "Escrow marketplace",
@@ -120,8 +120,8 @@ export const COMBOS: readonly Combo[] = [
     recipe: "Gas-free onboarding",
     ids: ["connect-wallet", "sponsored-gas", "batch-calls", "bridge"],
     name: "Gas-free onboarding",
-    pitch: "New users connect, bring funds in, and make their first payment in one tap with the app paying fees (sponsorship arrives with Everest).",
-    why: { "sponsored-gas": "Lets the app cover the first fees. Announced with Everest; dates to be announced.", "batch-calls": "Bundles the first steps into one tap. Announced with Everest; dates to be announced." },
+    pitch: "New users connect, bring funds in, and make their first payment in one tap with the app paying fees.",
+    why: { "sponsored-gas": "Lets the app cover the first fees.", "batch-calls": "Bundles the first steps into one tap." },
   },
   {
     recipe: "Live merchant screen",
@@ -371,7 +371,7 @@ const RECIPE_META: Readonly<Record<string, { id: string; idea: string }>> = {
   "Private payroll": { id: "private-payroll", idea: "Run payroll without publishing every salary" },
   "Escrow marketplace": { id: "escrow-marketplace", idea: "Buyers pay into escrow; sellers get paid on delivery" },
   "Borrow to pay": { id: "borrow-to-pay", idea: "Borrow against ETH and pay without selling it" },
-  "Gas-free onboarding": { id: "gas-free-onboarding", idea: "One-tap onboarding; batching and fee cover are announced" },
+  "Gas-free onboarding": { id: "gas-free-onboarding", idea: "One-tap onboarding with the app paying the fees" },
   "Live merchant screen": { id: "live-merchant-screen", idea: "A counter screen that flips to Paid the moment it lands" },
   "Stablecoin ops desk": { id: "safe-stablecoin-desk", idea: "Issue a stablecoin; hold, pause and match every move" },
 };

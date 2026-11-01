@@ -1,8 +1,7 @@
 import { CATALOG, DOCS } from "../data/catalog";
-import { DENIM_SHORT, DENIM_STATUS } from "../data/status";
 import type { BrickColor, BrickColorId, Category, Lego, LegoId } from "./types";
 
-export { DOCS, DENIM_SHORT, DENIM_STATUS };
+export { DOCS };
 
 const D = "https://docs.base.org";
 
@@ -11,8 +10,6 @@ export const RES = {
   mcp: D + "/mcp",
   ai: D + "/get-started/resources-for-ai-agents",
   guides: D + "/build-on-base/overview",
-  vibenet: "https://chain.base.org/vibenet",
-  faucet: "https://chain.base.org/vibenet/faucet",
 } as const;
 
 /** Plain-English glosses for jargon that shows up in a result. */
@@ -67,17 +64,15 @@ export const BRICK_COLORS: Record<BrickColorId, BrickColor> = {
 /** Tray filter chips in order (the UI adds "All" in front). */
 export const CATEGORIES: readonly Category[] = ["Money", "Identity", "Wallet", "Speed", "Trade", "Data", "Agents", "Apps"];
 
-/** All 40 Legos: the 5 heroes first, then the rest in catalog (category) order. */
+/** All 39 Legos: the 5 heroes first, then the rest in catalog (category) order. */
 export const LEGOS: readonly Lego[] = CATALOG.map((c): Lego => {
-  const { fragments, color, ui, role, note, ...rest } = c;
+  const { fragments, color, ui, role, ...rest } = c;
   return {
     ...rest,
     kicker: c.verb,
     title: c.name,
     blurb: c.short,
-    statusKind: c.status.kind,
     role: role ?? c.what,
-    ...(note ? { note } : {}),
     links: c.docs.map((d) => DOCS[d]),
     adj: fragments.adj,
     noun: fragments.noun,

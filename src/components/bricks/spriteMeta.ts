@@ -61,7 +61,6 @@ export const SPRITE_META: Readonly<Record<string, SpriteMeta>> = {
   "agent-codes": { width: 201, height: 208, aspect: 0.9663, front: [17.1, 141.6], verb: 38 },
   "docs-mcp": { width: 201, height: 208, aspect: 0.9663, front: [17.3, 141.9], verb: 44.2 },
   "skills": { width: 200, height: 208, aspect: 0.9615, front: [16.2, 140.5], verb: 36.8 },
-  "vibenet": { width: 215, height: 208, aspect: 1.0337, front: [16.7, 141.1], verb: 44.1 },
   "local-devnet": { width: 201, height: 208, aspect: 0.9663, front: [17.3, 141.7], verb: 44.1 },
 };
 
