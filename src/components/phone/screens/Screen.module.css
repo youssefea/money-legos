@@ -1269,38 +1269,36 @@
 }
 
 /* ---------------------------------------------------------------- dark */
-@media (prefers-color-scheme: dark) {
-  .app {
-    --bg: var(--base-gray-100);
-    --surface: var(--base-gray-80);
-    --line: var(--base-gray-80);
-    --line-card: var(--base-gray-60);
-    --fg: var(--base-gray-0);
-    --fg2: var(--base-gray-30);
-    --fg3: var(--base-gray-60);
-    --accent-ink: var(--base-cerulean);
-    --accent-tint: rgb(60 138 255 / 0.18);
-    --pos: var(--base-green);
-    --bone: var(--base-gray-80);
-  }
-  .card {
-    --bone: var(--base-gray-60);
-  }
-  .seg {
-    background: var(--base-gray-100);
-  }
-  .seg > span[data-on] {
-    background: var(--base-gray-60);
-  }
-  .field,
-  .swapIcon,
-  .card .meter {
-    background: var(--base-gray-100);
-  }
-  .chip[data-tone="blue"] {
-    color: var(--base-gray-0);
-  }
-  .root[data-skel] .card :is(.bars i, .meter i, .stack i) {
-    background: var(--base-gray-60) !important;
-  }
+:global(:where(html[data-theme="dark"])) .app {
+  --bg: var(--base-gray-100);
+  --surface: var(--base-gray-80);
+  --line: var(--base-gray-80);
+  --line-card: var(--base-gray-60);
+  --fg: var(--base-gray-0);
+  --fg2: var(--base-gray-30);
+  --fg3: var(--base-gray-60);
+  --accent-ink: var(--base-cerulean);
+  --accent-tint: rgb(60 138 255 / 0.18);
+  --pos: var(--base-green);
+  --bone: var(--base-gray-80);
+}
+:global(:where(html[data-theme="dark"])) .card {
+  --bone: var(--base-gray-60);
+}
+:global(:where(html[data-theme="dark"])) .seg {
+  background: var(--base-gray-100);
+}
+:global(:where(html[data-theme="dark"])) .seg > span[data-on] {
+  background: var(--base-gray-60);
+}
+:global(:where(html[data-theme="dark"])) .field,
+:global(:where(html[data-theme="dark"])) .swapIcon,
+:global(:where(html[data-theme="dark"])) .card .meter {
+  background: var(--base-gray-100);
+}
+:global(:where(html[data-theme="dark"])) .chip[data-tone="blue"] {
+  color: var(--base-gray-0);
+}
+:global(:where(html[data-theme="dark"])) .root[data-skel] .card :is(.bars i, .meter i, .stack i) {
+  background: var(--base-gray-60) !important;
 }

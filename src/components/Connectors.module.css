@@ -45,13 +45,11 @@
   animation: ring-in var(--dur-fast) var(--ease-out) both;
 }
 
-@media (prefers-color-scheme: dark) {
-  .halo {
-    stroke: var(--base-gray-100);
-  }
-  .ring {
-    stroke: var(--base-cerulean);
-  }
+:global(:where(html[data-theme="dark"])) .halo {
+  stroke: var(--base-gray-100);
+}
+:global(:where(html[data-theme="dark"])) .ring {
+  stroke: var(--base-cerulean);
 }
 
 @media (prefers-reduced-motion: reduce) {

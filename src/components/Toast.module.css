@@ -76,21 +76,19 @@
   background: var(--base-gray-15);
 }
 
-@media (prefers-color-scheme: dark) {
-  .toast {
-    background: var(--base-gray-80);
-    color: var(--base-gray-0);
-    box-shadow: 0 8px 24px -8px rgb(0 0 0 / 0.6);
-  }
-  .sep {
-    color: var(--base-gray-30);
-  }
-  .undo {
-    color: var(--base-cerulean);
-  }
-  .undo:hover {
-    background: var(--base-gray-60);
-  }
+:global(:where(html[data-theme="dark"])) .toast {
+  background: var(--base-gray-80);
+  color: var(--base-gray-0);
+  box-shadow: 0 8px 24px -8px rgb(0 0 0 / 0.6);
+}
+:global(:where(html[data-theme="dark"])) .sep {
+  color: var(--base-gray-30);
+}
+:global(:where(html[data-theme="dark"])) .undo {
+  color: var(--base-cerulean);
+}
+:global(:where(html[data-theme="dark"])) .undo:hover {
+  background: var(--base-gray-60);
 }
 
 @media (max-width: 1023.98px) {

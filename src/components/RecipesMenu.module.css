@@ -119,17 +119,15 @@
   width: auto;
 }
 
-@media (prefers-color-scheme: dark) {
-  .pop {
-    background: var(--base-gray-100);
-    border-color: var(--base-gray-80);
-    box-shadow: 0 16px 40px rgb(0 0 0 / 0.6);
-  }
-  .item:hover,
-  .item:focus-visible,
-  .trigger:hover {
-    background: var(--base-gray-80);
-  }
+:global(:where(html[data-theme="dark"])) .pop {
+  background: var(--base-gray-100);
+  border-color: var(--base-gray-80);
+  box-shadow: 0 16px 40px rgb(0 0 0 / 0.6);
+}
+:global(:where(html[data-theme="dark"])) .item:hover,
+:global(:where(html[data-theme="dark"])) .item:focus-visible,
+:global(:where(html[data-theme="dark"])) .trigger:hover {
+  background: var(--base-gray-80);
 }
 
 @media (min-width: 1600px) {
@@ -273,21 +271,19 @@
   line-height: 20px;
 }
 
-@media (prefers-color-scheme: dark) {
-  .shelfItem:hover,
-  .shelfItem:focus-visible,
-  .shelfItem[aria-current="true"] {
-    background: var(--base-gray-80);
-  }
-  .shelfItem[aria-current="true"],
-  .shelf[data-layout="row"] .shelfItem[aria-current="true"] {
-    border-color: var(--base-cerulean);
-    box-shadow: inset 0 0 0 2px var(--base-cerulean);
-  }
-  .shelf[data-layout="row"] .shelfItem {
-    background: var(--base-gray-100);
-    border-color: var(--base-gray-80);
-  }
+:global(:where(html[data-theme="dark"])) .shelfItem:hover,
+:global(:where(html[data-theme="dark"])) .shelfItem:focus-visible,
+:global(:where(html[data-theme="dark"])) .shelfItem[aria-current="true"] {
+  background: var(--base-gray-80);
+}
+:global(:where(html[data-theme="dark"])) .shelfItem[aria-current="true"],
+:global(:where(html[data-theme="dark"])) .shelf[data-layout="row"] .shelfItem[aria-current="true"] {
+  border-color: var(--base-cerulean);
+  box-shadow: inset 0 0 0 2px var(--base-cerulean);
+}
+:global(:where(html[data-theme="dark"])) .shelf[data-layout="row"] .shelfItem {
+  background: var(--base-gray-100);
+  border-color: var(--base-gray-80);
 }
 @media (min-width: 1600px) {
   .shelf[data-layout="column"] {

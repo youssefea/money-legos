@@ -38,7 +38,8 @@
 
 .sound,
 .docs,
-.present {
+.present,
+.theme {
   min-width: var(--hit-target);
   min-height: var(--hit-target);
   display: inline-grid;
@@ -82,12 +83,23 @@
   background: var(--base-gray-100);
   color: var(--base-gray-0);
 }
-@media (prefers-color-scheme: dark) {
-  .present[aria-pressed="true"] {
-    border-color: var(--base-gray-0);
-    background: var(--base-gray-0);
-    color: var(--base-gray-100);
-  }
+:global(:where(html[data-theme="dark"])) .present[aria-pressed="true"] {
+  border-color: var(--base-gray-0);
+  background: var(--base-gray-0);
+  color: var(--base-gray-100);
+}
+
+/* Dark mode toggle: an icon-only twin of the Present button (same border, radius and height). */
+.theme {
+  flex: none;
+  padding: 0;
+  border: 1px solid var(--color-hairline);
+  background: transparent;
+  color: var(--color-fg);
+  cursor: pointer;
+}
+.theme:hover {
+  border-color: var(--color-border-strong);
 }
 
 .docs {
@@ -150,6 +162,12 @@
   }
   .name {
     font-size: 15px;
+  }
+  .nav {
+    gap: 0;
+  }
+  .docs {
+    padding: 0 var(--space-2);
   }
 }
 

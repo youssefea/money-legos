@@ -130,17 +130,15 @@
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  .sheet {
-    border-top-color: var(--base-gray-80);
-    background: var(--base-gray-100);
-  }
-  .sheet::backdrop {
-    background: rgb(0 0 0 / 0.6);
-  }
-  .bar {
-    border-top-color: var(--base-gray-80);
-  }
+:global(:where(html[data-theme="dark"])) .sheet {
+  border-top-color: var(--base-gray-80);
+  background: var(--base-gray-100);
+}
+:global(:where(html[data-theme="dark"])) .sheet::backdrop {
+  background: rgb(0 0 0 / 0.6);
+}
+:global(:where(html[data-theme="dark"])) .bar {
+  border-top-color: var(--base-gray-80);
 }
 
 /* 320px phones: a tighter action bar so Copy prompt stays on one line. */

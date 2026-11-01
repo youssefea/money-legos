@@ -19,7 +19,8 @@ import {
 } from "@/lib";
 import { useBrickDrag } from "@/hooks/useBrickDrag";
 import { copyText, useCopiedReset } from "@/hooks/useCopy";
-import { useDark, useIsMobile, useReducedMotion } from "@/hooks/useMediaQuery";
+import { useIsMobile, useReducedMotion } from "@/hooks/useMediaQuery";
+import { useDark } from "@/hooks/useTheme";
 import { buzz, useSound } from "@/hooks/useSound";
 import { initialState, reducer, resultOf, stepStates, type LoadSource } from "@/state/store";
 import Board from "./Board";

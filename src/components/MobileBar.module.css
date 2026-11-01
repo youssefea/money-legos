@@ -111,27 +111,25 @@
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  .bar {
-    background: var(--base-gray-100);
-    border-color: var(--base-gray-80);
-  }
-  .module {
-    background: var(--base-gray-80);
-    box-shadow: none;
-  }
-  .module[data-empty] {
-    background: transparent;
-    box-shadow: inset 0 0 0 1px var(--base-gray-80);
-  }
-  .module[data-empty] i {
-    background: var(--base-gray-80);
-  }
-  .generate[aria-disabled="true"] {
-    background: var(--base-gray-80);
-    border-color: var(--base-gray-80);
-    color: var(--base-gray-30);
-  }
+:global(:where(html[data-theme="dark"])) .bar {
+  background: var(--base-gray-100);
+  border-color: var(--base-gray-80);
+}
+:global(:where(html[data-theme="dark"])) .module {
+  background: var(--base-gray-80);
+  box-shadow: none;
+}
+:global(:where(html[data-theme="dark"])) .module[data-empty] {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--base-gray-80);
+}
+:global(:where(html[data-theme="dark"])) .module[data-empty] i {
+  background: var(--base-gray-80);
+}
+:global(:where(html[data-theme="dark"])) .generate[aria-disabled="true"] {
+  background: var(--base-gray-80);
+  border-color: var(--base-gray-80);
+  color: var(--base-gray-30);
 }
 
 /* Smallest phones (<360): a smaller mini stack and tighter studs and chips, so nothing touches. */

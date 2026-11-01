@@ -43,8 +43,9 @@ test.describe("desktop", () => {
     await expect(page.getByTestId("recipes")).toHaveCount(0);
   });
 
-  test("bricks first in tab order: Docs, Present, then the bin", async ({ page, browserName }) => {
+  test("bricks first in tab order: Docs, Present, Dark mode, then the bin", async ({ page, browserName }) => {
     test.skip(browserName === "webkit", "WebKit on macOS tabs to form fields only (Safari's default)");
+    await page.keyboard.press("Tab");
     await page.keyboard.press("Tab");
     await page.keyboard.press("Tab");
     await page.keyboard.press("Tab");
@@ -502,6 +503,104 @@ test.describe("desktop", () => {
     await expect(page).toHaveURL(/\/$/);
     await expect(build(page)).toHaveText("Build app");
   });
+});
+
+test.describe("theme: light for everyone, dark on request", () => {
+  const theme = (page: Page) => page.evaluate(() => document.documentElement.getAttribute("data-theme"));
+  const bg = (page: Page) => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  const themeColor = (page: Page) => page.locator('meta[name="theme-color"]').getAttribute("content");
+
+  test("an OS dark preference still renders light by default", async ({ page }) => {
+    await page.emulateMedia({ colorScheme: "dark" });
+    await page.goto("/");
+    await page.getByTestId("brick-stage").waitFor();
+    expect(await theme(page)).toBe("light");
+    expect(await bg(page)).toBe("rgb(255, 255, 255)");
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme)).toBe("light");
+    expect(await themeColor(page)).toBe("#ffffff");
+    await expect(page.getByTestId("theme-toggle")).toHaveAttribute("aria-pressed", "false");
+  });
+
+  test("the toggle has an accessible name, switches to dark live (focus and the stack kept) and persists across reload", async ({ page }) => {
+    await page.goto("/#b20,payments,speed");
+    await expect(phone(page).locator("[data-region]")).toHaveCount(3);
+    const toggle = page.getByRole("button", { name: "Dark mode" });
+    await expect(toggle).toHaveAttribute("aria-pressed", "false");
+    await expect(toggle).toHaveAttribute("title", "Dark mode");
+    await toggle.focus();
+    await page.keyboard.press("Enter");
+    expect(await theme(page)).toBe("dark");
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    await expect(toggle).toHaveAttribute("title", "Light mode");
+    await expect(toggle).toBeFocused();
+    await expect(phone(page).locator("[data-region]")).toHaveCount(3);
+    expect(await bg(page)).toBe("rgb(10, 11, 13)");
+    expect(await themeColor(page)).toBe("#0a0b0d");
+    expect(await page.evaluate(() => localStorage.getItem("ml-theme"))).toBe("dark");
+    // The logo follows the theme, not the OS.
+    await expect(page.locator('img[src*="Base_lockup_white"]')).toBeVisible();
+    await expect(page.locator('img[src*="Base_lockup_2color"]')).toBeHidden();
+
+    await page.reload();
+    await page.getByTestId("brick-stage").waitFor();
+    expect(await theme(page)).toBe("dark");
+    expect(await themeColor(page)).toBe("#0a0b0d");
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+
+    await toggle.click();
+    expect(await theme(page)).toBe("light");
+    expect(await page.evaluate(() => localStorage.getItem("ml-theme"))).toBe("light");
+    await expect(page.locator('img[src*="Base_lockup_2color"]')).toBeVisible();
+  });
+
+  test("no flash: a stored dark choice is on <html> before first paint (by DOMContentLoaded)", async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem("ml-theme", "dark");
+      document.addEventListener("DOMContentLoaded", () => {
+        (window as unknown as { __themeAtDCL: string | null }).__themeAtDCL = document.documentElement.getAttribute("data-theme");
+      });
+    });
+    await page.goto("/");
+    await page.waitForFunction(() => "__themeAtDCL" in window);
+    expect(await page.evaluate(() => (window as unknown as { __themeAtDCL: string }).__themeAtDCL)).toBe("dark");
+  });
+
+  test("the toggle is in Present mode's toolbar", async ({ page }) => {
+    await page.goto("/");
+    await page.getByTestId("present-toggle").click();
+    await expect(page.getByTestId("present-drawer")).toBeVisible();
+    const toggle = page.getByTestId("theme-toggle");
+    await expect(toggle).toBeVisible();
+    expect((await toggle.boundingBox())!.height).toBeGreaterThanOrEqual(32);
+    await toggle.click();
+    expect(await theme(page)).toBe("dark");
+    await expect(page.getByTestId("present-drawer")).toBeVisible();
+  });
+
+  for (const w of [320, 390]) {
+    test(`the toggle fits the mobile header at ${w}px with a 44px target`, async ({ browser }) => {
+      const context = await browser.newContext({ viewport: { width: w, height: 700 }, hasTouch: true, isMobile: true });
+      const page = await context.newPage();
+      await page.goto("/");
+      const toggle = page.getByTestId("theme-toggle");
+      await expect(toggle).toBeVisible();
+      const b = (await toggle.boundingBox())!;
+      expect(b.height).toBeGreaterThanOrEqual(44);
+      expect(b.width).toBeGreaterThanOrEqual(44);
+      expect(b.x + b.width).toBeLessThanOrEqual(w);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(w);
+      // Nothing in the header row overlaps.
+      // "Money Legos" never runs into Docs.
+      const gap = await page.evaluate(() => {
+        const name = [...document.querySelectorAll("header span")].find((e) => e.textContent === "Money Legos")!.getBoundingClientRect();
+        return document.querySelector("header nav a")!.getBoundingClientRect().left - name.right;
+      });
+      expect(gap).toBeGreaterThanOrEqual(0);
+      await toggle.tap();
+      expect(await page.evaluate(() => document.documentElement.getAttribute("data-theme"))).toBe("dark");
+      await context.close();
+    });
+  }
 });
 
 test.describe("deep links", () => {

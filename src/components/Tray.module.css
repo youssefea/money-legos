@@ -261,11 +261,9 @@
     filter: drop-shadow(0 0 0.6px rgb(10 11 13 / 0.45)) drop-shadow(0 5px 4px rgb(10 11 13 / 0.16));
   }
 }
-@media (prefers-color-scheme: dark) {
-  .brick[data-pale] .sprite,
-  .brick[data-pale] .drawn {
-    filter: none;
-  }
+:global(:where(html[data-theme="dark"])) .brick[data-pale] .sprite,
+:global(:where(html[data-theme="dark"])) .brick[data-pale] .drawn {
+  filter: none;
 }
 .brick[data-dragging] .sprite,
 .brick[data-dragging] .drawn {
@@ -362,22 +360,20 @@
   color: var(--base-gray-30);
 }
 
-@media (prefers-color-scheme: dark) {
-  .tip {
-    background: var(--base-gray-80);
-    box-shadow: 0 8px 24px rgb(0 0 0 / 0.5);
-  }
-  .brick[data-inspect],
-  .brick[data-placed] {
-    box-shadow: inset 0 0 0 2px var(--base-cerulean);
-  }
-  .check {
-    background: var(--base-cerulean);
-    color: var(--base-gray-100);
-  }
-  .check {
-    box-shadow: 0 0 0 2px var(--base-gray-100);
-  }
+:global(:where(html[data-theme="dark"])) .tip {
+  background: var(--base-gray-80);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.5);
+}
+:global(:where(html[data-theme="dark"])) .brick[data-inspect],
+:global(:where(html[data-theme="dark"])) .brick[data-placed] {
+  box-shadow: inset 0 0 0 2px var(--base-cerulean);
+}
+:global(:where(html[data-theme="dark"])) .check {
+  background: var(--base-cerulean);
+  color: var(--base-gray-100);
+}
+:global(:where(html[data-theme="dark"])) .check {
+  box-shadow: 0 0 0 2px var(--base-gray-100);
 }
 
 /* ---------------------------------------------------------------- projector */

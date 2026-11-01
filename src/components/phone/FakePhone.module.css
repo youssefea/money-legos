@@ -171,22 +171,20 @@
 }
 
 /* ---------------------------------------------------------------- dark */
-@media (prefers-color-scheme: dark) {
-  .device {
-    background: #000;
-    box-shadow:
-      0 0 0 1.5px var(--base-gray-60),
-      0 0 0 2.5px var(--base-gray-80),
-      0 28px 56px -24px rgb(0 0 0 / 0.7);
-  }
-  .buttons i {
-    background: var(--base-gray-60);
-  }
-  .screen {
-    background: var(--base-gray-100);
-    color: var(--base-gray-0);
-  }
-  .home {
-    background: var(--base-gray-0);
-  }
+:global(:where(html[data-theme="dark"])) .device {
+  background: #000;
+  box-shadow:
+    0 0 0 1.5px var(--base-gray-60),
+    0 0 0 2.5px var(--base-gray-80),
+    0 28px 56px -24px rgb(0 0 0 / 0.7);
+}
+:global(:where(html[data-theme="dark"])) .buttons i {
+  background: var(--base-gray-60);
+}
+:global(:where(html[data-theme="dark"])) .screen {
+  background: var(--base-gray-100);
+  color: var(--base-gray-0);
+}
+:global(:where(html[data-theme="dark"])) .home {
+  background: var(--base-gray-0);
 }

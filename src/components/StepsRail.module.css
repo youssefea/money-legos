@@ -78,17 +78,15 @@
   color: var(--color-fg);
 }
 
-@media (prefers-color-scheme: dark) {
-  .step[data-state="todo"] .dot {
-    background: var(--base-gray-80);
-  }
-  .step[data-state="current"] .dot {
-    box-shadow: inset 0 0 0 1.5px var(--base-gray-30);
-  }
-  .step[data-state="done"] .dot {
-    background: var(--base-cerulean);
-    color: var(--base-gray-100);
-  }
+:global(:where(html[data-theme="dark"])) .step[data-state="todo"] .dot {
+  background: var(--base-gray-80);
+}
+:global(:where(html[data-theme="dark"])) .step[data-state="current"] .dot {
+  box-shadow: inset 0 0 0 1.5px var(--base-gray-30);
+}
+:global(:where(html[data-theme="dark"])) .step[data-state="done"] .dot {
+  background: var(--base-cerulean);
+  color: var(--base-gray-100);
 }
 
 @media (min-width: 1600px) {

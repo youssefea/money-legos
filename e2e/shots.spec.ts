@@ -64,12 +64,13 @@ for (const [w, h, scheme, state] of ALL) {
     const phone = w < 768;
     const context = await browser.newContext({
       viewport: { width: w, height: h },
-      colorScheme: scheme as "light" | "dark",
       deviceScaleFactor: 1,
       hasTouch: phone,
       isMobile: phone,
       reducedMotion: "reduce",
     });
+    // The theme is the user's choice (localStorage "ml-theme"), not the OS setting.
+    await context.addInitScript((t) => localStorage.setItem("ml-theme", t), scheme);
     const page = await context.newPage();
     await open(page, w, state);
     await page.screenshot({ path: join(DIR, `${w}x${h}-${scheme}-${state}.png`) });

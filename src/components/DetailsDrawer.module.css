@@ -221,22 +221,20 @@
   color: var(--color-fg-muted);
 }
 
-@media (prefers-color-scheme: dark) {
-  .drawer {
-    border-left-color: var(--base-gray-80);
-  }
-  .drawer::backdrop {
-    background: rgb(0 0 0 / 0.6);
-  }
-  .steps li {
-    background: var(--base-gray-80);
-  }
-  .prompt {
-    background: var(--base-gray-80);
-  }
-  .close:hover {
-    background: var(--base-gray-80);
-  }
+:global(:where(html[data-theme="dark"])) .drawer {
+  border-left-color: var(--base-gray-80);
+}
+:global(:where(html[data-theme="dark"])) .drawer::backdrop {
+  background: rgb(0 0 0 / 0.6);
+}
+:global(:where(html[data-theme="dark"])) .steps li {
+  background: var(--base-gray-80);
+}
+:global(:where(html[data-theme="dark"])) .prompt {
+  background: var(--base-gray-80);
+}
+:global(:where(html[data-theme="dark"])) .close:hover {
+  background: var(--base-gray-80);
 }
 
 @media (min-width: 1600px) {

@@ -2,6 +2,7 @@
 
 import BaseLockup from "./BaseLockup";
 import { RES } from "@/lib";
+import { setTheme, useTheme } from "@/hooks/useTheme";
 import styles from "./Header.module.css";
 
 export type HeaderProps = {
@@ -11,7 +12,7 @@ export type HeaderProps = {
   onPresent?: (on: boolean) => void;
 };
 
-/** Base lockup, divider, "Money Legos"; Docs and the Present toggle on the right. */
+/** Base lockup, divider, "Money Legos"; Docs, the Present toggle and the dark mode toggle on the right. */
 export default function Header({ present = false, onPresent }: HeaderProps) {
   return (
     <header className={styles.header} data-present={present || undefined}>
@@ -41,8 +42,44 @@ export default function Header({ present = false, onPresent }: HeaderProps) {
             Present
           </button>
         )}
+        <ThemeToggle />
       </nav>
     </header>
+  );
+}
+
+/** Light by default; this icon button switches to dark and back (remembered on this device). Focus stays on it. */
+export function ThemeToggle() {
+  const dark = useTheme() === "dark";
+  return (
+    <button
+      type="button"
+      className={styles.theme}
+      aria-label="Dark mode"
+      aria-pressed={dark}
+      title={dark ? "Light mode" : "Dark mode"}
+      onClick={() => setTheme(dark ? "light" : "dark")}
+      data-testid="theme-toggle"
+    >
+      {dark ? (
+        // Sun: pick light.
+        <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+          <circle cx="10" cy="10" r="3.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
+          <path
+            d="M10 2.5v1.75M10 15.75v1.75M2.5 10h1.75M15.75 10h1.75M4.7 4.7l1.24 1.24M14.06 14.06l1.24 1.24M4.7 15.3l1.24-1.24M14.06 5.94l1.24-1.24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+        </svg>
+      ) : (
+        // Moon: pick dark.
+        <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+          <path d="M16.5 12.2A6.75 6.75 0 0 1 7.8 3.5a6.75 6.75 0 1 0 8.7 8.7z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+        </svg>
+      )}
+    </button>
   );
 }
 

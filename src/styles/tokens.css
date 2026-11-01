@@ -160,7 +160,7 @@
   --dur-copied: 2000ms; /* how long "COPIED" stays */
   --squash: 0.06;
 
-  color-scheme: light dark;
+  color-scheme: light;
 }
 
 /* 1280-1439: a little narrower on both sides; the board keeps at least 360px. */
@@ -188,28 +188,9 @@
   }
 }
 
-/* Dark mode follows the system unless data-theme="light" pins it. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --color-bg: var(--base-gray-100);
-    --color-surface: var(--base-gray-100);
-    --color-panel: var(--base-gray-100);
-    --color-hairline: var(--base-gray-80);
-    --color-border-strong: var(--base-gray-60);
-    --color-dashed: var(--base-gray-60);
-    --color-slot-outline: var(--base-gray-30);
-    --color-fg: var(--base-gray-0);
-    --color-fg-muted: var(--base-gray-30);
-    --color-fg-label: var(--base-gray-30);
-    --color-link: var(--base-cerulean);
-    --color-baseplate: var(--base-gray-80);
-    --focus-ring-color: var(--base-cerulean);
-    --color-box-line: var(--base-gray-30);
-    --color-step-active: var(--base-gray-0);
-    --color-step-line: var(--base-cerulean);
-  }
-}
-:root[data-theme="dark"] {
+/* Light for everyone; dark only when the user picks it (data-theme="dark" on <html>, see ThemeToggle). */
+html[data-theme="dark"] {
+  color-scheme: dark;
   --color-bg: var(--base-gray-100);
   --color-surface: var(--base-gray-100);
   --color-panel: var(--base-gray-100);

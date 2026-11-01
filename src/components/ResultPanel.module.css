@@ -147,15 +147,13 @@
   cursor: not-allowed;
 }
 
-@media (prefers-color-scheme: dark) {
-  .name[data-empty] {
-    color: var(--base-gray-60);
-  }
-  .copy[aria-disabled="true"] {
-    background: var(--base-gray-80);
-    border-color: var(--base-gray-80);
-    color: var(--base-gray-30);
-  }
+:global(:where(html[data-theme="dark"])) .name[data-empty] {
+  color: var(--base-gray-60);
+}
+:global(:where(html[data-theme="dark"])) .copy[aria-disabled="true"] {
+  background: var(--base-gray-80);
+  border-color: var(--base-gray-80);
+  color: var(--base-gray-30);
 }
 
 /* Short screens: the name sits on one line beside nothing else, the chrome shrinks. */
